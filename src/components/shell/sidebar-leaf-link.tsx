@@ -17,7 +17,8 @@ interface SidebarLeafLinkProps {
   active: boolean;
   pinned: boolean;
   onTogglePin: () => void;
-  indent?: boolean;
+  /** Nesting depth (0 = top level). Each level indents a bit further. */
+  level?: number;
 }
 
 export function SidebarLeafLink({
@@ -26,16 +27,20 @@ export function SidebarLeafLink({
   active,
   pinned,
   onTogglePin,
-  indent = false,
+  level = 0,
 }: SidebarLeafLinkProps) {
   const Icon = item.icon;
 
   const link = (
     <Link
       href={item.href}
+      style={
+        level > 0 && !collapsed
+          ? { marginLeft: `${level * 1.1}rem` }
+          : undefined
+      }
       className={cn(
-        "group/nav-item flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-        indent && !collapsed && "ml-5",
+        "group/nav-item flex items-center gap-2 rounded-md px-2 py-2.5 text-sm transition-colors",
         active
           ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",

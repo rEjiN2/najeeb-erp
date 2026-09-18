@@ -3,8 +3,10 @@ import {
   Boxes,
   Database,
   LayoutDashboard,
+  MapPin,
   Receipt,
   Settings,
+  Tags,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,7 +19,7 @@ export interface NavLeaf {
 export interface NavGroup {
   title: string;
   icon: LucideIcon;
-  children: NavLeaf[];
+  children: NavEntry[];
 }
 
 export type NavEntry = NavLeaf | NavGroup;
@@ -34,8 +36,19 @@ export const NAV_ITEMS: NavEntry[] = [
     children: [
       {
         title: "Masters",
-        href: "/accounting-inventory/masters",
         icon: Database,
+        children: [
+          {
+            title: "Locations",
+            href: "/accounting-inventory/masters/locations",
+            icon: MapPin,
+          },
+          {
+            title: "Product Groups",
+            href: "/accounting-inventory/masters/product-groups",
+            icon: Tags,
+          },
+        ],
       },
       {
         title: "Transactions",
@@ -52,6 +65,22 @@ export const NAV_ITEMS: NavEntry[] = [
   { title: "Administration", href: "/administration", icon: Settings },
 ];
 
-export const FLAT_NAV_ITEMS: NavLeaf[] = NAV_ITEMS.flatMap((entry) =>
-  isNavGroup(entry) ? entry.children : [entry],
-);
+function flatten(entries: NavEntry[]): NavLeaf[] {
+  return entries.flatMap((entry) =>
+    isNavGroup(entry) ? flatten(entry.children) : [entry],
+  );
+}
+
+/** True if `pathname` matches any leaf nested anywhere under `entries`. */
+export function containsActivePath(
+  entries: NavEntry[],
+  pathname: string,
+): boolean {
+  return entries.some((entry) =>
+    isNavGroup(entry)
+      ? containsActivePath(entry.children, pathname)
+      : entry.href === pathname,
+  );
+}
+
+export const FLAT_NAV_ITEMS: NavLeaf[] = flatten(NAV_ITEMS);

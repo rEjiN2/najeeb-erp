@@ -13,7 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { NavGroup } from "@/config/nav";
+import { containsActivePath, isNavGroup, type NavGroup } from "@/config/nav";
 import { cn } from "@/lib/utils";
 
 import { SidebarLeafLink } from "./sidebar-leaf-link";
@@ -24,6 +24,8 @@ interface SidebarNavGroupProps {
   pathname: string;
   isFavourite: (href: string) => boolean;
   onTogglePin: (href: string) => void;
+  /** Nesting depth (0 = top level). Each level indents a bit further. */
+  level?: number;
 }
 
 export function SidebarNavGroup({
@@ -32,9 +34,10 @@ export function SidebarNavGroup({
   pathname,
   isFavourite,
   onTogglePin,
+  level = 0,
 }: SidebarNavGroupProps) {
   const [open, setOpen] = useState(() =>
-    group.children.some((child) => pathname === child.href),
+    containsActivePath(group.children, pathname),
   );
   const Icon = group.icon;
 
@@ -43,7 +46,7 @@ export function SidebarNavGroup({
       <Tooltip>
         <TooltipTrigger
           render={
-            <div className="text-sidebar-foreground/80 flex items-center justify-center rounded-md px-2 py-1.5">
+            <div className="text-sidebar-foreground/80 flex items-center justify-center rounded-md px-2 py-2.5">
               <Icon className="size-4" />
             </div>
           }
@@ -56,8 +59,11 @@ export function SidebarNavGroup({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger
+        style={
+          level > 0 ? { paddingLeft: `${0.5 + level * 1.1}rem` } : undefined
+        }
         className={cn(
-          "text-sidebar-foreground/80 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+          "text-sidebar-foreground/80 flex w-full items-center gap-2 rounded-md px-2 py-2.5 text-sm",
           "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         )}
       >
@@ -70,18 +76,30 @@ export function SidebarNavGroup({
           )}
         />
       </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-0.5 pt-0.5">
-        {group.children.map((child) => (
-          <SidebarLeafLink
-            key={child.href}
-            item={child}
-            collapsed={false}
-            active={pathname === child.href}
-            pinned={isFavourite(child.href)}
-            onTogglePin={() => onTogglePin(child.href)}
-            indent
-          />
-        ))}
+      <CollapsibleContent className="divide-sidebar-border divide-y">
+        {group.children.map((child) =>
+          isNavGroup(child) ? (
+            <SidebarNavGroup
+              key={child.title}
+              group={child}
+              collapsed={false}
+              pathname={pathname}
+              isFavourite={isFavourite}
+              onTogglePin={onTogglePin}
+              level={level + 1}
+            />
+          ) : (
+            <SidebarLeafLink
+              key={child.href}
+              item={child}
+              collapsed={false}
+              active={pathname === child.href}
+              pinned={isFavourite(child.href)}
+              onTogglePin={() => onTogglePin(child.href)}
+              level={level + 1}
+            />
+          ),
+        )}
       </CollapsibleContent>
     </Collapsible>
   );

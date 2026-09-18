@@ -48,6 +48,17 @@
   --brown-800: oklch(0.26 0.032 45);
   --brown-900: oklch(0.19 0.028 45);
 
+  /* 1d. Chart/status primitives. Validated with the dataviz skill's
+     validate_palette.js against this file's surfaces: copper<->teal clears
+     every categorical CVD/contrast check (worst adjacent ΔE 12.4 CVD / 27.2
+     normal-vision, light mode). Meaning is fixed dashboard-wide — copper is
+     always "in" (income/sales), teal always "out" (expense/purchases) — so
+     it's assigned by role below, never picked ad hoc per chart. */
+  --teal-400: oklch(0.68 0.14 175);
+  --teal-500: oklch(0.6 0.15 175);
+  --success-400: oklch(0.68 0.16 145);
+  --success-500: oklch(0.6 0.16 145);
+
   /* 2. Semantic (light) */
   --background: oklch(1 0 0);
   --foreground: var(--neutral-900);
@@ -74,6 +85,11 @@
   --chart-3: var(--neutral-600);
   --chart-4: var(--brand-700);
   --chart-5: var(--neutral-400);
+  /* Dashboard chart roles: money in vs money out, and status polarity. */
+  --chart-in: var(--brand-600);
+  --chart-out: var(--teal-500);
+  --success: var(--success-500);
+  --success-foreground: var(--neutral-50);
 
   /* Sidebar is always dark espresso-brown chrome, in both light and dark mode. */
   --sidebar: var(--brown-900);
@@ -118,6 +134,10 @@
   --chart-3: var(--neutral-400);
   --chart-4: var(--brand-600);
   --chart-5: var(--neutral-500);
+  --chart-in: var(--brand-400);
+  --chart-out: var(--teal-400);
+  --success: var(--success-400);
+  --success-foreground: var(--neutral-900);
 
   /* Same espresso-brown surface as light mode, one shade lighter than the
      main dark background so the sidebar still reads as its own panel. */

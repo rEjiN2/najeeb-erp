@@ -43,7 +43,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
               <SidebarSectionLabel collapsed={collapsed}>
                 Favourites
               </SidebarSectionLabel>
-              <nav className="space-y-0.5">
+              <nav className="divide-sidebar-border divide-y">
                 {favouriteItems.map((item) => (
                   <SidebarLeafLink
                     key={item.href}
@@ -58,7 +58,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
             </div>
           ) : null}
 
-          <nav className="space-y-0.5">
+          <nav className="divide-sidebar-border divide-y">
             {NAV_ITEMS.map((entry) =>
               isNavGroup(entry) ? (
                 <SidebarNavGroup
