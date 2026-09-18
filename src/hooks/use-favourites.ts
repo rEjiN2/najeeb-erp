@@ -6,10 +6,21 @@ const STORAGE_KEY = "ala:favourites";
 const FAVOURITES_EVENT = "ala:favourites-changed";
 const DEFAULT_FAVOURITES = ["/dashboard", "/accounting-inventory/masters"];
 
-function readFavourites(): string[] {
+// useSyncExternalStore requires getSnapshot to return a stable reference
+// when nothing changed — JSON.parse-ing on every call would return a new
+// array each render and put React in an infinite re-render loop. Cache the
+// parsed result and only reparse when the raw string actually changes.
+let cachedRaw: string | null = null;
+let cachedSnapshot: string[] = DEFAULT_FAVOURITES;
+
+function getSnapshot(): string[] {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : DEFAULT_FAVOURITES;
+    if (raw !== cachedRaw) {
+      cachedRaw = raw;
+      cachedSnapshot = raw ? (JSON.parse(raw) as string[]) : DEFAULT_FAVOURITES;
+    }
+    return cachedSnapshot;
   } catch {
     return DEFAULT_FAVOURITES;
   }
@@ -36,12 +47,12 @@ function subscribe(onStoreChange: () => void) {
 export function useFavourites() {
   const favourites = useSyncExternalStore(
     subscribe,
-    readFavourites,
+    getSnapshot,
     () => DEFAULT_FAVOURITES,
   );
 
   const toggleFavourite = useCallback((href: string) => {
-    const current = readFavourites();
+    const current = getSnapshot();
     const next = current.includes(href)
       ? current.filter((item) => item !== href)
       : [...current, href];

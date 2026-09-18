@@ -29,5 +29,10 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Also skips public/ static assets (images, fonts, etc.) by extension —
+  // without this, unauthenticated pages like /login couldn't load their own
+  // background image, since the gate would redirect the asset request too.
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|avif|ico|css|js|woff|woff2|ttf)$).*)",
+  ],
 };

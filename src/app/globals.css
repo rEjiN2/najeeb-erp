@@ -44,6 +44,10 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* Generates `rounded-field` — used by Input/Select/Textarea only. Flat
+     5px per the design spec, deliberately independent of the --radius dial
+     above so it can't drift when the general radius is tuned. */
+  --radius-field: var(--control-radius);
 }
 
 /* Semantic color values (:root / .dark) live in ../styles/tokens.css,

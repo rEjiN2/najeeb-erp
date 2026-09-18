@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 
 import { LoginForm } from "@/features/auth/login-form";
 
@@ -26,19 +27,31 @@ export default async function LoginPage({
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
-      <div className="bg-primary text-primary-foreground relative hidden flex-col justify-between p-10 lg:flex">
-        <span className="font-heading text-lg font-semibold">ALA Dates</span>
+      <div className="relative hidden flex-col justify-between overflow-hidden p-10 lg:flex">
+        <Image
+          src="/auth-banner.jpg"
+          alt=""
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover"
+        />
+        <div className="from-sidebar via-sidebar/75 to-sidebar/30 absolute inset-0 bg-gradient-to-t" />
 
-        <div className="space-y-3">
-          <p className="font-heading text-2xl leading-snug">
-            One system for every branch, warehouse, van and sale.
+        <span className="font-heading text-sidebar-foreground relative text-lg font-semibold">
+          ALA Dates
+        </span>
+
+        <div className="relative space-y-3">
+          <p className="font-heading text-sidebar-foreground text-2xl leading-snug">
+            Premium dates, precisely tracked.
           </p>
-          <p className="text-primary-foreground/80 text-sm">
-            Dates trading, rebuilt for how the business actually runs.
+          <p className="text-sidebar-foreground/80 text-sm">
+            From warehouse to van to sale — one system for the whole business.
           </p>
         </div>
 
-        <p className="text-primary-foreground/60 text-xs">
+        <p className="text-sidebar-foreground/60 relative text-xs">
           © {new Date().getFullYear()} ALA Dates Trading
         </p>
       </div>

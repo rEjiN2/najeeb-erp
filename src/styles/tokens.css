@@ -9,38 +9,47 @@
  *                    the primitives directly.
  *   3. Typography  — font families + a small type-scale override.
  *
- * Brand hue is a warm amber/terracotta (dates, dried fruit, gold packaging)
- * instead of shadcn's default neutral-gray theme, so the product doesn't
- * read as an unstyled shadcn template.
+ * Palette: a charcoal/near-black neutral base with a warm amber/copper
+ * accent — no default shadcn slate/blue anywhere. The main canvas is pure
+ * white; the sidebar is its own dark espresso-brown surface in BOTH light
+ * and dark mode (a persistent dark-chrome / light-canvas split, not
+ * something that flips with the theme toggle).
  */
 
 :root {
-  /* 1a. Brand primitives (amber -> terracotta) */
-  --brand-50: oklch(0.98 0.02 70);
-  --brand-100: oklch(0.95 0.045 65);
-  --brand-200: oklch(0.9 0.08 60);
-  --brand-300: oklch(0.83 0.12 55);
-  --brand-400: oklch(0.74 0.16 50);
-  --brand-500: oklch(0.64 0.19 45);
-  --brand-600: oklch(0.55 0.19 40);
-  --brand-700: oklch(0.46 0.17 38);
-  --brand-800: oklch(0.38 0.14 35);
-  --brand-900: oklch(0.28 0.1 32);
+  /* 1a. Brand primitives (amber -> copper). Drives primary buttons, links,
+     active nav state, and focus rings — the only accent color in the app. */
+  --brand-50: oklch(0.97 0.03 60);
+  --brand-100: oklch(0.93 0.06 55);
+  --brand-200: oklch(0.87 0.09 52);
+  --brand-300: oklch(0.79 0.13 48);
+  --brand-400: oklch(0.71 0.16 45);
+  --brand-500: oklch(0.63 0.18 42);
+  --brand-600: oklch(0.55 0.18 38);
+  --brand-700: oklch(0.46 0.16 35);
+  --brand-800: oklch(0.37 0.13 33);
+  --brand-900: oklch(0.28 0.1 30);
 
-  /* 1b. Neutral primitives — warm-tinted, not pure gray */
-  --neutral-50: oklch(0.985 0.003 75);
-  --neutral-100: oklch(0.965 0.004 75);
-  --neutral-200: oklch(0.925 0.005 75);
-  --neutral-300: oklch(0.87 0.006 75);
-  --neutral-400: oklch(0.7 0.008 75);
-  --neutral-500: oklch(0.55 0.008 75);
-  --neutral-600: oklch(0.44 0.008 75);
-  --neutral-700: oklch(0.33 0.007 75);
-  --neutral-800: oklch(0.24 0.006 75);
-  --neutral-900: oklch(0.16 0.005 75);
+  /* 1b. Neutral primitives — charcoal/near-black, not blue-gray or beige. */
+  --neutral-50: oklch(0.985 0.002 60);
+  --neutral-100: oklch(0.965 0.003 60);
+  --neutral-200: oklch(0.9 0.004 60);
+  --neutral-300: oklch(0.82 0.005 60);
+  --neutral-400: oklch(0.64 0.006 60);
+  --neutral-500: oklch(0.5 0.006 60);
+  --neutral-600: oklch(0.38 0.006 60);
+  --neutral-700: oklch(0.28 0.006 60);
+  --neutral-800: oklch(0.2 0.005 60);
+  --neutral-900: oklch(0.13 0.004 60);
+
+  /* 1c. Sidebar-only primitives — espresso brown, deliberately not part of
+     the neutral scale above so the sidebar reads as its own dark surface. */
+  --brown-700: oklch(0.33 0.035 45);
+  --brown-800: oklch(0.26 0.032 45);
+  --brown-900: oklch(0.19 0.028 45);
 
   /* 2. Semantic (light) */
-  --background: var(--neutral-50);
+  --background: oklch(1 0 0);
   --foreground: var(--neutral-900);
   --card: oklch(1 0 0);
   --card-foreground: var(--neutral-900);
@@ -56,24 +65,32 @@
   --accent-foreground: var(--brand-900);
   --destructive: oklch(0.577 0.245 27.325);
   --border: var(--neutral-200);
-  --input: var(--neutral-200);
+  /* Form-control border — a shade darker than --border so inputs read as
+     distinct, clickable boxes rather than blending into card edges. */
+  --input: var(--neutral-300);
   --ring: var(--brand-500);
   --chart-1: var(--brand-500);
   --chart-2: var(--brand-300);
   --chart-3: var(--neutral-600);
   --chart-4: var(--brand-700);
   --chart-5: var(--neutral-400);
-  --sidebar: var(--neutral-50);
-  --sidebar-foreground: var(--neutral-900);
-  --sidebar-primary: var(--brand-600);
-  --sidebar-primary-foreground: var(--neutral-50);
-  --sidebar-accent: var(--brand-100);
-  --sidebar-accent-foreground: var(--brand-900);
-  --sidebar-border: var(--neutral-200);
-  --sidebar-ring: var(--brand-500);
 
-  /* Radius — one dial for the whole scale (see @theme in globals.css) */
+  /* Sidebar is always dark espresso-brown chrome, in both light and dark mode. */
+  --sidebar: var(--brown-900);
+  --sidebar-foreground: var(--neutral-100);
+  --sidebar-primary: var(--brand-500);
+  --sidebar-primary-foreground: var(--neutral-50);
+  --sidebar-accent: var(--brown-800);
+  --sidebar-accent-foreground: var(--brand-300);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: var(--brand-400);
+
+  /* Radius */
   --radius: 0.75rem;
+  /* Form controls (input/select/textarea) get an exact, flat radius —
+     deliberately NOT derived from --radius, and NOT overridden per
+     component. See --radius-field in globals.css. */
+  --control-radius: 5px;
 }
 
 .dark {
@@ -94,30 +111,32 @@
   --accent-foreground: var(--brand-100);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
+  --input: oklch(1 0 0 / 20%);
   --ring: var(--brand-400);
   --chart-1: var(--brand-400);
   --chart-2: var(--brand-300);
   --chart-3: var(--neutral-400);
   --chart-4: var(--brand-600);
   --chart-5: var(--neutral-500);
-  --sidebar: var(--neutral-800);
+
+  /* Same espresso-brown surface as light mode, one shade lighter than the
+     main dark background so the sidebar still reads as its own panel. */
+  --sidebar: var(--brown-800);
   --sidebar-foreground: var(--neutral-50);
   --sidebar-primary: var(--brand-400);
   --sidebar-primary-foreground: var(--neutral-900);
-  --sidebar-accent: var(--brand-800);
-  --sidebar-accent-foreground: var(--brand-100);
-  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-accent: var(--brown-700);
+  --sidebar-accent-foreground: var(--brand-200);
+  --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: var(--brand-400);
 }
 
-/* 3. Typography — body uses Geist (bundled with next/font, no extra
-   network hop); headings use a warmer serif (see layout.tsx) so screens
-   don't read as one flat weight of sans-serif everywhere. */
+/* 3. Typography — Space Grotesk everywhere (body and headings alike, see
+   layout.tsx); Geist Mono stays for any future tabular/monospace need. */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-fraunces);
+  --font-heading: var(--font-space-grotesk);
 
   /* Type scale tuned for a data-dense ERP: tighter line-heights than
      Tailwind's prose-oriented defaults at the sizes tables/forms use most. */
