@@ -12,7 +12,13 @@ import { SidebarLeafLink } from "./sidebar-leaf-link";
 import { SidebarNavGroup } from "./sidebar-nav-group";
 import { SidebarSectionLabel } from "./sidebar-section-label";
 
-export function Sidebar({ collapsed }: { collapsed: boolean }) {
+export function Sidebar({
+  collapsed,
+  mobileOpen,
+}: {
+  collapsed: boolean;
+  mobileOpen: boolean;
+}) {
   const pathname = usePathname();
   const { favourites, toggleFavourite, isFavourite } = useFavourites();
 
@@ -23,8 +29,13 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
   return (
     <aside
       className={cn(
-        "border-sidebar-border bg-sidebar text-sidebar-foreground flex h-svh shrink-0 flex-col border-r transition-[width] duration-200",
-        collapsed ? "w-16" : "w-64",
+        // Mobile: an off-canvas drawer, always full width, slid in/out.
+        "border-sidebar-border bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex h-svh w-64 shrink-0 flex-col border-r transition-transform duration-200",
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        // Desktop: back in normal flow, always visible, width toggles
+        // between the full sidebar and an icon-only rail.
+        "lg:static lg:z-auto lg:translate-x-0 lg:transition-[width]",
+        collapsed ? "lg:w-16" : "lg:w-64",
       )}
     >
       <div className="border-sidebar-border flex h-14 items-center gap-2 border-b px-4">
