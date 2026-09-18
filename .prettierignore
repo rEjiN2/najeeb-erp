@@ -2,3 +2,7 @@
 node_modules
 pnpm-lock.yaml
 public
+# pnpm's content-addressable store — on some CI setups (e.g. Vercel) this
+# lands inside the repo checkout at build time; prettier recurses into
+# dotfolders by default and chokes trying to parse cached package files.
+.pnpm-store
