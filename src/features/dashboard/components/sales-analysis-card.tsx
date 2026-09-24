@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { currencyTooltipFormatter } from "@/features/dashboard/components/currency-tooltip";
-import { formatCompactCurrency } from "@/features/dashboard/format";
+import { formatCompactCurrency } from "@/lib/format";
 import { SALES_RECORDS, SALESMEN } from "@/features/dashboard/mock-data";
 
 const LATEST_DATE = "2026-09-18";

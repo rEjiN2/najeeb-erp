@@ -2,6 +2,7 @@ import {
   BarChart3,
   Boxes,
   Database,
+  HandCoins,
   LayoutDashboard,
   MapPin,
   Receipt,
@@ -52,8 +53,14 @@ export const NAV_ITEMS: NavEntry[] = [
       },
       {
         title: "Transactions",
-        href: "/accounting-inventory/transactions",
         icon: Receipt,
+        children: [
+          {
+            title: "Cash Receipt",
+            href: "/accounting-inventory/transactions/cash-receipt",
+            icon: HandCoins,
+          },
+        ],
       },
       {
         title: "Reports",

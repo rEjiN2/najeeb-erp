@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatCurrency } from "@/features/dashboard/format";
+import { formatCurrency } from "@/lib/format";
 import { PARTY_BALANCES } from "@/features/dashboard/mock-data";
 
 function initials(name: string) {

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/chart";
 import { currencyTooltipFormatter } from "@/features/dashboard/components/currency-tooltip";
 import { PeriodToggle } from "@/features/dashboard/components/period-toggle";
-import { formatCompactCurrency } from "@/features/dashboard/format";
+import { formatCompactCurrency } from "@/lib/format";
 import {
   PURCHASE_DATA,
   type PurchasePeriod,

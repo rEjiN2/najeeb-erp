@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 
 import { MasterFormFooter } from "@/components/master/master-form-footer";
-import { SearchableSelect } from "@/components/master/searchable-select";
+import { SearchableSelect } from "@/components/shared/searchable-select";
 import type { MasterStatus } from "@/components/master/status-badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

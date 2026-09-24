@@ -7,7 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatCurrency, formatPercent } from "@/features/dashboard/format";
+import { formatCurrency, formatPercent } from "@/lib/format";
 import { CASH_SUMMARY } from "@/features/dashboard/mock-data";
 import { cn } from "@/lib/utils";
 

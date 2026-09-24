@@ -1,5 +1,5 @@
 import type { ChartConfig } from "@/components/ui/chart";
-import { formatCurrency } from "@/features/dashboard/format";
+import { formatCurrency } from "@/lib/format";
 
 /**
  * A ChartTooltipContent `formatter` that prefixes values with "AED" and
