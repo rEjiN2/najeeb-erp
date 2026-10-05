@@ -218,9 +218,3 @@ export const SUPPLIER_BALANCES: SupplierBalance[] = [
   { id: "s5", name: "Al Hofuf Packing House", balance: 12_600 },
   { id: "s6", name: "Saudi Date Exporters Co.", balance: -8_750 },
 ];
-
-export const CASH_SUMMARY = {
-  bank: 482_600,
-  hand: 36_150,
-  previousTotal: 497_800,
-};

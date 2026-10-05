@@ -25,6 +25,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { DemoDataBadge } from "@/features/dashboard/components/demo-data-badge";
 import { currencyTooltipFormatter } from "@/features/dashboard/components/currency-tooltip";
 import { PeriodToggle } from "@/features/dashboard/components/period-toggle";
 import { formatCompactCurrency } from "@/lib/format";
@@ -50,7 +51,10 @@ export function IncomeExpenseCard() {
     <Card className="gap-4">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle>Income, Expense &amp; Profit</CardTitle>
+          <CardTitle className="flex flex-wrap items-center gap-2">
+            Income, Expense &amp; Profit
+            <DemoDataBadge />
+          </CardTitle>
           <CardDescription>Trend across the selected period</CardDescription>
         </div>
         <PeriodToggle

@@ -2,6 +2,11 @@ export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  role: {
+    id: string;
+    name: string;
+  };
+  permissions: string[];
 }
 
 export interface Session {
@@ -16,9 +21,8 @@ export interface LoginCredentials {
 
 /**
  * Provider-agnostic auth boundary. A client component or server helper only
- * ever talks to this shape — swapping the mock implementation for a real
- * backend later is a one-file change (see mock-auth-client.ts), not a
- * rewrite of every call site.
+ * ever talks to this shape — the implementation behind it (backend-auth-client.ts)
+ * can change without touching any call site.
  */
 export interface AuthClient {
   login(credentials: LoginCredentials): Promise<Session>;

@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { CashSummaryCard } from "@/features/dashboard/components/cash-summary-card";
+import {
+  CashSummaryCard,
+  CashSummaryCardSkeleton,
+} from "@/features/dashboard/components/cash-summary-card";
 import { IncomeExpenseCard } from "@/features/dashboard/components/income-expense-card";
 import { PartyBalancesCard } from "@/features/dashboard/components/party-balances-card";
 import { PurchaseAnalysisCard } from "@/features/dashboard/components/purchase-analysis-card";
@@ -30,7 +34,9 @@ export default async function DashboardPage() {
         <div className="md:col-span-2">
           <IncomeExpenseCard />
         </div>
-        <CashSummaryCard />
+        <Suspense fallback={<CashSummaryCardSkeleton />}>
+          <CashSummaryCard />
+        </Suspense>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

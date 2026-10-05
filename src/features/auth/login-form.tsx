@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { useAuth } from "./auth-context";
-import { MOCK_CREDENTIALS } from "./constants";
 
 export function LoginForm({ redirectTo }: { redirectTo: string }) {
   const router = useRouter();
@@ -92,10 +91,6 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
         Sign in
       </Button>
-
-      <p className="text-muted-foreground text-center text-xs">
-        Demo credentials: {MOCK_CREDENTIALS.email} / {MOCK_CREDENTIALS.password}
-      </p>
     </form>
   );
 }

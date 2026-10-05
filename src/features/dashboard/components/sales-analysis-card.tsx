@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DemoDataBadge } from "@/features/dashboard/components/demo-data-badge";
 import { currencyTooltipFormatter } from "@/features/dashboard/components/currency-tooltip";
 import { formatCompactCurrency } from "@/lib/format";
 import { SALES_RECORDS, SALESMEN } from "@/features/dashboard/mock-data";
@@ -69,7 +70,10 @@ export function SalesAnalysisCard() {
     <Card className="gap-4">
       <CardHeader className="flex flex-col gap-3">
         <div>
-          <CardTitle>Sales Analysis</CardTitle>
+          <CardTitle className="flex flex-wrap items-center gap-2">
+            Sales Analysis
+            <DemoDataBadge />
+          </CardTitle>
           <CardDescription>By date range and salesman</CardDescription>
         </div>
         <div className="flex flex-wrap items-center gap-2">

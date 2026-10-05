@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 
 import { LoginForm } from "@/features/auth/login-form";
+import { getServerSession } from "@/features/auth/session";
 
 export const metadata: Metadata = {
   title: "Sign in | ALA Dates",
@@ -24,6 +26,10 @@ export default async function LoginPage({
 }) {
   const { from } = await searchParams;
   const redirectTo = resolveRedirectTo(from);
+
+  if (await getServerSession()) {
+    redirect(redirectTo);
+  }
 
   return (
     <div className="grid min-h-svh lg:grid-cols-2">

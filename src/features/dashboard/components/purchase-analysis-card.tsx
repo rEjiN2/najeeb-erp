@@ -23,6 +23,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { DemoDataBadge } from "@/features/dashboard/components/demo-data-badge";
 import { currencyTooltipFormatter } from "@/features/dashboard/components/currency-tooltip";
 import { PeriodToggle } from "@/features/dashboard/components/period-toggle";
 import { formatCompactCurrency } from "@/lib/format";
@@ -53,7 +54,10 @@ export function PurchaseAnalysisCard() {
     <Card className="gap-4">
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle>Purchase Analysis</CardTitle>
+          <CardTitle className="flex flex-wrap items-center gap-2">
+            Purchase Analysis
+            <DemoDataBadge />
+          </CardTitle>
           <CardDescription>Total purchases by {period}</CardDescription>
         </div>
         <PeriodToggle

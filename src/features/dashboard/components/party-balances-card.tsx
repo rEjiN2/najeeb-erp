@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DemoDataBadge } from "@/features/dashboard/components/demo-data-badge";
 import { formatCurrency } from "@/lib/format";
 import { PARTY_BALANCES } from "@/features/dashboard/mock-data";
 
@@ -27,7 +28,10 @@ export function PartyBalancesCard() {
   return (
     <Card className="gap-4">
       <CardHeader>
-        <CardTitle>Party Balances</CardTitle>
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          Party Balances
+          <DemoDataBadge />
+        </CardTitle>
         <CardDescription>Top outstanding customer amounts</CardDescription>
       </CardHeader>
       <CardContent>

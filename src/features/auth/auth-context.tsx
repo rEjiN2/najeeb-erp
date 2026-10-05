@@ -10,12 +10,11 @@ import {
   type ReactNode,
 } from "react";
 
-import { mockAuthClient } from "./mock-auth-client";
+import { backendAuthClient } from "./backend-auth-client";
 import type { AuthClient, LoginCredentials, Session } from "./types";
 
-// The single place that picks which AuthClient implementation backs the
-// app. Point this at a real implementation when a backend exists.
-const authClient: AuthClient = mockAuthClient;
+// The single place that picks which AuthClient implementation backs the app.
+const authClient: AuthClient = backendAuthClient;
 
 interface AuthContextValue {
   session: Session | null;

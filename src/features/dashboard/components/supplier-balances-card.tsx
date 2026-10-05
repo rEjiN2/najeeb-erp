@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DemoDataBadge } from "@/features/dashboard/components/demo-data-badge";
 import { formatCurrency } from "@/lib/format";
 import { SUPPLIER_BALANCES } from "@/features/dashboard/mock-data";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,10 @@ export function SupplierBalancesCard() {
   return (
     <Card className="gap-4">
       <CardHeader>
-        <CardTitle>Supplier Balances</CardTitle>
+        <CardTitle className="flex flex-wrap items-center gap-2">
+          Supplier Balances
+          <DemoDataBadge />
+        </CardTitle>
         <CardDescription>
           Top outstanding amounts — signed from our side
         </CardDescription>
