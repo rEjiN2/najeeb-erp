@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronRight, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  ChevronRight,
+  Lock,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +27,38 @@ import {
 import type { FlattenedNode } from "@/lib/tree";
 import { cn } from "@/lib/utils";
 
+/**
+ * Indent guides drawn before a row; deeper rows share the last guide and show
+ * a "+n" marker, so the name column never gets squeezed off-screen however
+ * deep a branch goes.
+ */
+const MAX_INDENT_GUIDES = 8;
+
+function TreeIndent({ depth }: { depth: number }) {
+  const guides = Math.min(depth, MAX_INDENT_GUIDES);
+  const overflow = depth - guides;
+
+  return (
+    <>
+      {Array.from({ length: guides }, (_, level) => (
+        <span
+          key={level}
+          aria-hidden
+          className="before:border-border relative -my-2 w-5 shrink-0 self-stretch before:absolute before:inset-y-0 before:left-2.5 before:border-l"
+        />
+      ))}
+      {overflow > 0 ? (
+        <span
+          className="text-muted-foreground mr-0.5 text-xs tabular-nums"
+          title={`${depth + 1} levels deep`}
+        >
+          +{overflow}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 export interface MasterColumn<T> {
   key: string;
   header: string;
@@ -38,6 +76,11 @@ interface MasterTableProps<T> {
   onDelete: (item: T) => void;
   /** Non-null return disables delete for that row and becomes its tooltip. */
   deleteDisabledReason?: (item: T, hasChildren: boolean) => string | null;
+  /** Non-null return makes the row read-only: no actions, this note instead
+   * (e.g. records owned by another module). */
+  readOnlyNote?: (item: T) => string | null;
+  /** Fresh rows are loading (e.g. after a filter change) — dims the table. */
+  busy?: boolean;
   emptyMessage?: string;
 }
 
@@ -50,20 +93,36 @@ export function MasterTable<T>({
   onEdit,
   onDelete,
   deleteDisabledReason,
+  readOnlyNote,
+  busy = false,
   emptyMessage = "No records found.",
 }: MasterTableProps<T>) {
   const [firstColumn, ...restColumns] = columns;
+  // Flat lists get no expander gutter.
+  const isTree = rows.some((row) => row.depth > 0 || row.hasChildren);
 
   if (rows.length === 0) {
     return (
-      <div className="text-muted-foreground flex min-h-40 items-center justify-center rounded-lg border border-dashed text-sm">
+      <div
+        aria-busy={busy}
+        className={cn(
+          "text-muted-foreground flex min-h-40 items-center justify-center rounded-lg border border-dashed text-sm transition-opacity",
+          busy && "opacity-60",
+        )}
+      >
         {emptyMessage}
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border">
+    <div
+      aria-busy={busy}
+      className={cn(
+        "overflow-hidden rounded-lg border transition-opacity",
+        busy && "pointer-events-none opacity-60",
+      )}
+    >
       <Table>
         <TableHeader>
           <TableRow>
@@ -77,30 +136,26 @@ export function MasterTable<T>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(({ item, depth, hasChildren }) => {
+          {rows.map(({ item, depth, hasChildren, childCount }) => {
             const id = getId(item);
             const collapsed = collapsedIds.has(id);
             const disabledReason =
               deleteDisabledReason?.(item, hasChildren) ?? null;
+            const lockedNote = readOnlyNote?.(item) ?? null;
 
             return (
               <TableRow key={id}>
                 {firstColumn ? (
                   <TableCell>
-                    <div
-                      className="flex items-center gap-1.5"
-                      style={
-                        depth
-                          ? { paddingLeft: `${depth * 1.25}rem` }
-                          : undefined
-                      }
-                    >
+                    <div className="flex items-center">
+                      <TreeIndent depth={depth} />
                       {hasChildren ? (
                         <button
                           type="button"
                           onClick={() => onToggleExpand(id)}
                           aria-label={collapsed ? "Expand" : "Collapse"}
-                          className="text-muted-foreground hover:bg-muted hover:text-foreground flex size-5 shrink-0 items-center justify-center rounded-sm"
+                          aria-expanded={!collapsed}
+                          className="text-muted-foreground hover:bg-muted hover:text-foreground mr-1.5 flex size-5 shrink-0 items-center justify-center rounded-sm"
                         >
                           <ChevronRight
                             className={cn(
@@ -109,10 +164,18 @@ export function MasterTable<T>({
                             )}
                           />
                         </button>
-                      ) : (
-                        <span className="size-5 shrink-0" aria-hidden />
-                      )}
+                      ) : isTree ? (
+                        <span className="mr-1.5 size-5 shrink-0" aria-hidden />
+                      ) : null}
                       {firstColumn.render(item)}
+                      {hasChildren && collapsed ? (
+                        <span
+                          className="bg-muted text-muted-foreground ml-2 rounded-full px-1.5 text-xs tabular-nums"
+                          title={`${childCount} hidden below`}
+                        >
+                          {childCount}
+                        </span>
+                      ) : null}
                     </div>
                   </TableCell>
                 ) : null}
@@ -122,32 +185,38 @@ export function MasterTable<T>({
                   </TableCell>
                 ))}
                 <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label="Row actions"
+                  {lockedNote ? (
+                    <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                      <Lock className="size-3" /> {lockedNote}
+                    </span>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label="Row actions"
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEdit(item)}>
+                          <Pencil /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={Boolean(disabledReason)}
+                          title={disabledReason ?? undefined}
+                          onClick={() => onDelete(item)}
                         >
-                          <MoreHorizontal className="size-4" />
-                        </Button>
-                      }
-                    />
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => onEdit(item)}>
-                        <Pencil /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        disabled={Boolean(disabledReason)}
-                        title={disabledReason ?? undefined}
-                        onClick={() => onDelete(item)}
-                      >
-                        <Trash2 /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                          <Trash2 /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </TableCell>
               </TableRow>
             );

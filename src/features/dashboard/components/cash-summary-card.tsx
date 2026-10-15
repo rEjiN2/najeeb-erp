@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
-import { Banknote, CircleAlert, Landmark, LockKeyhole } from "lucide-react";
+import {
+  Banknote,
+  CircleAlert,
+  Landmark,
+  LockKeyhole,
+  Wallet,
+} from "lucide-react";
 
 import {
   Card,
@@ -25,12 +31,18 @@ const asOfFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Dubai",
 });
 
-function CashSummaryShell({ children }: { children: ReactNode }) {
+function CashSummaryShell({
+  children,
+  description = "Bank and hand, combined",
+}: {
+  children: ReactNode;
+  description?: string;
+}) {
   return (
     <Card className="gap-4">
       <CardHeader>
         <CardTitle>Cash Position</CardTitle>
-        <CardDescription>Bank and hand, combined</CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="flex h-full flex-col justify-between gap-6">
         {children}
@@ -49,15 +61,22 @@ export async function CashSummaryCard() {
   const summary = result.data;
   const bank = findBalanceGroup(summary, "bank");
   const hand = findBalanceGroup(summary, "cash");
+  const wallet = findBalanceGroup(summary, "wallet");
+  // The backend's total already includes wallets; their line only shows once
+  // there's money in one, so the card stays two-up for wallet-less setups.
+  const showWallet = wallet.total !== 0;
   const total = summary.cashAndBankTotal;
 
-  // Share bar only makes sense when both sides are non-negative and there is
+  // Share bar only makes sense when every part is non-negative and there is
   // something to split; an overdrawn bank would otherwise give a nonsense width.
-  const showShare = bank.total >= 0 && hand.total >= 0 && total > 0;
-  const bankShare = showShare ? (bank.total / total) * 100 : 0;
+  const showShare =
+    bank.total >= 0 && hand.total >= 0 && wallet.total >= 0 && total > 0;
+  const share = (amount: number) => (showShare ? (amount / total) * 100 : 0);
 
   return (
-    <CashSummaryShell>
+    <CashSummaryShell
+      description={showWallet ? "Bank, hand and wallets, combined" : undefined}
+    >
       <div>
         <span className="font-mono text-3xl font-semibold tabular-nums">
           {formatCurrency(total)}
@@ -77,12 +96,18 @@ export async function CashSummaryCard() {
             <>
               <div
                 className="bg-chart-in h-full"
-                style={{ width: `${bankShare}%` }}
+                style={{ width: `${share(bank.total)}%` }}
               />
               <div
                 className="bg-muted-foreground/40 h-full"
-                style={{ width: `${100 - bankShare}%` }}
+                style={{ width: `${share(hand.total)}%` }}
               />
+              {showWallet ? (
+                <div
+                  className="bg-chart-3 h-full"
+                  style={{ width: `${share(wallet.total)}%` }}
+                />
+              ) : null}
             </>
           )}
         </div>
@@ -102,6 +127,14 @@ export async function CashSummaryCard() {
             amount={hand.total}
             accountCount={hand.accountCount}
           />
+          {showWallet ? (
+            <BalanceFigure
+              icon={<Wallet className="text-chart-3 mt-0.5 size-4 shrink-0" />}
+              label="Wallets"
+              amount={wallet.total}
+              accountCount={wallet.accountCount}
+            />
+          ) : null}
         </div>
       </div>
     </CashSummaryShell>
@@ -144,6 +177,11 @@ const ERROR_COPY: Record<
   unauthorized: {
     title: "Not signed in to the server",
     body: "Live balances need a backend session. Sign in again to load them.",
+    icon: LockKeyhole,
+  },
+  forbidden: {
+    title: "No access to balances",
+    body: "Your account doesn't have permission to view cash and bank balances.",
     icon: LockKeyhole,
   },
   unavailable: {

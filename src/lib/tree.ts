@@ -9,6 +9,8 @@ export interface FlattenedNode<T> {
   item: T;
   depth: number;
   hasChildren: boolean;
+  /** Direct children — shown on a collapsed node so hidden rows aren't a surprise. */
+  childCount: number;
 }
 
 function groupByParent<T extends { id: string }>(
@@ -40,8 +42,9 @@ export function flattenTree<T extends { id: string }>(
 
   function visit(parentId: string | null, depth: number) {
     for (const item of childrenByParent.get(parentId) ?? []) {
-      const hasChildren = (childrenByParent.get(item.id)?.length ?? 0) > 0;
-      result.push({ item, depth, hasChildren });
+      const childCount = childrenByParent.get(item.id)?.length ?? 0;
+      const hasChildren = childCount > 0;
+      result.push({ item, depth, hasChildren, childCount });
       if (hasChildren && !collapsedIds.has(item.id)) {
         visit(item.id, depth + 1);
       }
@@ -75,6 +78,29 @@ export function getDescendantIds<T extends { id: string }>(
   return descendants;
 }
 
+/** Levels below `id`: 0 for a leaf, 1 if it only has children, 2 with
+ * grandchildren, ... — how much a move adds on top of the new position. */
+export function getSubtreeHeight<T extends { id: string }>(
+  items: T[],
+  getParentId: (item: T) => string | null,
+  id: string,
+): number {
+  const childrenByParent = groupByParent(items, getParentId);
+  const visited = new Set<string>();
+
+  function height(nodeId: string): number {
+    if (visited.has(nodeId)) return 0; // guards against bad (cyclic) data
+    visited.add(nodeId);
+    let max = 0;
+    for (const child of childrenByParent.get(nodeId) ?? []) {
+      max = Math.max(max, 1 + height(child.id));
+    }
+    return max;
+  }
+
+  return height(id);
+}
+
 /** All ancestor ids of `id`, nearest first — used to keep a search match's
  * path visible (and auto-expanded) in a filtered tree view. */
 export function getAncestorIds<T extends { id: string }>(
@@ -87,11 +113,33 @@ export function getAncestorIds<T extends { id: string }>(
 
   let current = byId.get(id);
   let parentId = current ? getParentId(current) : null;
-  while (parentId) {
+  while (parentId && !ancestors.has(parentId)) {
     ancestors.add(parentId);
     current = byId.get(parentId);
     parentId = current ? getParentId(current) : null;
   }
 
   return ancestors;
+}
+
+/**
+ * Nested `{ ...item, children }` forest (the backend's `/tree` endpoints) →
+ * flat list in depth-first order, the shape every helper above expects.
+ * `pick` strips `children` (and anything else) off each node.
+ */
+export function flattenTreeNodes<N extends { children: N[] }, T>(
+  nodes: readonly N[],
+  pick: (node: N) => T,
+): T[] {
+  const result: T[] = [];
+
+  function visit(list: readonly N[]) {
+    for (const node of list) {
+      result.push(pick(node));
+      visit(node.children);
+    }
+  }
+
+  visit(nodes);
+  return result;
 }

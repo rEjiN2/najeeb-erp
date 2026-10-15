@@ -5,6 +5,17 @@ export function formatCurrency(value: number): string {
   return `${sign}AED ${numberFormatter.format(Math.abs(Math.round(value)))}`;
 }
 
+const amountFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/** Exact ledger figure, to the fils — "AED 1,234.50". */
+export function formatAmount(value: number): string {
+  const sign = value < 0 ? "-" : "";
+  return `${sign}AED ${amountFormatter.format(Math.abs(value))}`;
+}
+
 /** Short axis/tick form — "AED 120k", "AED 1.4M". */
 export function formatCompactCurrency(value: number): string {
   const sign = value < 0 ? "-" : "";

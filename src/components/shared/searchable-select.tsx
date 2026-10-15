@@ -3,6 +3,7 @@
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -22,6 +23,12 @@ import { cn } from "@/lib/utils";
 export interface SearchableSelectOption {
   value: string;
   label: string;
+  /** Secondary line (e.g. a record's code); also searchable. */
+  description?: string;
+  /** Short tag shown beside the label (e.g. a record type); also searchable. */
+  badge?: string;
+  /** When set, the option is shown but can't be picked, with this as why. */
+  disabledReason?: string;
 }
 
 interface SearchableSelectProps {
@@ -31,6 +38,28 @@ interface SearchableSelectProps {
   placeholder?: string;
   emptyText?: string;
   disabled?: boolean;
+  /** Offer a "no selection" item. Off when a value is required. */
+  allowClear?: boolean;
+  /** Text for the "no selection" item, e.g. "Top level (no parent)". */
+  clearLabel?: string;
+}
+
+// Match on what the user can see (label, description, badge) — never on the
+// raw option value, which is often an opaque id. Every word typed must appear
+// somewhere, so "main ajman" finds "Main Branch > Ajman Warehouse".
+function filterByKeywords(_value: string, search: string, keywords?: string[]) {
+  const terms = search.toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length === 0) return 1;
+  const haystack = (keywords ?? []).join(" ").toLowerCase();
+  return terms.every((term) => haystack.includes(term)) ? 1 : 0;
+}
+
+function OptionBadge({ children }: { children: string }) {
+  return (
+    <Badge variant="outline" className="shrink-0 font-normal">
+      {children}
+    </Badge>
+  );
 }
 
 /**
@@ -45,6 +74,8 @@ export function SearchableSelect({
   placeholder = "Select...",
   emptyText = "No results.",
   disabled,
+  allowClear = true,
+  clearLabel = "Clear selection",
 }: SearchableSelectProps) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value) ?? null;
@@ -62,36 +93,51 @@ export function SearchableSelect({
             className="w-full justify-between font-normal"
           >
             <span
-              className={cn("truncate", !selected && "text-muted-foreground")}
+              className={cn(
+                "min-w-0 flex-1 truncate text-left",
+                !selected && "text-muted-foreground",
+              )}
+              title={selected?.label}
             >
               {selected ? selected.label : placeholder}
             </span>
+            {selected?.badge ? (
+              <OptionBadge>{selected.badge}</OptionBadge>
+            ) : null}
             <ChevronsUpDown className="size-4 shrink-0 opacity-50" />
           </Button>
         }
       />
       <PopoverContent className="w-(--anchor-width) p-0" align="start">
-        <Command>
+        <Command filter={filterByKeywords}>
           <CommandInput placeholder="Search..." />
           <CommandList>
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
-              {value ? (
+              {allowClear && value ? (
                 <CommandItem
                   value="__clear__"
+                  keywords={[clearLabel]}
                   onSelect={() => {
                     onChange(null);
                     setOpen(false);
                   }}
                   className="text-muted-foreground"
                 >
-                  Clear selection
+                  {clearLabel}
                 </CommandItem>
               ) : null}
               {options.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
+                  value={option.value}
+                  keywords={[
+                    option.label,
+                    option.description ?? "",
+                    option.badge ?? "",
+                  ]}
+                  disabled={Boolean(option.disabledReason)}
+                  title={option.disabledReason}
                   onSelect={() => {
                     onChange(option.value);
                     setOpen(false);
@@ -99,11 +145,27 @@ export function SearchableSelect({
                 >
                   <Check
                     className={cn(
-                      "mr-2 size-4",
+                      "mt-0.5 mr-2 size-4 self-start",
                       value === option.value ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  {option.label}
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-start gap-2">
+                      {/* Wraps instead of truncating: for paths the end (the
+                          option's own name) is the part that matters. */}
+                      <span className="min-w-0 flex-1 break-words">
+                        {option.label}
+                      </span>
+                      {option.badge ? (
+                        <OptionBadge>{option.badge}</OptionBadge>
+                      ) : null}
+                    </span>
+                    {option.description || option.disabledReason ? (
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {option.disabledReason ?? option.description}
+                      </span>
+                    ) : null}
+                  </span>
                 </CommandItem>
               ))}
             </CommandGroup>

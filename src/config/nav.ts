@@ -8,6 +8,7 @@ import {
   Receipt,
   Settings,
   Tags,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,6 +40,11 @@ export const NAV_ITEMS: NavEntry[] = [
         title: "Masters",
         icon: Database,
         children: [
+          {
+            title: "Accounts",
+            href: "/accounting-inventory/masters/accounts",
+            icon: Wallet,
+          },
           {
             title: "Locations",
             href: "/accounting-inventory/masters/locations",

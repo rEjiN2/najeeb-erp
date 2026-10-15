@@ -5,7 +5,14 @@ import { apiGet } from "@/lib/api";
 // Mirrors DashboardSummary in the backend's dashboard.service.ts.
 
 export type LedgerAccountType =
-  "cash" | "bank" | "party" | "supplier" | "income" | "expense" | "other";
+  | "cash"
+  | "bank"
+  | "wallet"
+  | "party"
+  | "supplier"
+  | "income"
+  | "expense"
+  | "other";
 
 export interface DashboardAccountBalance {
   id: string;
@@ -27,7 +34,7 @@ export interface DashboardSummary {
   asOf: string;
   /** One entry per ledger account type, empty types included. */
   balancesByType: DashboardBalanceGroup[];
-  /** Cash + bank combined. */
+  /** Active cash + bank + wallet accounts combined. */
   cashAndBankTotal: number;
 }
 

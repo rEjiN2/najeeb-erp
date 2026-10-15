@@ -1,4 +1,4 @@
-import { MapPin, Tags } from "lucide-react";
+import { MapPin, Tags, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -14,6 +14,12 @@ export const metadata: Metadata = {
 };
 
 const MASTER_LINKS = [
+  {
+    href: "/accounting-inventory/masters/accounts",
+    title: "Accounts",
+    description: "Cash, bank, wallet, income and expense accounts.",
+    icon: Wallet,
+  },
   {
     href: "/accounting-inventory/masters/locations",
     title: "Locations",

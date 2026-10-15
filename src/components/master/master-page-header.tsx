@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 interface MasterPageHeaderProps {
   title: string;
   description: string;
-  actionLabel: string;
-  onAction: () => void;
+  /** Omit both to render the header without its primary action (e.g. while
+   * the list is loading or failed to load). */
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 export function MasterPageHeader({
@@ -21,9 +23,11 @@ export function MasterPageHeader({
         <h1 className="font-heading text-2xl font-semibold">{title}</h1>
         <p className="text-muted-foreground text-sm">{description}</p>
       </div>
-      <Button onClick={onAction}>
-        <Plus /> {actionLabel}
-      </Button>
+      {actionLabel && onAction ? (
+        <Button onClick={onAction}>
+          <Plus /> {actionLabel}
+        </Button>
+      ) : null}
     </div>
   );
 }

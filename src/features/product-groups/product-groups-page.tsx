@@ -1,8 +1,11 @@
 "use client";
 
+import { FolderTree } from "lucide-react";
+
 import { DeleteConfirmDialog } from "@/components/master/delete-confirm-dialog";
 import { MasterFormSheet } from "@/components/master/master-form-sheet";
 import { MasterPageHeader } from "@/components/master/master-page-header";
+import { MasterEmptyState } from "@/components/master/master-states";
 import {
   MasterTable,
   type MasterColumn,
@@ -10,9 +13,14 @@ import {
 import { MasterToolbar } from "@/components/master/master-toolbar";
 import { useMasterCrud } from "@/hooks/use-master-crud";
 
-import { MOCK_PRODUCT_GROUPS } from "./mock-data";
+import {
+  createProductGroup,
+  deleteProductGroup,
+  updateProductGroup,
+} from "./actions";
+import { PRODUCT_GROUPS_DESCRIPTION, PRODUCT_GROUPS_TITLE } from "./constants";
 import { ProductGroupForm } from "./product-group-form";
-import type { ProductGroup } from "./types";
+import type { ProductGroup, ProductGroupInput } from "./types";
 
 const COLUMNS: MasterColumn<ProductGroup>[] = [
   {
@@ -38,41 +46,64 @@ function matchesQuery(group: ProductGroup, query: string) {
   );
 }
 
-export function ProductGroupsPage() {
-  const crud = useMasterCrud<ProductGroup>({
-    data: MOCK_PRODUCT_GROUPS,
+export function ProductGroupsPage({
+  productGroups,
+}: {
+  productGroups: ProductGroup[];
+}) {
+  const crud = useMasterCrud<ProductGroup, ProductGroupInput>({
+    data: productGroups,
+    onSave: (values, editing) =>
+      editing
+        ? updateProductGroup(editing.id, values)
+        : createProductGroup(values),
+    onDelete: (group) => deleteProductGroup(group.id),
     matches: matchesQuery,
     getParentId: (group) => group.parentId,
   });
 
+  const isEmpty = crud.items.length === 0;
+
   return (
     <div className="space-y-6">
       <MasterPageHeader
-        title="Product Groups"
-        description="How products are grouped and nested — e.g. Dates > Ajwa Dates."
-        actionLabel="Add Product Group"
+        title={PRODUCT_GROUPS_TITLE}
+        description={PRODUCT_GROUPS_DESCRIPTION}
+        actionLabel={isEmpty ? undefined : "Add Product Group"}
         onAction={crud.openCreate}
       />
 
-      <MasterToolbar
-        value={crud.query}
-        onChange={crud.setQuery}
-        placeholder="Search product groups..."
-      />
+      {isEmpty ? (
+        <MasterEmptyState
+          icon={FolderTree}
+          title="No product groups yet"
+          description="Create a top-level group like “Dates”, then nest varieties and gift packs under it."
+          actionLabel="Add Product Group"
+          onAction={crud.openCreate}
+        />
+      ) : (
+        <>
+          <MasterToolbar
+            value={crud.query}
+            onChange={crud.setQuery}
+            placeholder="Search product groups..."
+          />
 
-      <MasterTable
-        columns={COLUMNS}
-        rows={crud.rows}
-        getId={(group) => group.id}
-        collapsedIds={crud.collapsedIds}
-        onToggleExpand={crud.toggleExpand}
-        onEdit={crud.openEdit}
-        onDelete={crud.requestDelete}
-        deleteDisabledReason={(_group, hasChildren) =>
-          hasChildren ? "Move or remove its child groups first." : null
-        }
-        emptyMessage="No product groups match your search."
-      />
+          <MasterTable
+            columns={COLUMNS}
+            rows={crud.rows}
+            getId={(group) => group.id}
+            collapsedIds={crud.collapsedIds}
+            onToggleExpand={crud.toggleExpand}
+            onEdit={crud.openEdit}
+            onDelete={crud.requestDelete}
+            deleteDisabledReason={(_group, hasChildren) =>
+              hasChildren ? "Move or remove its child groups first." : null
+            }
+            emptyMessage="No product groups match your search."
+          />
+        </>
+      )}
 
       <MasterFormSheet
         open={crud.isFormOpen}
@@ -97,6 +128,8 @@ export function ProductGroupsPage() {
         }}
         itemLabel={crud.deleteTarget?.name ?? "this product group"}
         onConfirm={crud.confirmDelete}
+        pending={crud.isDeleting}
+        errors={crud.deleteErrors}
       />
     </div>
   );

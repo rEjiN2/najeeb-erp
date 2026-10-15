@@ -3,6 +3,7 @@ import { Geist_Mono, Space_Grotesk } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/shared/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/features/auth/auth-context";
 import { getServerSession } from "@/features/auth/session";
 
@@ -44,6 +45,7 @@ export default async function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider initialSession={session}>{children}</AuthProvider>
+          <Toaster position="bottom-right" richColors />
         </ThemeProvider>
       </body>
     </html>

@@ -1,25 +1,64 @@
 import type { MasterStatus } from "@/components/master/status-badge";
 
-export const LOCATION_TYPES = ["Branch", "Warehouse", "Store", "Van"] as const;
+// Mirrors the backend's location.schema.ts enums and LocationTreeItem
+// (location.service.ts). Values are the wire values — lowercase.
+
+export const LOCATION_TYPES = ["branch", "warehouse", "store", "van"] as const;
 export type LocationType = (typeof LOCATION_TYPES)[number];
 
-/**
- * Which types a location of a given type may sit under. Branch has none —
- * it's always top-level. A Van is explicitly allowed under either a
- * Warehouse or a Branch directly.
- */
-export const ALLOWED_PARENT_TYPES: Record<LocationType, LocationType[]> = {
-  Branch: [],
-  Warehouse: ["Branch"],
-  Store: ["Warehouse"],
-  Van: ["Warehouse", "Branch"],
+export const LOCATION_TYPE_LABELS: Record<LocationType, string> = {
+  branch: "Branch",
+  warehouse: "Warehouse",
+  store: "Store",
+  van: "Van",
 };
+
+export const LOCATION_STATUSES = ["active", "inactive"] as const;
+export type LocationStatus = (typeof LOCATION_STATUSES)[number];
+
+export const LOCATION_STATUS_LABELS: Record<LocationStatus, MasterStatus> = {
+  active: "Active",
+  inactive: "Inactive",
+};
+
+/**
+ * GET /locations/rules — the backend's single source for the hierarchy.
+ * `allowedParentTypes[type]` lists the types a location may sit under; a
+ * `null` entry means it may also be top-level (no `null` → parent required).
+ * Never hardcode these here.
+ */
+export interface LocationRules {
+  allowedParentTypes: Record<LocationType, (LocationType | null)[]>;
+  /** Max levels in one chain, a top-level location being level 1. */
+  maxLevels: number;
+}
 
 export interface Location {
   id: string;
   code: string;
   name: string;
   type: LocationType;
+  status: LocationStatus;
   parentId: string | null;
-  status: MasterStatus;
+  // The tree response also carries a cached `depth`, but records created
+  // before it existed omit it — depth is derived from parentId instead.
+}
+
+/** GET /locations/tree node. */
+export type LocationTreeNode = Location & { children: LocationTreeNode[] };
+
+/**
+ * Body for POST /locations and PATCH /locations/:id (CreateLocationDto).
+ * No `code`: the backend generates it per type (BR-/WH-/ST-/VAN-) and rejects
+ * a payload that includes one.
+ */
+export type LocationInput = Omit<Location, "id" | "code">;
+
+/** The saved Mongoose document POST/PATCH /locations respond with — only the
+ * fields the UI reads. */
+export interface SavedLocation {
+  _id: string;
+  code: string;
+  name: string;
+  type: LocationType;
 }
