@@ -17,18 +17,22 @@ import { buttonVariants } from "@/components/ui/button";
 import { readErrorMessages } from "@/lib/api-types";
 import { redirectToLogin } from "@/lib/browser-api";
 
-/** Same-origin route handler that streams the backend PDF (app/api/...). */
-export function receiptPdfUrl(id: string, download = false): string {
-  return `/api/cash-receipts/${encodeURIComponent(id)}/pdf${download ? "?download=1" : ""}`;
-}
+import { voucherPdfUrl, type VoucherConfig } from "./config";
 
 type PdfResult =
   { ok: true; blob: Blob; filename: string } | { ok: false; message: string };
 
-async function fetchPdf(id: string, download: boolean): Promise<PdfResult> {
+async function fetchPdf(
+  config: VoucherConfig,
+  id: string,
+  download: boolean,
+): Promise<PdfResult> {
   let response: Response;
   try {
-    response = await fetch(receiptPdfUrl(id, download), { cache: "no-store" });
+    // Same-origin route handler that streams the backend PDF (app/api/...).
+    response = await fetch(voucherPdfUrl(config, id, download), {
+      cache: "no-store",
+    });
   } catch {
     return {
       ok: false,
@@ -44,11 +48,14 @@ async function fetchPdf(id: string, download: boolean): Promise<PdfResult> {
     if (response.status === 403) {
       return {
         ok: false,
-        message: "You don't have permission to print this receipt.",
+        message: `You don't have permission to print this ${config.noun}.`,
       };
     }
     if (response.status === 404) {
-      return { ok: false, message: "This receipt no longer exists." };
+      return {
+        ok: false,
+        message: `This ${config.noun} no longer exists.`,
+      };
     }
     const messages = await readErrorMessages(response);
     return {
@@ -63,7 +70,7 @@ async function fetchPdf(id: string, download: boolean): Promise<PdfResult> {
   const filename =
     /filename="([^"]+)"/.exec(
       response.headers.get("Content-Disposition") ?? "",
-    )?.[1] ?? "cash-receipt.pdf";
+    )?.[1] ?? config.pdfFilename;
   return { ok: true, blob: await response.blob(), filename };
 }
 
@@ -71,13 +78,16 @@ async function fetchPdf(id: string, download: boolean): Promise<PdfResult> {
 const REVOKE_AFTER_MS = 60_000;
 
 /**
- * Print and Download PDF for a receipt. Print opens a window synchronously
+ * Print and Download PDF for a voucher. Print opens a window synchronously
  * (inside the click, so popup blockers allow it), fills it with the PDF and
  * opens the print dialog; when the window is blocked, a dialog offers a plain
  * link instead. Each successful fetch is a "printed" event on the backend, so
  * `onPrinted` lets the caller refresh its activity timeline.
  */
-export function useReceiptPdf({ onPrinted }: { onPrinted?: () => void } = {}) {
+export function useVoucherPdf(
+  config: VoucherConfig,
+  { onPrinted }: { onPrinted?: () => void } = {},
+) {
   const [busy, setBusy] = useState<"print" | "download" | null>(null);
   const [blocked, setBlocked] = useState<{
     id: string;
@@ -96,7 +106,7 @@ export function useReceiptPdf({ onPrinted }: { onPrinted?: () => void } = {}) {
     win.document.body.textContent = `Preparing ${voucherNo}…`;
 
     setBusy("print");
-    const result = await fetchPdf(id, false);
+    const result = await fetchPdf(config, id, false);
     setBusy(null);
     if (!result.ok) {
       win.close();
@@ -133,7 +143,7 @@ export function useReceiptPdf({ onPrinted }: { onPrinted?: () => void } = {}) {
 
   async function download(id: string, voucherNo: string) {
     setBusy("download");
-    const result = await fetchPdf(id, true);
+    const result = await fetchPdf(config, id, true);
     setBusy(null);
     if (!result.ok) {
       toast.error(`Couldn't download ${voucherNo}`, {
@@ -172,7 +182,7 @@ export function useReceiptPdf({ onPrinted }: { onPrinted?: () => void } = {}) {
           <AlertDialogCancel>Close</AlertDialogCancel>
           {blocked ? (
             <a
-              href={receiptPdfUrl(blocked.id)}
+              href={voucherPdfUrl(config, blocked.id)}
               target="_blank"
               rel="noopener"
               className={buttonVariants()}

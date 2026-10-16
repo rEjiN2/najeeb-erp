@@ -35,7 +35,7 @@ export default async function LoginPage({
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="relative hidden flex-col justify-between overflow-hidden p-10 lg:flex">
         <Image
-          src="/auth-banner.jpg"
+          src="/auth-banner.png"
           alt=""
           fill
           priority

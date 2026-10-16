@@ -1,4 +1,5 @@
 import {
+  Banknote,
   BarChart3,
   Boxes,
   Building,
@@ -86,6 +87,11 @@ export const NAV_ITEMS: NavEntry[] = [
             title: "Cash Receipts",
             href: "/accounting-inventory/transactions/cash-receipts",
             icon: HandCoins,
+          },
+          {
+            title: "Cash Payments",
+            href: "/accounting-inventory/transactions/cash-payments",
+            icon: Banknote,
           },
         ],
       },

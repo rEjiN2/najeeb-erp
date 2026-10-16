@@ -21,40 +21,42 @@ import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 
 import {
-  CancelReceiptDialog,
+  CancelVoucherDialog,
   type CancelTarget,
-} from "../cancel-receipt-dialog";
-import {
-  CASH_RECEIPTS_DESCRIPTION,
-  CASH_RECEIPTS_TITLE,
-  CASH_RECEIPT_ENTITY_TYPE,
-  NEW_CASH_RECEIPT_PATH,
-} from "../constants";
+} from "../cancel-voucher-dialog";
+import { newVoucherPath, type VoucherConfig } from "../config";
 import {
   DATE_PRESET_LABELS,
   PAGE_SIZES,
   clearedFilters,
   hasActiveFilters,
   toSearch,
-  type CashReceiptFilters,
   type SortField,
+  type VoucherFilters,
 } from "../filters";
-import type { AccountLookupItem, CashReceiptPage, UserRef } from "../types";
-import { useReceiptPdf } from "../use-receipt-pdf";
-import { ReceiptFilterBar, type Loadable } from "./receipt-filter-bar";
-import { ReceiptsTable } from "./receipts-table";
+import type {
+  AccountLookupItem,
+  CancelVoucherAction,
+  UserRef,
+  VoucherPage,
+} from "../types";
+import { useVoucherPdf } from "../use-voucher-pdf";
+import { VoucherFilterBar, type Loadable } from "./voucher-filter-bar";
+import { VouchersTable } from "./vouchers-table";
 
-interface CashReceiptsListPageProps {
-  page: CashReceiptPage;
-  filters: CashReceiptFilters;
+interface VoucherListPageProps {
+  config: VoucherConfig;
+  cancelAction: CancelVoucherAction;
+  page: VoucherPage;
+  filters: VoucherFilters;
   /** The calendar days the date filter resolved to (UAE), for the summary. */
   dateRange: { dateFrom?: string; dateTo?: string };
-  /** Posted receipts among the filtered ones. */
+  /** Posted vouchers among the filtered ones. */
   postedCount: number;
-  /** No receipt exists at all — not just none matching the filters. */
+  /** No voucher exists at all — not just none matching the filters. */
   isFirstRun: boolean;
   canManage: boolean;
-  cashAccounts: Loadable<AccountLookupItem[]>;
+  headerAccounts: Loadable<AccountLookupItem[]>;
   users: Loadable<UserRef[]>;
   cashiers: Loadable<CashierLookupItem[]>;
   selectedAccountName: string | null;
@@ -65,7 +67,7 @@ const PAGE_SIZE_ITEMS = Object.fromEntries(
 );
 
 function describeRange(
-  filters: CashReceiptFilters,
+  filters: VoucherFilters,
   { dateFrom, dateTo }: { dateFrom?: string; dateTo?: string },
 ): string {
   if (!dateFrom && !dateTo) return DATE_PRESET_LABELS.all;
@@ -83,13 +85,14 @@ function describeRange(
 }
 
 function SummaryStrip({
+  config,
   page,
   filters,
   dateRange,
   postedCount,
 }: Pick<
-  CashReceiptsListPageProps,
-  "page" | "filters" | "dateRange" | "postedCount"
+  VoucherListPageProps,
+  "config" | "page" | "filters" | "dateRange" | "postedCount"
 >) {
   const cancelledCount = page.summary.count - postedCount;
   const onlyCancelled = filters.status === "cancelled";
@@ -98,7 +101,7 @@ function SummaryStrip({
     <div className="bg-card flex flex-col gap-4 rounded-lg border p-4 sm:flex-row sm:items-center sm:gap-10">
       <div>
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          {onlyCancelled ? "Cancelled receipts" : "Receipts"}
+          {onlyCancelled ? `Cancelled ${config.nounPlural}` : config.NounPlural}
         </p>
         <p className="font-heading text-2xl font-semibold tabular-nums">
           {onlyCancelled ? cancelledCount : postedCount}
@@ -106,7 +109,7 @@ function SummaryStrip({
       </div>
       <div>
         <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-          Total received
+          {config.copy.totalLabel}
         </p>
         <p className="font-heading font-mono text-2xl font-semibold tabular-nums">
           {formatAmount(page.summary.total)}
@@ -119,30 +122,33 @@ function SummaryStrip({
         </p>
         <p>
           {onlyCancelled
-            ? "Cancelled receipts aren't counted in totals."
+            ? `Cancelled ${config.nounPlural} aren't counted in totals.`
             : cancelledCount > 0
-              ? `Excludes ${cancelledCount} cancelled ${cancelledCount === 1 ? "receipt" : "receipts"}.`
-              : "Cancelled receipts are excluded."}
+              ? `Excludes ${cancelledCount} cancelled ${cancelledCount === 1 ? config.noun : config.nounPlural}.`
+              : `Cancelled ${config.nounPlural} are excluded.`}
         </p>
       </div>
     </div>
   );
 }
 
-export function CashReceiptsListPage({
+export function VoucherListPage({
+  config,
+  cancelAction,
   page,
   filters,
   dateRange,
   postedCount,
   isFirstRun,
   canManage,
-  cashAccounts,
+  headerAccounts,
   users,
   cashiers,
   selectedAccountName,
-}: CashReceiptsListPageProps) {
+}: VoucherListPageProps) {
   const router = useRouter();
-  const pdf = useReceiptPdf();
+  const pdf = useVoucherPdf(config);
+  const newPath = newVoucherPath(config);
   const pathname = usePathname();
   const [isNavigating, startNavigation] = useTransition();
   const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
@@ -153,7 +159,7 @@ export function CashReceiptsListPage({
 
   // Filters, sorting and paging live in the URL: the server component
   // re-fetches for them, and the view survives a refresh or a shared link.
-  function navigate(next: Partial<CashReceiptFilters>, resetPage = true) {
+  function navigate(next: Partial<VoucherFilters>, resetPage = true) {
     const merged = { ...filters, ...(resetPage ? { page: 1 } : {}), ...next };
     startNavigation(() =>
       router.replace(`${pathname}${toSearch(merged)}`, { scroll: false }),
@@ -177,16 +183,12 @@ export function CashReceiptsListPage({
   const header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="font-heading text-2xl font-semibold">
-          {CASH_RECEIPTS_TITLE}
-        </h1>
-        <p className="text-muted-foreground text-sm">
-          {CASH_RECEIPTS_DESCRIPTION}
-        </p>
+        <h1 className="font-heading text-2xl font-semibold">{config.title}</h1>
+        <p className="text-muted-foreground text-sm">{config.description}</p>
       </div>
       {canManage && !isFirstRun ? (
-        <Link href={NEW_CASH_RECEIPT_PATH} className={buttonVariants()}>
-          <Plus /> Create Receipt
+        <Link href={newPath} className={buttonVariants()}>
+          <Plus /> {config.copy.createButton}
         </Link>
       ) : null}
     </div>
@@ -198,18 +200,18 @@ export function CashReceiptsListPage({
         {header}
         <StatePanel
           icon={HandCoins}
-          title="No cash receipts yet"
+          title={`No ${config.title.toLowerCase()} yet`}
           action={
             canManage ? (
-              <Link href={NEW_CASH_RECEIPT_PATH} className={buttonVariants()}>
-                <Plus /> Create your first receipt
+              <Link href={newPath} className={buttonVariants()}>
+                <Plus /> {config.copy.firstCreateButton}
               </Link>
             ) : undefined
           }
         >
           {canManage
-            ? "Record cash collected from customers. Each receipt posts to a cash account and the parties it was received from."
-            : "Receipts will appear here once someone records one."}
+            ? config.copy.firstRunText
+            : `${config.NounPlural} will appear here once someone records one.`}
         </StatePanel>
       </div>
     );
@@ -219,18 +221,20 @@ export function CashReceiptsListPage({
     <div className="space-y-6">
       {header}
 
-      <ReceiptFilterBar
+      <VoucherFilterBar
+        config={config}
         filters={filters}
         onChange={(next) => navigate(next)}
         onClear={() => navigate(clearedFilters(filters))}
         busy={isNavigating}
-        cashAccounts={cashAccounts}
+        headerAccounts={headerAccounts}
         users={users}
         cashiers={cashiers}
         selectedAccountName={selectedAccountName}
       />
 
       <SummaryStrip
+        config={config}
         page={page}
         filters={filters}
         dateRange={dateRange}
@@ -241,7 +245,7 @@ export function CashReceiptsListPage({
         filtered ? (
           <StatePanel
             icon={SearchX}
-            title="No receipts match these filters"
+            title={`No ${config.nounPlural} match these filters`}
             action={
               <Button
                 variant="outline"
@@ -252,13 +256,13 @@ export function CashReceiptsListPage({
             }
           >
             Try a wider date range, or clear the filters to see this
-            month&apos;s receipts.
+            month&apos;s {config.nounPlural}.
           </StatePanel>
         ) : (
           // Only the default "This month" applies, and nothing falls in it.
           <StatePanel
             icon={CalendarRange}
-            title="No receipts this month"
+            title={`No ${config.nounPlural} this month`}
             action={
               <Button
                 variant="outline"
@@ -268,13 +272,13 @@ export function CashReceiptsListPage({
               </Button>
             }
           >
-            Nothing has been received since the 1st. Earlier receipts are still
-            there.
+            {config.copy.emptyMonthText}
           </StatePanel>
         )
       ) : (
         <>
-          <ReceiptsTable
+          <VouchersTable
+            config={config}
             rows={page.items}
             filters={filters}
             onSort={sortBy}
@@ -330,7 +334,9 @@ export function CashReceiptsListPage({
 
       {pdf.fallback}
 
-      <CancelReceiptDialog
+      <CancelVoucherDialog
+        config={config}
+        cancelAction={cancelAction}
         target={cancelTarget}
         onClose={() => setCancelTarget(null)}
       />
@@ -338,8 +344,8 @@ export function CashReceiptsListPage({
       <ActivitySheet
         target={activityTarget}
         onClose={() => setActivityTarget(null)}
-        entityType={CASH_RECEIPT_ENTITY_TYPE}
-        subjectLabel="receipt"
+        entityType={config.entityType}
+        subjectLabel={config.noun}
         // The list's comment count is server-rendered; re-fetch it.
         onCommentAdded={() => startNavigation(() => router.refresh())}
       />

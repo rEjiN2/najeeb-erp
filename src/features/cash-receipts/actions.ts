@@ -1,84 +1,43 @@
 "use server";
 
-import { apiSend } from "@/lib/api";
 import type { MutationResult } from "@/lib/mutation";
-import { runMutation } from "@/lib/run-mutation";
+import {
+  cancelVoucher,
+  createVoucher,
+  updateVoucher,
+  type VoucherWriteTarget,
+} from "@/features/vouchers/mutations";
+import type {
+  VoucherInput,
+  VoucherSaveResult,
+} from "@/features/vouchers/types";
 
 import { CASH_RECEIPTS_PATH, cashReceiptPath } from "./constants";
-import type { CashReceiptInput } from "./types";
 
-// Server Actions are public endpoints: the backend authenticates the forwarded
-// cookie, checks cash-receipts:manage and validates every field, so these only
-// shape the request. Bodies are rebuilt field by field because the backend
-// rejects unknown properties — totals, voucher numbers and who/when included.
-
-const FORBIDDEN = "You don't have permission to manage cash receipts.";
-
-interface SavedReceipt {
-  _id: string;
-  voucherNo: string;
-}
-
-function toLines(input: CashReceiptInput) {
-  return input.lines.map((line) => ({
-    accountId: line.accountId,
-    amount: line.amount,
-    vat: line.vat,
-    ...(line.narration.trim() ? { narration: line.narration.trim() } : {}),
-    ...(line.remarks.trim() ? { remarks: line.remarks.trim() } : {}),
-  }));
-}
+const TARGET: VoucherWriteTarget = {
+  path: "/cash-receipts",
+  headerKey: "cashAccountId",
+  sendsReference: false,
+  acknowledgesWarnings: false,
+  listPath: CASH_RECEIPTS_PATH,
+  viewPath: cashReceiptPath,
+  forbiddenMessage: "You don't have permission to manage cash receipts.",
+  savedMessage: (voucherNo) => `Receipt ${voucherNo} saved`,
+  cancelledMessage: (voucherNo) => `Cash receipt ${voucherNo} cancelled`,
+};
 
 export async function createCashReceipt(
-  input: CashReceiptInput,
-): Promise<MutationResult> {
-  const comments = input.comments.trim();
-
-  return runMutation(
-    apiSend<SavedReceipt>("POST", "/cash-receipts", {
-      voucherDate: input.voucherDate,
-      cashAccountId: input.cashAccountId,
-      cashierId: input.cashierId,
-      ...(comments ? { comments } : {}),
-      lines: toLines(input),
-    }),
-    {
-      returnTo: CASH_RECEIPTS_PATH,
-      forbiddenMessage: FORBIDDEN,
-      successMessage: (saved) => `Receipt ${saved.voucherNo} saved`,
-      getId: (saved) => saved._id,
-    },
-  );
+  input: VoucherInput,
+): Promise<VoucherSaveResult> {
+  return createVoucher(TARGET, input, false);
 }
 
-/**
- * Sends the whole voucher; the backend diffs it and answers "No changes to
- * save" when nothing visible changed. Blank comments are sent as "" so
- * clearing them is an edit, not "leave as is".
- */
 export async function updateCashReceipt(
   id: string,
-  input: CashReceiptInput,
+  input: VoucherInput,
   changeNote: string,
-): Promise<MutationResult> {
-  const note = changeNote.trim();
-
-  return runMutation(
-    apiSend<SavedReceipt>("PATCH", `/cash-receipts/${encodeURIComponent(id)}`, {
-      voucherDate: input.voucherDate,
-      cashAccountId: input.cashAccountId,
-      cashierId: input.cashierId,
-      comments: input.comments.trim(),
-      lines: toLines(input),
-      ...(note ? { changeNote: note } : {}),
-    }),
-    {
-      returnTo: cashReceiptPath(id),
-      forbiddenMessage: FORBIDDEN,
-      successMessage: (saved) => `Receipt ${saved.voucherNo} saved`,
-      getId: (saved) => saved._id,
-    },
-  );
+): Promise<VoucherSaveResult> {
+  return updateVoucher(TARGET, id, input, changeNote, false);
 }
 
 /** Reverses the posting; the voucher stays, marked cancelled. */
@@ -86,16 +45,5 @@ export async function cancelCashReceipt(
   id: string,
   reason: string,
 ): Promise<MutationResult> {
-  return runMutation(
-    apiSend<SavedReceipt>(
-      "POST",
-      `/cash-receipts/${encodeURIComponent(id)}/cancel`,
-      { reason: reason.trim() },
-    ),
-    {
-      returnTo: cashReceiptPath(id),
-      forbiddenMessage: FORBIDDEN,
-      successMessage: (saved) => `Cash receipt ${saved.voucherNo} cancelled`,
-    },
-  );
+  return cancelVoucher(TARGET, id, reason);
 }

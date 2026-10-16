@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 import { ACCESS_COOKIE_NAME as BACKEND_ACCESS_COOKIE } from "@/features/auth/constants";
 
-import { readErrorMessages, reasonFor, type ApiResult } from "./api-types";
+import { readErrorBody, reasonFor, type ApiResult } from "./api-types";
 
 export type { ApiFailure, ApiFailureReason, ApiResult } from "./api-types";
 
@@ -57,7 +57,7 @@ async function apiRequest<T>(
       ok: false,
       reason: reasonFor(response.status),
       status: response.status,
-      messages: await readErrorMessages(response),
+      ...(await readErrorBody(response)),
     };
   }
 

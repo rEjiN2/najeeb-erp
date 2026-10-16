@@ -7,19 +7,38 @@ export interface ApiFailure {
   status?: number;
   /** Messages from the backend's error envelope; empty when it sent none. */
   messages: string[];
+  /** Things the user must confirm before retrying (e.g. a payment taking
+   * cash below zero) — present only when the backend sent a list. */
+  warnings?: unknown[];
 }
 
 export type ApiResult<T> = { ok: true; data: T } | ApiFailure;
 
-/** Backend error envelope: `message` is a string, or a list for validation errors. */
-export async function readErrorMessages(response: Response): Promise<string[]> {
+/** Backend error envelope: `message` is a string, or a list for validation
+ * errors; `warnings` rides along on a 409 that can be acknowledged. */
+export async function readErrorBody(
+  response: Response,
+): Promise<{ messages: string[]; warnings?: unknown[] }> {
   try {
-    const body = (await response.json()) as { message?: string | string[] };
-    if (Array.isArray(body.message)) return body.message;
-    return body.message ? [body.message] : [];
+    const body = (await response.json()) as {
+      message?: string | string[];
+      warnings?: unknown;
+    };
+    const messages = Array.isArray(body.message)
+      ? body.message
+      : body.message
+        ? [body.message]
+        : [];
+    return Array.isArray(body.warnings)
+      ? { messages, warnings: body.warnings }
+      : { messages };
   } catch {
-    return [];
+    return { messages: [] };
   }
+}
+
+export async function readErrorMessages(response: Response): Promise<string[]> {
+  return (await readErrorBody(response)).messages;
 }
 
 export function reasonFor(status: number): ApiFailureReason {

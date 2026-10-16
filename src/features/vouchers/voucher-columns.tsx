@@ -4,7 +4,7 @@ import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import { parseMoney, type DraftErrors, type DraftLine } from "./form/draft";
-import type { CashReceiptLine } from "./types";
+import type { VoucherLine } from "./types";
 
 function AccountName({ name }: { name: string | null }) {
   return name ? (
@@ -121,7 +121,7 @@ export function editColumns(
 }
 
 /** Read-only grid for the view page. */
-export const VIEW_COLUMNS: VoucherColumn<CashReceiptLine & { id: string }>[] = [
+export const VIEW_COLUMNS: VoucherColumn<VoucherLine & { id: string }>[] = [
   {
     key: "account",
     header: "Account",

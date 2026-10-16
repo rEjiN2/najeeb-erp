@@ -1,3 +1,5 @@
+import type { VoucherConfig } from "@/features/vouchers/config";
+
 export const CASH_RECEIPTS_PATH =
   "/accounting-inventory/transactions/cash-receipts";
 export const CASH_RECEIPTS_TITLE = "Cash Receipts";
@@ -10,15 +12,14 @@ export const CASH_RECEIPT_ENTITY_TYPE = "cash-receipt";
 /** Needed for create, edit and cancel; reading and commenting need none. */
 export const CASH_RECEIPTS_MANAGE_PERMISSION = "cash-receipts:manage";
 
-/** Account types the Cash Account picker offers. */
-export const CASH_ACCOUNT_TYPES = ["cash", "wallet"] as const;
-
-/** Account types a receipt's lines (and the "Account / party" filter) pick from. */
-export const LINE_ACCOUNT_TYPES = ["party"] as const;
-
-/** Backend limits (dto/update-cash-receipt.dto.ts). */
-export const CANCEL_REASON_MIN_LENGTH = 3;
-export const REASON_MAX_LENGTH = 500;
+/** Account types a receipt's lines (and the "Account / party" filter) pick
+ * from — the backend's RECEIPT_LINE_ACCOUNT_TYPES. */
+export const LINE_ACCOUNT_TYPES = [
+  "party",
+  "income",
+  "expense",
+  "other",
+] as const;
 
 export function cashReceiptPath(id: string): string {
   return `${CASH_RECEIPTS_PATH}/${encodeURIComponent(id)}`;
@@ -29,3 +30,55 @@ export function editCashReceiptPath(id: string): string {
 }
 
 export const NEW_CASH_RECEIPT_PATH = `${CASH_RECEIPTS_PATH}/new`;
+
+/** What makes the shared voucher screens a Cash Receipt. */
+export const CASH_RECEIPT_CONFIG: VoucherConfig = {
+  basePath: CASH_RECEIPTS_PATH,
+  pdfApiBase: "/api/cash-receipts",
+  pdfFilename: "cash-receipt.pdf",
+  entityType: CASH_RECEIPT_ENTITY_TYPE,
+  title: CASH_RECEIPTS_TITLE,
+  description: CASH_RECEIPTS_DESCRIPTION,
+  singular: "Cash Receipt",
+  noun: "receipt",
+  Noun: "Receipt",
+  nounPlural: "receipts",
+  NounPlural: "Receipts",
+  permissionLabel: "Manage cash receipts",
+  lineAccountTypes: LINE_ACCOUNT_TYPES,
+  showPaymentDetails: false,
+  addPartyKind: "customer",
+  copy: {
+    headerLabel: "Received Into",
+    headerFilterAny: "Received into: any",
+    counterpartyLabel: "Received From",
+    totalLabel: "Total received",
+    createButton: "Create Receipt",
+    firstCreateButton: "Create your first receipt",
+    firstRunText:
+      "Record cash collected from customers. Each receipt posts to a cash, wallet or bank account and the parties it was received from.",
+    emptyMonthText:
+      "Nothing has been received since the 1st. Earlier receipts are still there.",
+    newDescription: "Record cash received against one or more party accounts.",
+    editDescription:
+      "Saving re-posts the receipt with your changes and records them in its activity.",
+    addLinePlaceholder: "+ Add a party to receive from",
+    addLineSearchPlaceholder: "Search parties by name or code...",
+    addLineEmpty: "No matching parties. Add a customer",
+    addLineEmptyNoAdd:
+      "No matching parties. Ask someone who manages customers to add it.",
+    linesEmpty: "No lines yet — add the party you received cash from below.",
+    accountFilterPlaceholder: "All accounts / parties",
+    accountFilterSearchPlaceholder: "Search parties...",
+    accountFilterEmpty: "No matching parties",
+    searchPlaceholder: "Search voucher no, comments or narration...",
+    commentsPlaceholder: "Optional notes about this receipt",
+    headerRequired: "Select the account the money was received into.",
+    cashierRequired: "Select the cashier who collected the cash.",
+    linesRequired: "Add at least one account to receive from.",
+    inactivePartyHint: "Reactivate it under Customers to receive from it.",
+    cancelledNotEditableHint:
+      "Create a new receipt if the cash still needs recording.",
+    cancelReasonPlaceholder: "e.g. Duplicate of CR000123",
+  },
+};

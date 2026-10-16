@@ -102,7 +102,12 @@ export function AsyncSearchableSelect<O extends SearchableSelectOption>({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) setQuery("");
+        if (!next) {
+          setQuery("");
+          // Don't flash the last results on reopen; always re-ask the backend
+          // so an account created meanwhile shows up.
+          setState(null);
+        }
       }}
     >
       <PopoverTrigger

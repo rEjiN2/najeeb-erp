@@ -1,61 +1,14 @@
-import { apiFetchRaw } from "@/lib/api";
+import { proxyVoucherPdf } from "@/features/vouchers/pdf-route";
 
-/**
- * GET /api/cash-receipts/:id/pdf[?download=1] — the receipt's PDF, fetched
- * from the backend with the caller's session cookie and streamed back, so
- * the browser only ever talks to this app. Every call is a print on the
- * backend: it's audited ("printed") and later copies are marked DUPLICATE.
- *
- * Errors keep the backend's status and JSON body, so the client can tell a
- * 401/403/404 apart and show the backend's own message.
- */
+/** GET /api/cash-receipts/:id/pdf[?download=1] — see proxyVoucherPdf. */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const download = new URL(request.url).searchParams.get("download") === "1";
-
-  let upstream: Response;
-  try {
-    upstream = await apiFetchRaw(
-      `/cash-receipts/${encodeURIComponent(id)}/pdf`,
-    );
-  } catch {
-    return Response.json(
-      {
-        message: "Can't reach the server. Check your connection and try again.",
-      },
-      { status: 503 },
-    );
-  }
-
-  if (!upstream.ok) {
-    return new Response(upstream.body, {
-      status: upstream.status,
-      headers: {
-        "Content-Type":
-          upstream.headers.get("Content-Type") ?? "application/json",
-        "Cache-Control": "private, no-store",
-      },
-    });
-  }
-
-  // Keep the backend's filename (e.g. CR000123.pdf); only the disposition
-  // changes between viewing/printing and saving.
-  const filename =
-    /filename="([^"]+)"/.exec(
-      upstream.headers.get("Content-Disposition") ?? "",
-    )?.[1] ?? "cash-receipt.pdf";
-  const safeName = filename.replace(/["\\\r\n]/g, "_");
-  const headers = new Headers({
-    "Content-Type": "application/pdf",
-    "Content-Disposition": `${download ? "attachment" : "inline"}; filename="${safeName}"`,
-    "Cache-Control": "private, no-store",
-    "X-Content-Type-Options": "nosniff",
+  return proxyVoucherPdf(request, {
+    backendPath: "/cash-receipts",
+    id,
+    fallbackName: "cash-receipt.pdf",
   });
-  const length = upstream.headers.get("Content-Length");
-  if (length) headers.set("Content-Length", length);
-
-  return new Response(upstream.body, { status: 200, headers });
 }

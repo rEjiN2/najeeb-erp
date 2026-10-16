@@ -1,6 +1,7 @@
 import { uaeToday, toDateInputValue } from "@/lib/datetime";
 
-import type { CashReceiptDetail, CashReceiptInput } from "../types";
+import type { VoucherConfig } from "../config";
+import type { VoucherDetail, VoucherInput } from "../types";
 
 /** A line as the form edits it — amounts stay text until submit so typing
  * "12." or clearing a field doesn't fight the input. */
@@ -18,9 +19,12 @@ export interface DraftLine {
 
 export interface DraftVoucher {
   voucherDate: string;
-  cashAccountId: string;
+  /** "Received Into" / "Paid From". */
+  headerAccountId: string;
   /** "" until one is picked — required to save. */
   cashierId: string;
+  /** Cheque number, transfer reference, etc. Payments only. */
+  paymentReference: string;
   comments: string;
   lines: DraftLine[];
 }
@@ -29,21 +33,23 @@ export interface DraftVoucher {
 export function blankDraft(cashierId = ""): DraftVoucher {
   return {
     voucherDate: uaeToday(),
-    cashAccountId: "",
+    headerAccountId: "",
     cashierId,
+    paymentReference: "",
     comments: "",
     lines: [],
   };
 }
 
-export function draftFromReceipt(receipt: CashReceiptDetail): DraftVoucher {
+export function draftFromVoucher(voucher: VoucherDetail): DraftVoucher {
   return {
-    voucherDate: toDateInputValue(receipt.voucherDate),
-    cashAccountId: receipt.cashAccount.id,
-    // Legacy receipts have only free text here, and must be given a cashier.
-    cashierId: receipt.cashier.id ?? "",
-    comments: receipt.comments,
-    lines: receipt.lines.map((line, index) => ({
+    voucherDate: toDateInputValue(voucher.voucherDate),
+    headerAccountId: voucher.headerAccount.id,
+    // Legacy vouchers have only free text here, and must be given a cashier.
+    cashierId: voucher.cashier.id ?? "",
+    paymentReference: voucher.paymentReference ?? "",
+    comments: voucher.comments,
+    lines: voucher.lines.map((line, index) => ({
       // Lines have no id of their own; position is stable for the form's life.
       id: `line-${index}`,
       accountId: line.accountId,
@@ -67,7 +73,7 @@ export function parseMoney(raw: string, blankIsZero = false): number {
 }
 
 export interface DraftErrors {
-  cashAccount?: string;
+  headerAccount?: string;
   cashier?: string;
   voucherDate?: string;
   lines?: string;
@@ -77,17 +83,22 @@ export interface DraftErrors {
 }
 
 /** Checks the form can be sent at all; the backend validates everything else. */
-export function validateDraft(draft: DraftVoucher): {
+export function validateDraft(
+  draft: DraftVoucher,
+  copy: Pick<
+    VoucherConfig["copy"],
+    "headerRequired" | "cashierRequired" | "linesRequired"
+  >,
+): {
   errors: DraftErrors;
   valid: boolean;
 } {
   const errors: DraftErrors = { lineAmount: {}, lineVat: {} };
   if (!draft.voucherDate) errors.voucherDate = "Pick the voucher date.";
-  if (!draft.cashAccountId) errors.cashAccount = "Select a cash account.";
-  if (!draft.cashierId)
-    errors.cashier = "Select the cashier who collected the cash.";
+  if (!draft.headerAccountId) errors.headerAccount = copy.headerRequired;
+  if (!draft.cashierId) errors.cashier = copy.cashierRequired;
   if (draft.lines.length === 0) {
-    errors.lines = "Add at least one account to receive from.";
+    errors.lines = copy.linesRequired;
   }
   for (const line of draft.lines) {
     if (Number.isNaN(parseMoney(line.amount))) {
@@ -100,7 +111,7 @@ export function validateDraft(draft: DraftVoucher): {
   }
   const valid =
     !errors.voucherDate &&
-    !errors.cashAccount &&
+    !errors.headerAccount &&
     !errors.cashier &&
     !errors.lines &&
     Object.keys(errors.lineAmount).length === 0 &&
@@ -108,11 +119,12 @@ export function validateDraft(draft: DraftVoucher): {
   return { errors, valid };
 }
 
-export function toInput(draft: DraftVoucher): CashReceiptInput {
+export function toInput(draft: DraftVoucher): VoucherInput {
   return {
     voucherDate: draft.voucherDate,
-    cashAccountId: draft.cashAccountId,
+    headerAccountId: draft.headerAccountId,
     cashierId: draft.cashierId,
+    paymentReference: draft.paymentReference,
     comments: draft.comments,
     lines: draft.lines.map((line) => ({
       accountId: line.accountId,

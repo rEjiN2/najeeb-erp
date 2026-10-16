@@ -32,19 +32,21 @@ import { useVoucherDraft } from "@/hooks/use-voucher-draft";
 import type { MutationResult } from "@/lib/mutation";
 import { formatAmount } from "@/lib/format";
 
-import { searchLineAccounts, type LineAccountOption } from "../account-search";
-import { createCashReceipt, updateCashReceipt } from "../actions";
-import {
-  CASH_RECEIPTS_PATH,
-  CASH_RECEIPTS_TITLE,
-  REASON_MAX_LENGTH,
-  cashReceiptPath,
-} from "../constants";
-import { editColumns } from "../receipt-columns";
-import type { AccountLookupItem, CashReceiptDetail } from "../types";
+import { lineAccountSearch, type LineAccountOption } from "../account-search";
+import { voucherPath, type VoucherConfig } from "../config";
+import { REASON_MAX_LENGTH } from "../constants";
+import { editColumns } from "../voucher-columns";
+import type {
+  AccountLookupItem,
+  CreateVoucherAction,
+  UpdateVoucherAction,
+  VoucherDetail,
+  VoucherInput,
+  VoucherWarning,
+} from "../types";
 import {
   blankDraft,
-  draftFromReceipt,
+  draftFromVoucher,
   draftTotals,
   toInput,
   validateDraft,
@@ -52,9 +54,10 @@ import {
   type DraftLine,
   type DraftVoucher,
 } from "./draft";
-import { ReceiptHeaderFields } from "./receipt-header-fields";
+import { VoucherHeaderFields } from "./voucher-header-fields";
+import { VoucherWarningsDialog } from "./voucher-warnings-dialog";
 
-/** The backend's answer to an edit that changes nothing (cash-receipt.service.ts). */
+/** The backend's answer to an edit that changes nothing (voucher-posting.service.ts). */
 const NO_CHANGES = "No changes to save";
 
 const NO_ERRORS: DraftErrors = { lineAmount: {}, lineVat: {} };
@@ -66,12 +69,14 @@ function newLineId(): string {
 }
 
 function AddLineControl({
+  config,
   onAdd,
-  onAddCustomer,
+  onAddParty,
 }: {
+  config: VoucherConfig;
   onAdd: (line: DraftLine) => void;
-  /** Opens the customer form; only with parties:manage. */
-  onAddCustomer?: () => void;
+  /** Opens the customer/supplier form; only with parties:manage. */
+  onAddParty?: () => void;
 }) {
   return (
     <div className="max-w-sm">
@@ -91,27 +96,26 @@ function AddLineControl({
             vat: "",
           });
         }}
-        search={searchLineAccounts}
-        placeholder="+ Add a party to receive from"
-        searchPlaceholder="Search parties by name or code..."
+        search={lineAccountSearch(config.lineAccountTypes)}
+        placeholder={config.copy.addLinePlaceholder}
+        searchPlaceholder={config.copy.addLineSearchPlaceholder}
         emptyText={
-          onAddCustomer
-            ? "No matching parties. Add a customer"
-            : "No matching parties. Ask someone who manages customers to add it."
+          onAddParty ? config.copy.addLineEmpty : config.copy.addLineEmptyNoAdd
         }
         allowClear={false}
         footer={
-          onAddCustomer
+          onAddParty
             ? (close) => (
                 <button
                   type="button"
                   onClick={() => {
                     close();
-                    onAddCustomer();
+                    onAddParty();
                   }}
                   className="text-primary hover:bg-accent flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm font-medium"
                 >
-                  <UserPlus className="size-4" /> Add customer
+                  <UserPlus className="size-4" /> Add{" "}
+                  {PARTY_KIND_CONFIG[config.addPartyKind].noun}
                 </button>
               )
             : undefined
@@ -128,38 +132,51 @@ export interface CashierPanelData {
   locations: Location[] | null;
 }
 
-type CashReceiptFormProps = {
-  cashAccounts: AccountLookupItem[];
+type VoucherFormProps = {
+  config: VoucherConfig;
+  createAction: CreateVoucherAction;
+  updateAction: UpdateVoucherAction;
+  /** Active cash, wallet and bank accounts for the header picker. */
+  headerAccounts: AccountLookupItem[];
   /** Active cashiers for the dropdown. */
   cashiers: CashierLookupItem[];
-  /** The signed-in user's own active cashier, pre-selected on a new receipt. */
+  /** The signed-in user's own active cashier, pre-selected on a new voucher. */
   myCashierId?: string | null;
   /** /cashiers/me failed, so nothing could be pre-selected. */
   myCashierFailed?: boolean;
   cashierPanel: CashierPanelData | null;
-  /** parties:manage — offers "Add customer" in the party picker. */
-  canAddCustomer: boolean;
+  /** parties:manage — offers "Add customer" / "Add supplier" in the line picker. */
+  canAddParty: boolean;
 } & (
-  | { mode: "create"; receipt?: undefined }
-  | { mode: "edit"; receipt: CashReceiptDetail }
+  | { mode: "create"; voucher?: undefined }
+  | { mode: "edit"; voucher: VoucherDetail }
 );
 
-export function CashReceiptForm({
+export function VoucherForm({
+  config,
+  createAction,
+  updateAction,
   mode,
-  receipt,
-  cashAccounts,
+  voucher,
+  headerAccounts,
   cashiers,
   myCashierId,
   myCashierFailed = false,
   cashierPanel,
-  canAddCustomer,
-}: CashReceiptFormProps) {
+  canAddParty,
+}: VoucherFormProps) {
   const router = useRouter();
+  const partyKind = PARTY_KIND_CONFIG[config.addPartyKind];
   const [initial] = useState<DraftVoucher>(() =>
-    receipt ? draftFromReceipt(receipt) : blankDraft(myCashierId ?? ""),
+    voucher ? draftFromVoucher(voucher) : blankDraft(myCashierId ?? ""),
   );
   const [cashierPanelOpen, setCashierPanelOpen] = useState(false);
-  const [customerPanelOpen, setCustomerPanelOpen] = useState(false);
+  const [partyPanelOpen, setPartyPanelOpen] = useState(false);
+  // A save the backend sent back for confirmation, with what it warned about.
+  const [pendingWarnings, setPendingWarnings] = useState<{
+    input: VoucherInput;
+    warnings: VoucherWarning[];
+  } | null>(null);
   // Cashiers added from the side panel, until the refreshed lookup lists them.
   const [addedCashiers, setAddedCashiers] = useState<CashierLookupItem[]>([]);
   const cashierOptions = [
@@ -178,12 +195,12 @@ export function CashReceiptForm({
   const formRef = useRef<HTMLFormElement>(null);
   const errorsRef = useRef<HTMLDivElement>(null);
 
-  const { errors, valid } = validateDraft(draft.voucher);
+  const { errors, valid } = validateDraft(draft.voucher, config.copy);
   // Errors only show once the user has tried to save.
   const visibleErrors: DraftErrors = showErrors ? errors : NO_ERRORS;
   const totals = draftTotals(draft.voucher.lines);
   const isDirty = draft.isDirty || changeNote.trim() !== "";
-  const backHref = receipt ? cashReceiptPath(receipt.id) : CASH_RECEIPTS_PATH;
+  const backHref = voucher ? voucherPath(config, voucher.id) : config.basePath;
 
   // Ctrl/Cmd + S saves, like a desktop voucher screen.
   useEffect(() => {
@@ -208,30 +225,46 @@ export function CashReceiptForm({
       return;
     }
 
-    const input = toInput(draft.voucher);
+    save(toInput(draft.voucher), false);
+  }
+
+  /** Sends the voucher; a 409 with warnings comes back for the user to confirm. */
+  function save(input: VoucherInput, acknowledgeWarnings: boolean) {
     startTransition(async () => {
       try {
         const result =
           mode === "edit"
-            ? await updateCashReceipt(receipt.id, input, changeNote)
-            : await createCashReceipt(input);
+            ? await updateAction(
+                voucher.id,
+                input,
+                changeNote,
+                acknowledgeWarnings,
+              )
+            : await createAction(input, acknowledgeWarnings);
         if (!result) return; // Redirected to sign in.
 
         if (result.ok) {
+          setPendingWarnings(null);
           setLeaving(true);
-          const id = result.id ?? receipt?.id;
+          const id = result.id ?? voucher?.id;
           // The view page shows the "saved" banner with print/next actions.
           router.push(
-            id ? `${cashReceiptPath(id)}?saved=1` : CASH_RECEIPTS_PATH,
+            id ? `${voucherPath(config, id)}?saved=1` : config.basePath,
           );
           return;
         }
+        if ("warnings" in result) {
+          setPendingWarnings({ input, warnings: result.warnings });
+          return;
+        }
+        setPendingWarnings(null);
         setServerErrors(result.messages);
         errorsRef.current?.scrollIntoView({
           behavior: "smooth",
           block: "center",
         });
       } catch {
+        setPendingWarnings(null);
         setServerErrors([
           "Couldn't reach the app. Check your connection and try again.",
         ]);
@@ -265,13 +298,13 @@ export function CashReceiptForm({
     return result;
   }
 
-  /** Saves the customer, then receives from it: its ledger account becomes a line. */
-  async function addCustomer(
+  /** Saves the party, then adds its ledger account as a line. */
+  async function addParty(
     values: PartyInput,
   ): Promise<MutationResult<unknown>> {
     let result;
     try {
-      result = await createParty("customer", values);
+      result = await createParty(config.addPartyKind, values);
     } catch {
       return {
         ok: false,
@@ -282,10 +315,10 @@ export function CashReceiptForm({
     }
     if (!result) return { ok: true }; // Redirected to sign in.
     if (result.ok && result.data && values.status === "inactive") {
-      // Receipts post to active accounts only; saved, but not added as a line.
-      setCustomerPanelOpen(false);
+      // Vouchers post to active accounts only; saved, but not added as a line.
+      setPartyPanelOpen(false);
       toast.info(`${result.data.name} was saved as inactive`, {
-        description: "Reactivate it under Customers to receive from it.",
+        description: config.copy.inactivePartyHint,
       });
       return result;
     }
@@ -297,12 +330,12 @@ export function CashReceiptForm({
         accountName: party.name,
         narration: "",
         remarks: "",
-        // A new customer's ledger account starts at zero.
+        // A new party's ledger account starts at zero.
         oldBalance: 0,
         amount: "",
         vat: "",
       });
-      setCustomerPanelOpen(false);
+      setPartyPanelOpen(false);
       if (result.message) toast.success(result.message);
     }
     return result;
@@ -336,18 +369,18 @@ export function CashReceiptForm({
         <VoucherToolbar
           title={
             mode === "edit"
-              ? `Edit Cash Receipt ${receipt.voucherNo}`
-              : "New Cash Receipt"
+              ? `Edit ${config.singular} ${voucher.voucherNo}`
+              : `New ${config.singular}`
           }
           description={
             mode === "edit"
-              ? "Saving re-posts the receipt with your changes and records them in its activity."
-              : "Record cash received against one or more party accounts."
+              ? config.copy.editDescription
+              : config.copy.newDescription
           }
           back={
-            receipt
-              ? { href: backHref, label: receipt.voucherNo }
-              : { href: CASH_RECEIPTS_PATH, label: CASH_RECEIPTS_TITLE }
+            voucher
+              ? { href: backHref, label: voucher.voucherNo }
+              : { href: config.basePath, label: config.title }
           }
           actions={
             <>
@@ -380,8 +413,8 @@ export function CashReceiptForm({
               <div className="space-y-0.5">
                 <p className="font-medium">No changes to save</p>
                 <p className="text-muted-foreground">
-                  Nothing on this receipt differs from the saved version. Change
-                  a field or a line, or go back.
+                  Nothing on this {config.noun} differs from the saved version.
+                  Change a field or a line, or go back.
                 </p>
               </div>
             </div>
@@ -409,14 +442,15 @@ export function CashReceiptForm({
           </p>
         ) : null}
 
-        <ReceiptHeaderFields
+        <VoucherHeaderFields
+          config={config}
           voucher={draft.voucher}
           onChange={draft.updateVoucher}
-          voucherNo={receipt?.voucherNo ?? null}
-          cashAccounts={cashAccounts}
-          currentCashAccount={receipt?.cashAccount ?? null}
+          voucherNo={voucher?.voucherNo ?? null}
+          headerAccounts={headerAccounts}
+          currentHeaderAccount={voucher?.headerAccount ?? null}
           cashiers={cashierOptions}
-          currentCashier={receipt?.cashier ?? null}
+          currentCashier={voucher?.cashier ?? null}
           onAddCashier={
             cashierPanel ? () => setCashierPanelOpen(true) : undefined
           }
@@ -432,13 +466,14 @@ export function CashReceiptForm({
             onRemoveLine={draft.removeLine}
             addRowControl={
               <AddLineControl
+                config={config}
                 onAdd={draft.addLine}
-                onAddCustomer={
-                  canAddCustomer ? () => setCustomerPanelOpen(true) : undefined
+                onAddParty={
+                  canAddParty ? () => setPartyPanelOpen(true) : undefined
                 }
               />
             }
-            emptyMessage="No lines yet — add the party you received cash from below."
+            emptyMessage={config.copy.linesEmpty}
           />
           {showErrors && errors.lines ? (
             <p className="text-destructive flex items-center gap-1.5 text-sm">
@@ -476,7 +511,7 @@ export function CashReceiptForm({
               disabled={pending}
             />
             <p className="text-muted-foreground text-xs">
-              Shown with this edit in the receipt&apos;s activity.
+              Shown with this edit in the {config.noun}&apos;s activity.
             </p>
           </div>
         ) : null}
@@ -485,13 +520,13 @@ export function CashReceiptForm({
       </form>
 
       {/* Outside the voucher <form>: React events bubble through portals, so a
-        nested form's submit would also submit the receipt. */}
+        nested form's submit would also submit the voucher. */}
       {cashierPanel ? (
         <MasterFormSheet
           open={cashierPanelOpen}
           onOpenChange={setCashierPanelOpen}
           title="Add Cashier"
-          description="Saved to the Cashiers master and picked on this receipt."
+          description={`Saved to the Cashiers master and picked on this ${config.noun}.`}
         >
           {cashierPanelOpen ? (
             <CashierForm
@@ -504,23 +539,33 @@ export function CashReceiptForm({
         </MasterFormSheet>
       ) : null}
 
-      {canAddCustomer ? (
+      {canAddParty ? (
         <MasterFormSheet
-          open={customerPanelOpen}
-          onOpenChange={setCustomerPanelOpen}
-          title="Add Customer"
-          description="Saved to Customers and added to this receipt as a line."
+          open={partyPanelOpen}
+          onOpenChange={setPartyPanelOpen}
+          title={`Add ${partyKind.Noun}`}
+          description={`Saved to ${partyKind.title} and added to this ${config.noun} as a line.`}
         >
-          {customerPanelOpen ? (
+          {partyPanelOpen ? (
             <PartyForm
-              config={PARTY_KIND_CONFIG.customer}
+              config={partyKind}
               initialValue={null}
               canManage
-              onSubmit={addCustomer}
+              onSubmit={addParty}
             />
           ) : null}
         </MasterFormSheet>
       ) : null}
+
+      <VoucherWarningsDialog
+        warnings={pendingWarnings?.warnings ?? null}
+        noun={config.noun}
+        pending={pending}
+        onConfirm={() => {
+          if (pendingWarnings) save(pendingWarnings.input, true);
+        }}
+        onCancel={() => setPendingWarnings(null)}
+      />
     </>
   );
 }

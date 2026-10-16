@@ -34,26 +34,31 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { VoucherStatusBadge } from "@/components/voucher/voucher-status-badge";
+import { PaymentMethodBadge } from "../payment-method-badge";
 import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-import { cashReceiptPath, editCashReceiptPath } from "../constants";
-import type { CashReceiptFilters, SortField } from "../filters";
-import type { CashReceiptListRow, UserRef } from "../types";
+import {
+  editVoucherPath,
+  noPermissionMessage,
+  voucherPath,
+  type VoucherConfig,
+} from "../config";
+import type { SortField, VoucherFilters } from "../filters";
+import type { UserRef, VoucherListRow } from "../types";
 
-interface ReceiptsTableProps {
-  rows: CashReceiptListRow[];
-  filters: CashReceiptFilters;
+interface VouchersTableProps {
+  config: VoucherConfig;
+  rows: VoucherListRow[];
+  filters: VoucherFilters;
   onSort: (field: SortField) => void;
   canManage: boolean;
-  onPrint: (row: CashReceiptListRow) => void;
-  onActivity: (row: CashReceiptListRow) => void;
-  onCancel: (row: CashReceiptListRow) => void;
+  onPrint: (row: VoucherListRow) => void;
+  onActivity: (row: VoucherListRow) => void;
+  onCancel: (row: VoucherListRow) => void;
   busy: boolean;
 }
-
-const NO_PERMISSION = "You don't have permission to manage cash receipts";
 
 function SortableHead({
   field,
@@ -63,7 +68,7 @@ function SortableHead({
   children,
 }: {
   field: SortField;
-  filters: CashReceiptFilters;
+  filters: VoucherFilters;
   onSort: (field: SortField) => void;
   className?: string;
   children: ReactNode;
@@ -123,7 +128,8 @@ function WhoWhen({
   );
 }
 
-export function ReceiptsTable({
+export function VouchersTable({
+  config,
   rows,
   filters,
   onSort,
@@ -132,8 +138,9 @@ export function ReceiptsTable({
   onActivity,
   onCancel,
   busy,
-}: ReceiptsTableProps) {
+}: VouchersTableProps) {
   const router = useRouter();
+  const noPermission = noPermissionMessage(config);
 
   return (
     <div
@@ -152,9 +159,9 @@ export function ReceiptsTable({
             <SortableHead field="date" filters={filters} onSort={onSort}>
               Date
             </SortableHead>
-            <TableHead>Cash Account</TableHead>
+            <TableHead>{config.copy.headerLabel}</TableHead>
             <TableHead>Cashier</TableHead>
-            <TableHead>Received From</TableHead>
+            <TableHead>{config.copy.counterpartyLabel}</TableHead>
             <SortableHead
               field="amount"
               filters={filters}
@@ -174,9 +181,14 @@ export function ReceiptsTable({
         </TableHeader>
         <TableBody>
           {rows.map((row) => {
-            const viewHref = cashReceiptPath(row.id);
+            const viewHref = voucherPath(config, row.id);
             const isPosted = row.status === "posted";
             const first = row.partiesSummary.firstAccount;
+            const headerName = row.headerAccount.name ?? (
+              <span className="text-muted-foreground italic">
+                Unknown account
+              </span>
+            );
 
             return (
               <TableRow
@@ -199,13 +211,18 @@ export function ReceiptsTable({
                 <TableCell className="text-sm whitespace-nowrap">
                   {formatCalendarDate(row.date)}
                 </TableCell>
-                <TableCell className="max-w-48 truncate text-sm">
-                  {row.cashAccount.name ?? (
-                    <span className="text-muted-foreground italic">
-                      Unknown account
+                {config.showPaymentDetails ? (
+                  <TableCell className="max-w-56 text-sm">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate">{headerName}</span>
+                      <PaymentMethodBadge method={row.paymentMethod} />
                     </span>
-                  )}
-                </TableCell>
+                  </TableCell>
+                ) : (
+                  <TableCell className="max-w-48 truncate text-sm">
+                    {headerName}
+                  </TableCell>
+                )}
                 <TableCell className="max-w-40 truncate text-sm">
                   {row.cashier.name ? (
                     <span
@@ -307,9 +324,9 @@ export function ReceiptsTable({
                       {isPosted ? (
                         <DropdownMenuItem
                           disabled={!canManage}
-                          title={canManage ? undefined : NO_PERMISSION}
+                          title={canManage ? undefined : noPermission}
                           onClick={() =>
-                            router.push(editCashReceiptPath(row.id))
+                            router.push(editVoucherPath(config, row.id))
                           }
                         >
                           <Pencil /> Edit
@@ -327,10 +344,10 @@ export function ReceiptsTable({
                           <DropdownMenuItem
                             variant="destructive"
                             disabled={!canManage}
-                            title={canManage ? undefined : NO_PERMISSION}
+                            title={canManage ? undefined : noPermission}
                             onClick={() => onCancel(row)}
                           >
-                            <Ban /> Cancel receipt
+                            <Ban /> Cancel {config.noun}
                           </DropdownMenuItem>
                         </>
                       ) : null}

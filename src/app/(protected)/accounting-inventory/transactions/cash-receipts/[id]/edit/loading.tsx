@@ -1,5 +1,11 @@
-import { ReceiptPageSkeleton } from "@/features/cash-receipts/receipt-states";
+import { CASH_RECEIPT_CONFIG } from "@/features/cash-receipts/constants";
+import { VoucherPageSkeleton } from "@/features/vouchers/voucher-states";
 
 export default function Loading() {
-  return <ReceiptPageSkeleton title="Edit Cash Receipt" />;
+  return (
+    <VoucherPageSkeleton
+      config={CASH_RECEIPT_CONFIG}
+      title="Edit Cash Receipt"
+    />
+  );
 }

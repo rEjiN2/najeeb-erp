@@ -32,19 +32,22 @@ import { VoucherTotalsFooter } from "@/components/voucher/voucher-totals-footer"
 import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 
-import { CancelReceiptDialog } from "../cancel-receipt-dialog";
+import { CancelVoucherDialog } from "../cancel-voucher-dialog";
 import {
-  CASH_RECEIPTS_PATH,
-  CASH_RECEIPTS_TITLE,
-  CASH_RECEIPT_ENTITY_TYPE,
-  NEW_CASH_RECEIPT_PATH,
-  editCashReceiptPath,
-} from "../constants";
-import { VIEW_COLUMNS } from "../receipt-columns";
-import type { CashReceiptDetail, CashierRef, UserRef } from "../types";
-import { useReceiptPdf } from "../use-receipt-pdf";
-
-const NO_PERMISSION = "You don't have permission to manage cash receipts";
+  editVoucherPath,
+  newVoucherPath,
+  noPermissionMessage,
+  type VoucherConfig,
+} from "../config";
+import { PaymentMethodBadge } from "../payment-method-badge";
+import type {
+  CancelVoucherAction,
+  CashierRef,
+  UserRef,
+  VoucherDetail,
+} from "../types";
+import { useVoucherPdf } from "../use-voucher-pdf";
+import { VIEW_COLUMNS } from "../voucher-columns";
 
 function Who({ user }: { user: UserRef | null }) {
   return user ? (
@@ -77,34 +80,34 @@ function Stamp({
 }
 
 /** "Created by X 2 days ago · Last updated by Y 1 hour ago · Cancelled by Z · reason" */
-function MetaStrip({ receipt }: { receipt: CashReceiptDetail }) {
+function MetaStrip({ voucher }: { voucher: VoucherDetail }) {
   const parts: ReactNode[] = [
     <Stamp
       key="created"
       label="Created by"
-      user={receipt.createdBy}
-      at={receipt.createdAt}
+      user={voucher.createdBy}
+      at={voucher.createdAt}
     />,
   ];
-  if (receipt.updatedBy || receipt.updatedAt) {
+  if (voucher.updatedBy || voucher.updatedAt) {
     parts.push(
       <Stamp
         key="updated"
         label="Last updated by"
-        user={receipt.updatedBy}
-        at={receipt.updatedAt}
+        user={voucher.updatedBy}
+        at={voucher.updatedAt}
       />,
     );
   }
-  if (receipt.status === "cancelled") {
+  if (voucher.status === "cancelled") {
     parts.push(
       <span key="cancelled" className="text-destructive">
         <Stamp
           label="Cancelled by"
-          user={receipt.cancelledBy}
-          at={receipt.cancelledAt}
+          user={voucher.cancelledBy}
+          at={voucher.cancelledAt}
         />
-        {receipt.cancelReason ? ` · ${receipt.cancelReason}` : null}
+        {voucher.cancelReason ? ` · ${voucher.cancelReason}` : null}
       </span>,
     );
   }
@@ -147,30 +150,36 @@ function CashierName({ cashier }: { cashier: CashierRef }) {
   );
 }
 
-interface CashReceiptViewProps {
-  receipt: CashReceiptDetail;
+interface VoucherViewProps {
+  config: VoucherConfig;
+  cancelAction: CancelVoucherAction;
+  voucher: VoucherDetail;
   canManage: boolean;
   /** Arrived straight from saving: show the "saved" banner. */
   justSaved: boolean;
 }
 
-export function CashReceiptView({
-  receipt,
+export function VoucherView({
+  config,
+  cancelAction,
+  voucher,
   canManage,
   justSaved,
-}: CashReceiptViewProps) {
+}: VoucherViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [cancelOpen, setCancelOpen] = useState(false);
   // Bumped after each print/download: the backend logs a "printed" event.
   const [printCount, setPrintCount] = useState(0);
-  const pdf = useReceiptPdf({ onPrinted: () => setPrintCount((n) => n + 1) });
-  const isPosted = receipt.status === "posted";
+  const pdf = useVoucherPdf(config, {
+    onPrinted: () => setPrintCount((n) => n + 1),
+  });
+  const isPosted = voucher.status === "posted";
 
   const printButton = (
     <Button
       variant="outline"
-      onClick={() => void pdf.print(receipt.id, receipt.voucherNo)}
+      onClick={() => void pdf.print(voucher.id, voucher.voucherNo)}
       disabled={pdf.busy !== null}
     >
       {pdf.busy === "print" ? (
@@ -184,7 +193,7 @@ export function CashReceiptView({
   const downloadButton = (
     <Button
       variant="outline"
-      onClick={() => void pdf.download(receipt.id, receipt.voucherNo)}
+      onClick={() => void pdf.download(voucher.id, voucher.voucherNo)}
       disabled={pdf.busy !== null}
     >
       {pdf.busy === "download" ? (
@@ -196,7 +205,7 @@ export function CashReceiptView({
     </Button>
   );
 
-  const lines = receipt.lines.map((line, index) => ({
+  const lines = voucher.lines.map((line, index) => ({
     ...line,
     id: `line-${index}`,
   }));
@@ -204,10 +213,10 @@ export function CashReceiptView({
   return (
     <div className="space-y-6">
       <VoucherToolbar
-        title={`Cash Receipt ${receipt.voucherNo}`}
-        badge={<VoucherStatusBadge status={receipt.status} />}
-        description={<MetaStrip receipt={receipt} />}
-        back={{ href: CASH_RECEIPTS_PATH, label: CASH_RECEIPTS_TITLE }}
+        title={`${config.singular} ${voucher.voucherNo}`}
+        badge={<VoucherStatusBadge status={voucher.status} />}
+        description={<MetaStrip voucher={voucher} />}
+        back={{ href: config.basePath, label: config.title }}
         actions={
           <>
             {printButton}
@@ -220,17 +229,17 @@ export function CashReceiptView({
                     className="text-destructive hover:text-destructive"
                     onClick={() => setCancelOpen(true)}
                   >
-                    <Ban /> Cancel receipt
+                    <Ban /> Cancel {config.noun}
                   </Button>
                   <Link
-                    href={editCashReceiptPath(receipt.id)}
+                    href={editVoucherPath(config, voucher.id)}
                     className={buttonVariants()}
                   >
                     <Pencil /> Edit
                   </Link>
                 </>
               ) : (
-                <Button disabled title={NO_PERMISSION}>
+                <Button disabled title={noPermissionMessage(config)}>
                   <Pencil /> Edit
                 </Button>
               )
@@ -246,21 +255,21 @@ export function CashReceiptView({
         >
           <p className="text-success flex flex-1 items-center gap-2 font-medium">
             <CircleCheck className="size-5 shrink-0" />
-            Receipt {receipt.voucherNo} saved
+            {config.Noun} {voucher.voucherNo} saved
           </p>
           <div className="flex flex-wrap items-center gap-2">
             {printButton}
             {downloadButton}
             {canManage ? (
               <Link
-                href={NEW_CASH_RECEIPT_PATH}
+                href={newVoucherPath(config)}
                 className={buttonVariants({ variant: "outline" })}
               >
-                <Plus /> New Receipt
+                <Plus /> New {config.Noun}
               </Link>
             ) : null}
             <Link
-              href={CASH_RECEIPTS_PATH}
+              href={config.basePath}
               className={buttonVariants({ variant: "ghost" })}
             >
               <ArrowLeft /> Back to list
@@ -277,23 +286,23 @@ export function CashReceiptView({
         </div>
       ) : null}
 
-      {receipt.status === "cancelled" ? (
+      {voucher.status === "cancelled" ? (
         <div
           role="status"
           className="border-destructive/30 bg-destructive/5 flex flex-col gap-1 rounded-lg border p-4 text-sm"
         >
           <p className="text-destructive flex items-center gap-1.5 font-medium">
-            <Ban className="size-4" /> This receipt is cancelled
+            <Ban className="size-4" /> This {config.noun} is cancelled
           </p>
-          {receipt.cancelReason ? (
+          {voucher.cancelReason ? (
             <p className="text-foreground">
               <span className="text-muted-foreground">Reason: </span>
-              {receipt.cancelReason}
+              {voucher.cancelReason}
             </p>
           ) : null}
           <p className="text-muted-foreground">
-            The posting was reversed. This receipt no longer counts towards any
-            balance and can&apos;t be edited.
+            The posting was reversed. This {config.noun} no longer counts
+            towards any balance and can&apos;t be edited.
           </p>
         </div>
       ) : null}
@@ -307,26 +316,42 @@ export function CashReceiptView({
             <CardContent>
               <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label="Voucher No">
-                  <span className="font-mono">{receipt.voucherNo}</span>
+                  <span className="font-mono">{voucher.voucherNo}</span>
                 </Field>
                 <Field label="Voucher Date">
-                  {formatCalendarDate(receipt.voucherDate)}
+                  {formatCalendarDate(voucher.voucherDate)}
                 </Field>
-                <Field label="Cash Account">
-                  {receipt.cashAccount.name ?? (
+                <Field label={config.copy.headerLabel}>
+                  {voucher.headerAccount.name ?? (
                     <span className="text-muted-foreground italic">
                       Unknown account
                     </span>
                   )}
                 </Field>
                 <Field label="Cashier">
-                  <CashierName cashier={receipt.cashier} />
+                  <CashierName cashier={voucher.cashier} />
                 </Field>
+                {config.showPaymentDetails ? (
+                  <>
+                    <Field label="Method">
+                      <PaymentMethodBadge method={voucher.paymentMethod} />
+                    </Field>
+                    <Field label="Reference">
+                      {voucher.paymentReference ? (
+                        <span className="font-mono">
+                          {voucher.paymentReference}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </Field>
+                  </>
+                ) : null}
                 <div className="sm:col-span-2">
                   <Field label="Comments">
-                    {receipt.comments ? (
+                    {voucher.comments ? (
                       <span className="whitespace-pre-wrap">
-                        {receipt.comments}
+                        {voucher.comments}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
@@ -341,11 +366,11 @@ export function CashReceiptView({
 
           <VoucherTotalsFooter
             totals={[
-              { label: "Gross", value: formatAmount(receipt.grossTotal) },
-              { label: "Total Tax", value: formatAmount(receipt.totalTax) },
+              { label: "Gross", value: formatAmount(voucher.grossTotal) },
+              { label: "Total Tax", value: formatAmount(voucher.totalTax) },
               {
                 label: "Grand Total",
-                value: formatAmount(receipt.grandTotal),
+                value: formatAmount(voucher.grandTotal),
                 emphasize: true,
               },
             ]}
@@ -362,10 +387,10 @@ export function CashReceiptView({
           <CardContent>
             <ActivityPanel
               // Re-read after a cancel or edit lands a new audit entry.
-              key={`${receipt.status}-${receipt.updatedAt ?? ""}-${printCount}`}
-              entityType={CASH_RECEIPT_ENTITY_TYPE}
-              entityId={receipt.id}
-              subjectLabel="receipt"
+              key={`${voucher.status}-${voucher.updatedAt ?? ""}-${printCount}`}
+              entityType={config.entityType}
+              entityId={voucher.id}
+              subjectLabel={config.noun}
               className="max-h-[70vh]"
             />
           </CardContent>
@@ -374,13 +399,15 @@ export function CashReceiptView({
 
       {pdf.fallback}
 
-      <CancelReceiptDialog
+      <CancelVoucherDialog
+        config={config}
+        cancelAction={cancelAction}
         target={
           cancelOpen
             ? {
-                id: receipt.id,
-                voucherNo: receipt.voucherNo,
-                grandTotal: receipt.grandTotal,
+                id: voucher.id,
+                voucherNo: voucher.voucherNo,
+                grandTotal: voucher.grandTotal,
               }
             : null
         }

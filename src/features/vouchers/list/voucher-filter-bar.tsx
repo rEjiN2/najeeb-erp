@@ -23,19 +23,24 @@ import {
 } from "@/components/ui/select";
 import { startOfMonth, uaeToday } from "@/lib/datetime";
 
-import { searchLineAccounts } from "../account-search";
+import type { CashierLookupItem } from "@/features/cashiers/types";
+
+import { lineAccountSearch } from "../account-search";
+import type { VoucherConfig } from "../config";
+import { ACCOUNT_TYPE_BADGES } from "../constants";
 import {
   DATE_PRESETS,
   DATE_PRESET_LABELS,
+  METHOD_FILTERS,
+  METHOD_FILTER_LABELS,
   STATUS_FILTERS,
   STATUS_FILTER_LABELS,
   hasActiveFilters,
-  type CashReceiptFilters,
   type DatePreset,
+  type MethodFilter,
   type StatusFilter,
+  type VoucherFilters,
 } from "../filters";
-import type { CashierLookupItem } from "@/features/cashiers/types";
-
 import type { AccountLookupItem, UserRef } from "../types";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -44,29 +49,31 @@ const SEARCH_DEBOUNCE_MS = 300;
 export type Loadable<T> =
   { ok: true; data: T } | { ok: false; message: string };
 
-interface ReceiptFilterBarProps {
-  filters: CashReceiptFilters;
-  onChange: (next: Partial<CashReceiptFilters>) => void;
+interface VoucherFilterBarProps {
+  config: VoucherConfig;
+  filters: VoucherFilters;
+  onChange: (next: Partial<VoucherFilters>) => void;
   onClear: () => void;
   busy: boolean;
-  cashAccounts: Loadable<AccountLookupItem[]>;
+  headerAccounts: Loadable<AccountLookupItem[]>;
   users: Loadable<UserRef[]>;
-  /** Every cashier, inactive ones too — old receipts may name them. */
+  /** Every cashier, inactive ones too — old vouchers may name them. */
   cashiers: Loadable<CashierLookupItem[]>;
   /** Name of the account in the "Account / party" filter, resolved server-side. */
   selectedAccountName: string | null;
 }
 
-export function ReceiptFilterBar({
+export function VoucherFilterBar({
+  config,
   filters,
   onChange,
   onClear,
   busy,
-  cashAccounts,
+  headerAccounts,
   users,
   cashiers,
   selectedAccountName,
-}: ReceiptFilterBarProps) {
+}: VoucherFilterBarProps) {
   return (
     <div className="bg-card space-y-3 rounded-lg border p-3 sm:p-4">
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
@@ -74,6 +81,8 @@ export function ReceiptFilterBar({
           value={filters.q}
           onSearch={(q) => onChange({ q })}
           busy={busy}
+          placeholder={config.copy.searchPlaceholder}
+          label={`Search ${config.nounPlural}`}
         />
         <DateRangeControl filters={filters} onChange={onChange} />
       </div>
@@ -98,30 +107,52 @@ export function ReceiptFilterBar({
           </SelectContent>
         </Select>
 
+        {config.showPaymentDetails ? (
+          <Select
+            value={filters.method}
+            onValueChange={(value) =>
+              value && onChange({ method: value as MethodFilter })
+            }
+            items={METHOD_FILTER_LABELS}
+          >
+            <SelectTrigger className="w-full lg:w-36" aria-label="Method">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {METHOD_FILTERS.map((method) => (
+                <SelectItem key={method} value={method}>
+                  {METHOD_FILTER_LABELS[method]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+
         <div
           className="lg:w-56"
-          title={cashAccounts.ok ? undefined : cashAccounts.message}
+          title={headerAccounts.ok ? undefined : headerAccounts.message}
         >
           <SearchableSelect
-            value={filters.cashAccountId || null}
-            onChange={(value) => onChange({ cashAccountId: value ?? "" })}
+            value={filters.headerAccountId || null}
+            onChange={(value) => onChange({ headerAccountId: value ?? "" })}
             options={
-              cashAccounts.ok
-                ? cashAccounts.data.map((account) => ({
+              headerAccounts.ok
+                ? headerAccounts.data.map((account) => ({
                     value: account.id,
                     label: account.name,
                     description: account.code,
+                    badge: ACCOUNT_TYPE_BADGES[account.type] ?? account.type,
                   }))
                 : []
             }
             placeholder={
-              cashAccounts.ok
-                ? "All cash accounts"
-                : "Cash accounts unavailable"
+              headerAccounts.ok
+                ? config.copy.headerFilterAny
+                : "Accounts unavailable"
             }
             emptyText="No matching accounts"
-            clearLabel="All cash accounts"
-            disabled={!cashAccounts.ok}
+            clearLabel={config.copy.headerFilterAny}
+            disabled={!headerAccounts.ok}
           />
         </div>
 
@@ -131,11 +162,11 @@ export function ReceiptFilterBar({
             value={filters.accountId || null}
             valueLabel={selectedAccountName ?? "Unknown account"}
             onChange={(option) => onChange({ accountId: option?.value ?? "" })}
-            search={searchLineAccounts}
-            placeholder="All accounts / parties"
-            searchPlaceholder="Search parties..."
-            emptyText="No matching parties"
-            clearLabel="All accounts / parties"
+            search={lineAccountSearch(config.lineAccountTypes)}
+            placeholder={config.copy.accountFilterPlaceholder}
+            searchPlaceholder={config.copy.accountFilterSearchPlaceholder}
+            emptyText={config.copy.accountFilterEmpty}
+            clearLabel={config.copy.accountFilterPlaceholder}
           />
         </div>
 
@@ -190,11 +221,11 @@ export function ReceiptFilterBar({
         ) : null}
       </div>
 
-      {!cashAccounts.ok || !users.ok || !cashiers.ok ? (
+      {!headerAccounts.ok || !users.ok || !cashiers.ok ? (
         <p className="text-muted-foreground text-xs">
           {[
-            !cashAccounts.ok
-              ? `Cash account filter: ${cashAccounts.message}`
+            !headerAccounts.ok
+              ? `${config.copy.headerLabel} filter: ${headerAccounts.message}`
               : null,
             !users.ok ? `Created-by filter: ${users.message}` : null,
             !cashiers.ok ? `Cashier filter: ${cashiers.message}` : null,
@@ -211,10 +242,14 @@ function SearchBox({
   value,
   onSearch,
   busy,
+  placeholder,
+  label,
 }: {
   value: string;
   onSearch: (q: string) => void;
   busy: boolean;
+  placeholder: string;
+  label: string;
 }) {
   const [text, setText] = useState(value);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -242,8 +277,8 @@ function SearchBox({
             SEARCH_DEBOUNCE_MS,
           );
         }}
-        placeholder="Search voucher no, comments or narration..."
-        aria-label="Search receipts"
+        placeholder={placeholder}
+        aria-label={label}
         maxLength={100}
         className="pr-8 pl-8"
       />
@@ -261,8 +296,8 @@ function DateRangeControl({
   filters,
   onChange,
 }: {
-  filters: CashReceiptFilters;
-  onChange: (next: Partial<CashReceiptFilters>) => void;
+  filters: VoucherFilters;
+  onChange: (next: Partial<VoucherFilters>) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -340,8 +375,8 @@ function MoreFilters({
   filters,
   onChange,
 }: {
-  filters: CashReceiptFilters;
-  onChange: (next: Partial<CashReceiptFilters>) => void;
+  filters: VoucherFilters;
+  onChange: (next: Partial<VoucherFilters>) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [min, setMin] = useState("");

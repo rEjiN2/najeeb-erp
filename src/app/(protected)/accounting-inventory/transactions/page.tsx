@@ -1,4 +1,4 @@
-import { HandCoins } from "lucide-react";
+import { Banknote, HandCoins } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -19,6 +19,13 @@ const TRANSACTION_LINKS = [
     title: "Cash Receipts",
     description: "Record cash received against one or more party accounts.",
     icon: HandCoins,
+  },
+  {
+    href: "/accounting-inventory/transactions/cash-payments",
+    title: "Cash Payments",
+    description:
+      "Record money paid to suppliers, customers and expenses, from cash or bank.",
+    icon: Banknote,
   },
 ];
 

@@ -40,19 +40,31 @@ export const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
   cancelled: "Cancelled",
 };
 
+export const METHOD_FILTERS = ["all", "cash", "bank"] as const;
+export type MethodFilter = (typeof METHOD_FILTERS)[number];
+
+export const METHOD_FILTER_LABELS: Record<MethodFilter, string> = {
+  all: "All methods",
+  cash: "Cash",
+  bank: "Bank",
+};
+
 export const SORT_FIELDS = ["date", "amount", "voucherNo"] as const;
 export type SortField = (typeof SORT_FIELDS)[number];
 export type SortDir = "asc" | "desc";
 
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
 
-export interface CashReceiptFilters {
+export interface VoucherFilters {
   range: DatePreset;
   /** Only with range "custom". YYYY-MM-DD. */
   from: string;
   to: string;
   status: StatusFilter;
-  cashAccountId: string;
+  /** Cash covers cash and wallet accounts. */
+  method: MethodFilter;
+  /** The header ("Received Into" / "Paid From") account. */
+  headerAccountId: string;
   accountId: string;
   cashierId: string;
   createdBy: string;
@@ -65,12 +77,13 @@ export interface CashReceiptFilters {
   pageSize: number;
 }
 
-export const DEFAULT_FILTERS: CashReceiptFilters = {
+export const DEFAULT_FILTERS: VoucherFilters = {
   range: "month",
   from: "",
   to: "",
   status: "all",
-  cashAccountId: "",
+  method: "all",
+  headerAccountId: "",
   accountId: "",
   cashierId: "",
   createdBy: "",
@@ -114,7 +127,7 @@ function positiveInt(value: string, fallback: number): number {
 
 /** URL → filters. Values the backend would reject are dropped here rather
  * than turning a hand-edited link into an error page. */
-export function parseFilters(params: SearchParams): CashReceiptFilters {
+export function parseFilters(params: SearchParams): VoucherFilters {
   let range = oneOf(first(params.range), DATE_PRESETS, DEFAULT_FILTERS.range);
   let from = first(params.from);
   let to = first(params.to);
@@ -145,7 +158,8 @@ export function parseFilters(params: SearchParams): CashReceiptFilters {
     from,
     to,
     status: oneOf(first(params.status), STATUS_FILTERS, DEFAULT_FILTERS.status),
-    cashAccountId: idParam("cash"),
+    method: oneOf(first(params.method), METHOD_FILTERS, DEFAULT_FILTERS.method),
+    headerAccountId: idParam("cash"),
     accountId: idParam("account"),
     cashierId: idParam("cashier"),
     createdBy: idParam("by"),
@@ -162,7 +176,7 @@ export function parseFilters(params: SearchParams): CashReceiptFilters {
 }
 
 /** Filters → query string, leaving defaults out so URLs stay short. */
-export function toSearch(filters: CashReceiptFilters): string {
+export function toSearch(filters: VoucherFilters): string {
   const params = new URLSearchParams();
   const d = DEFAULT_FILTERS;
   if (filters.range !== d.range) params.set("range", filters.range);
@@ -171,7 +185,8 @@ export function toSearch(filters: CashReceiptFilters): string {
     if (filters.to) params.set("to", filters.to);
   }
   if (filters.status !== d.status) params.set("status", filters.status);
-  if (filters.cashAccountId) params.set("cash", filters.cashAccountId);
+  if (filters.method !== d.method) params.set("method", filters.method);
+  if (filters.headerAccountId) params.set("cash", filters.headerAccountId);
   if (filters.accountId) params.set("account", filters.accountId);
   if (filters.cashierId) params.set("cashier", filters.cashierId);
   if (filters.createdBy) params.set("by", filters.createdBy);
@@ -189,7 +204,7 @@ export function toSearch(filters: CashReceiptFilters): string {
 
 /** The calendar days a preset covers, relative to `today` (UAE). */
 export function resolveDateRange(
-  filters: Pick<CashReceiptFilters, "range" | "from" | "to">,
+  filters: Pick<VoucherFilters, "range" | "from" | "to">,
   today: string,
 ): { dateFrom?: string; dateTo?: string } {
   switch (filters.range) {
@@ -212,12 +227,13 @@ export function resolveDateRange(
 }
 
 /** Filters that narrow the list — sorting and paging don't count. */
-export function hasActiveFilters(filters: CashReceiptFilters): boolean {
+export function hasActiveFilters(filters: VoucherFilters): boolean {
   const d = DEFAULT_FILTERS;
   return (
     filters.range !== d.range ||
     filters.status !== d.status ||
-    filters.cashAccountId !== "" ||
+    filters.method !== d.method ||
+    filters.headerAccountId !== "" ||
     filters.accountId !== "" ||
     filters.cashierId !== "" ||
     filters.createdBy !== "" ||
@@ -228,9 +244,7 @@ export function hasActiveFilters(filters: CashReceiptFilters): boolean {
 }
 
 /** Clears every filter but keeps how the list is sorted and sized. */
-export function clearedFilters(
-  filters: CashReceiptFilters,
-): CashReceiptFilters {
+export function clearedFilters(filters: VoucherFilters): VoucherFilters {
   return {
     ...DEFAULT_FILTERS,
     sortBy: filters.sortBy,
