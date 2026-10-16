@@ -6,13 +6,17 @@ import { redirect } from "next/navigation";
 import type { ApiResult } from "@/lib/api";
 import type { MutationResult } from "@/lib/mutation";
 
-interface RunMutationOptions<T> {
+interface RunMutationOptions<T, D> {
   /** Page to come back to after signing in again on a 401. */
   returnTo: string;
   /** Shown on a 403 — names what the user isn't allowed to do. */
   forbiddenMessage: string;
   /** Builds the success toast from the backend's response body. */
   successMessage?: (data: T) => string;
+  /** Picks the saved record's id, for screens that navigate to it next. */
+  getId?: (data: T) => string;
+  /** Picks plain fields of the response to hand back to the client. */
+  select?: (data: T) => D;
 }
 
 /**
@@ -20,15 +24,26 @@ interface RunMutationOptions<T> {
  * the client router on success (so server-rendered lists re-fetch), sends the
  * user to /login on 401, and keeps the backend's own validation messages.
  */
-export async function runMutation<T>(
+export async function runMutation<T, D = never>(
   request: Promise<ApiResult<T>>,
-  { returnTo, forbiddenMessage, successMessage }: RunMutationOptions<T>,
-): Promise<MutationResult> {
+  {
+    returnTo,
+    forbiddenMessage,
+    successMessage,
+    getId,
+    select,
+  }: RunMutationOptions<T, D>,
+): Promise<MutationResult<D>> {
   const result = await request;
 
   if (result.ok) {
     refresh();
-    return { ok: true, message: successMessage?.(result.data) };
+    return {
+      ok: true,
+      message: successMessage?.(result.data),
+      id: getId?.(result.data),
+      data: select?.(result.data),
+    };
   }
 
   switch (result.reason) {

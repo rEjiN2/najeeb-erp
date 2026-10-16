@@ -76,6 +76,10 @@ interface MasterTableProps<T> {
   onDelete: (item: T) => void;
   /** Non-null return disables delete for that row and becomes its tooltip. */
   deleteDisabledReason?: (item: T, hasChildren: boolean) => string | null;
+  /** More row-menu items (DropdownMenuItem) between Edit and Delete. */
+  extraActions?: (item: T) => ReactNode;
+  /** false hides Edit and Delete (e.g. no permission) but keeps extraActions. */
+  canModify?: boolean;
   /** Non-null return makes the row read-only: no actions, this note instead
    * (e.g. records owned by another module). */
   readOnlyNote?: (item: T) => string | null;
@@ -94,6 +98,8 @@ export function MasterTable<T>({
   onDelete,
   deleteDisabledReason,
   readOnlyNote,
+  extraActions,
+  canModify = true,
   busy = false,
   emptyMessage = "No records found.",
 }: MasterTableProps<T>) {
@@ -203,17 +209,22 @@ export function MasterTable<T>({
                         }
                       />
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onEdit(item)}>
-                          <Pencil /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          variant="destructive"
-                          disabled={Boolean(disabledReason)}
-                          title={disabledReason ?? undefined}
-                          onClick={() => onDelete(item)}
-                        >
-                          <Trash2 /> Delete
-                        </DropdownMenuItem>
+                        {canModify ? (
+                          <DropdownMenuItem onClick={() => onEdit(item)}>
+                            <Pencil /> Edit
+                          </DropdownMenuItem>
+                        ) : null}
+                        {extraActions?.(item)}
+                        {canModify ? (
+                          <DropdownMenuItem
+                            variant="destructive"
+                            disabled={Boolean(disabledReason)}
+                            title={disabledReason ?? undefined}
+                            onClick={() => onDelete(item)}
+                          >
+                            <Trash2 /> Delete
+                          </DropdownMenuItem>
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}

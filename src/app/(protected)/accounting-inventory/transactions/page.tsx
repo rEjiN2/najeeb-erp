@@ -15,8 +15,8 @@ export const metadata: Metadata = {
 
 const TRANSACTION_LINKS = [
   {
-    href: "/accounting-inventory/transactions/cash-receipt",
-    title: "Cash Receipt",
+    href: "/accounting-inventory/transactions/cash-receipts",
+    title: "Cash Receipts",
     description: "Record cash received against one or more party accounts.",
     icon: HandCoins,
   },

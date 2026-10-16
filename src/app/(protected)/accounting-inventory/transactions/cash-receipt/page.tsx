@@ -1,11 +1,8 @@
-import type { Metadata } from "next";
+import { permanentRedirect } from "next/navigation";
 
-import { CashReceiptPage } from "@/features/cash-receipt/cash-receipt-page";
+import { CASH_RECEIPTS_PATH } from "@/features/cash-receipts/constants";
 
-export const metadata: Metadata = {
-  title: "Cash Receipt | ALA Dates",
-};
-
+/** Old single-screen route; kept so bookmarks land on the new list. */
 export default function Page() {
-  return <CashReceiptPage />;
+  permanentRedirect(CASH_RECEIPTS_PATH);
 }

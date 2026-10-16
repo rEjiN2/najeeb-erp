@@ -10,36 +10,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition, type ReactNode } from "react";
+import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 
-function StatePanel({
-  icon: Icon,
-  title,
-  children,
-  action,
-}: {
-  icon: LucideIcon;
-  title: string;
-  children: ReactNode;
-  action?: ReactNode;
-}) {
-  return (
-    <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-10 text-center">
-      <div className="bg-muted text-muted-foreground flex size-11 items-center justify-center rounded-full">
-        <Icon className="size-5" />
-      </div>
-      <div className="space-y-1">
-        <p className="font-medium">{title}</p>
-        <p className="text-muted-foreground max-w-sm text-sm">{children}</p>
-      </div>
-      {action ? <div className="pt-1">{action}</div> : null}
-    </div>
-  );
-}
+import { StatePanel } from "./state-panel";
 
-function RetryButton() {
+export function RetryButton() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -62,6 +39,8 @@ interface MasterLoadErrorProps {
   /** Plural noun for the records, e.g. "locations". */
   subject: string;
   status?: number;
+  /** Backend messages — shown for 4xx errors (e.g. an invalid filter). */
+  messages?: string[];
 }
 
 /** Why a master list couldn't load. 401 never reaches here — the page
@@ -70,6 +49,7 @@ export function MasterLoadError({
   reason,
   subject,
   status,
+  messages = [],
 }: MasterLoadErrorProps) {
   if (reason === "forbidden") {
     return (
@@ -99,8 +79,9 @@ export function MasterLoadError({
       title={`Couldn't load ${subject}`}
       action={<RetryButton />}
     >
-      The server returned an error{status ? ` (HTTP ${status})` : ""}. Try again
-      in a moment.
+      {status && status < 500 && messages.length > 0
+        ? messages.join(" ")
+        : `The server returned an error${status ? ` (HTTP ${status})` : ""}. Try again in a moment.`}
     </StatePanel>
   );
 }

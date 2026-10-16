@@ -4,7 +4,14 @@ import { Sprout } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FLAT_NAV_ITEMS, NAV_ITEMS, isNavGroup } from "@/config/nav";
+import {
+  NAV_ITEMS,
+  flattenNav,
+  isActivePath,
+  isNavGroup,
+  visibleNavItems,
+} from "@/config/nav";
+import { useAuth } from "@/features/auth/auth-context";
 import { useFavourites } from "@/hooks/use-favourites";
 import { cn } from "@/lib/utils";
 
@@ -21,8 +28,10 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const { favourites, toggleFavourite, isFavourite } = useFavourites();
+  const { session } = useAuth();
+  const navItems = visibleNavItems(NAV_ITEMS, session?.user.permissions ?? []);
 
-  const favouriteItems = FLAT_NAV_ITEMS.filter((item) =>
+  const favouriteItems = flattenNav(navItems).filter((item) =>
     favourites.includes(item.href),
   );
 
@@ -30,7 +39,7 @@ export function Sidebar({
     <aside
       className={cn(
         // Mobile: an off-canvas drawer, always full width, slid in/out.
-        "border-sidebar-border bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex h-svh w-64 shrink-0 flex-col border-r transition-transform duration-200",
+        "border-sidebar-border bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex h-svh w-64 shrink-0 flex-col border-r transition-transform duration-200 print:hidden",
         mobileOpen ? "translate-x-0" : "-translate-x-full",
         // Desktop: back in normal flow, always visible, width toggles
         // between the full sidebar and an icon-only rail.
@@ -60,7 +69,7 @@ export function Sidebar({
                     key={item.href}
                     item={item}
                     collapsed={collapsed}
-                    active={pathname === item.href}
+                    active={isActivePath(item.href, pathname)}
                     pinned
                     onTogglePin={() => toggleFavourite(item.href)}
                   />
@@ -70,7 +79,7 @@ export function Sidebar({
           ) : null}
 
           <nav className="divide-sidebar-border divide-y">
-            {NAV_ITEMS.map((entry) =>
+            {navItems.map((entry) =>
               isNavGroup(entry) ? (
                 <SidebarNavGroup
                   key={entry.title}
@@ -85,7 +94,7 @@ export function Sidebar({
                   key={entry.href}
                   item={entry}
                   collapsed={collapsed}
-                  active={pathname === entry.href}
+                  active={isActivePath(entry.href, pathname)}
                   pinned={isFavourite(entry.href)}
                   onTogglePin={() => toggleFavourite(entry.href)}
                 />

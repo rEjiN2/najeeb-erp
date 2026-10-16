@@ -1,4 +1,4 @@
-import { MapPin, Tags, Wallet } from "lucide-react";
+import { Building, IdCard, MapPin, Tags, Truck, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -19,6 +19,24 @@ const MASTER_LINKS = [
     title: "Accounts",
     description: "Cash, bank, wallet, income and expense accounts.",
     icon: Wallet,
+  },
+  {
+    href: "/accounting-inventory/masters/customers",
+    title: "Customers",
+    description: "Who you sell to, with addresses, credit terms and documents.",
+    icon: Building,
+  },
+  {
+    href: "/accounting-inventory/masters/suppliers",
+    title: "Suppliers",
+    description: "Who you buy from, with credit terms and documents.",
+    icon: Truck,
+  },
+  {
+    href: "/accounting-inventory/masters/cashiers",
+    title: "Cashiers",
+    description: "People who collect cash, linked to logins and locations.",
+    icon: IdCard,
   },
   {
     href: "/accounting-inventory/masters/locations",

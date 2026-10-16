@@ -1,55 +1,50 @@
-import { Plus, Printer, Save, Search, Trash2 } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
 
 interface VoucherToolbarProps {
   title: string;
-  description: string;
-  onNew: () => void;
-  onSave: () => void;
-  onPrint: () => void;
-  onDelete: () => void;
-  onSearch: () => void;
-  /** Delete is disabled for an unsaved draft — nothing to delete yet. */
-  isDeleteDisabled?: boolean;
+  description?: ReactNode;
+  /** Beside the title — e.g. a status badge. */
+  badge?: ReactNode;
+  /** Way back to the voucher list. */
+  back: { href: string; label: string };
+  /** Right-aligned buttons — Save/Print on a form, Edit/Print/Cancel on a view.
+   * There is deliberately no Delete: posted vouchers are cancelled, not removed. */
+  actions?: ReactNode;
 }
 
+/** Title row shared by every voucher's create, view and edit pages. */
 export function VoucherToolbar({
   title,
   description,
-  onNew,
-  onSave,
-  onPrint,
-  onDelete,
-  onSearch,
-  isDeleteDisabled = false,
+  badge,
+  back,
+  actions,
 }: VoucherToolbarProps) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold">{title}</h1>
-        <p className="text-muted-foreground text-sm">{description}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={onNew}>
-          <Plus /> New
-        </Button>
-        <Button variant="outline" onClick={onSearch}>
-          <Search /> Search
-        </Button>
-        <Button variant="outline" onClick={onPrint}>
-          <Printer /> Print
-        </Button>
-        <Button
-          variant="outline"
-          onClick={onDelete}
-          disabled={isDeleteDisabled}
-        >
-          <Trash2 /> Delete
-        </Button>
-        <Button onClick={onSave}>
-          <Save /> Save
-        </Button>
+    <div className="space-y-2">
+      <Link
+        href={back.href}
+        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm print:hidden"
+      >
+        <ChevronLeft className="size-4" /> {back.label}
+      </Link>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-heading text-2xl font-semibold">{title}</h1>
+            {badge}
+          </div>
+          {description ? (
+            <div className="text-muted-foreground text-sm">{description}</div>
+          ) : null}
+        </div>
+        {actions ? (
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            {actions}
+          </div>
+        ) : null}
       </div>
     </div>
   );

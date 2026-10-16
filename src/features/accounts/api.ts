@@ -57,3 +57,36 @@ export function getExpenseAccounts(): Promise<ApiResult<AccountLookupItem[]>> {
     "/accounts/lookup?types=expense&limit=100",
   );
 }
+
+interface RawLedgerAccount {
+  _id: string;
+  code: string;
+  name: string;
+  type: string;
+  balance: number;
+}
+
+export interface AccountSummary {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  balance: number;
+}
+
+/** One account by id; `null` data when it no longer exists. */
+export async function getAccount(
+  id: string,
+): Promise<ApiResult<AccountSummary | null>> {
+  const result = await apiGet<RawLedgerAccount>(
+    `/accounts/${encodeURIComponent(id)}`,
+  );
+  if (result.ok) {
+    const { _id, code, name, type, balance } = result.data;
+    return { ok: true, data: { id: _id, code, name, type, balance } };
+  }
+  if (result.reason === "error" && result.status === 404) {
+    return { ok: true, data: null };
+  }
+  return result;
+}

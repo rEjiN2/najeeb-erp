@@ -3,10 +3,14 @@
  * already user-facing (the backend's own validation text, or a specific
  * permission/connectivity message) — the client never invents its own.
  */
-export type MutationResult =
+export type MutationResult<D = never> =
   | {
       ok: true;
       /** Shown as a success toast, e.g. "Warehouse WH-0003 created". */ message?: string;
+      /** The saved record's id, when the action asked for it. */
+      id?: string;
+      /** Fields of the saved record a screen needs next (see runMutation's `select`). */
+      data?: D;
     }
   | {
       ok: false;

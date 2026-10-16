@@ -13,7 +13,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { containsActivePath, isNavGroup, type NavGroup } from "@/config/nav";
+import {
+  containsActivePath,
+  isActivePath,
+  isNavGroup,
+  type NavGroup,
+} from "@/config/nav";
 import { cn } from "@/lib/utils";
 
 import { SidebarLeafLink } from "./sidebar-leaf-link";
@@ -93,7 +98,7 @@ export function SidebarNavGroup({
               key={child.href}
               item={child}
               collapsed={false}
-              active={pathname === child.href}
+              active={isActivePath(child.href, pathname)}
               pinned={isFavourite(child.href)}
               onTogglePin={() => onTogglePin(child.href)}
               level={level + 1}

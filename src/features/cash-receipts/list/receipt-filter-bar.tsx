@@ -1,0 +1,463 @@
+"use client";
+
+import { Loader2, Search, SlidersHorizontal, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+
+import { AsyncSearchableSelect } from "@/components/shared/async-searchable-select";
+import { SearchableSelect } from "@/components/shared/searchable-select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { startOfMonth, uaeToday } from "@/lib/datetime";
+
+import { searchLineAccounts } from "../account-search";
+import {
+  DATE_PRESETS,
+  DATE_PRESET_LABELS,
+  STATUS_FILTERS,
+  STATUS_FILTER_LABELS,
+  hasActiveFilters,
+  type CashReceiptFilters,
+  type DatePreset,
+  type StatusFilter,
+} from "../filters";
+import type { CashierLookupItem } from "@/features/cashiers/types";
+
+import type { AccountLookupItem, UserRef } from "../types";
+
+const SEARCH_DEBOUNCE_MS = 300;
+
+/** A lookup the filter needs, or why it couldn't load. */
+export type Loadable<T> =
+  { ok: true; data: T } | { ok: false; message: string };
+
+interface ReceiptFilterBarProps {
+  filters: CashReceiptFilters;
+  onChange: (next: Partial<CashReceiptFilters>) => void;
+  onClear: () => void;
+  busy: boolean;
+  cashAccounts: Loadable<AccountLookupItem[]>;
+  users: Loadable<UserRef[]>;
+  /** Every cashier, inactive ones too — old receipts may name them. */
+  cashiers: Loadable<CashierLookupItem[]>;
+  /** Name of the account in the "Account / party" filter, resolved server-side. */
+  selectedAccountName: string | null;
+}
+
+export function ReceiptFilterBar({
+  filters,
+  onChange,
+  onClear,
+  busy,
+  cashAccounts,
+  users,
+  cashiers,
+  selectedAccountName,
+}: ReceiptFilterBarProps) {
+  return (
+    <div className="bg-card space-y-3 rounded-lg border p-3 sm:p-4">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <SearchBox
+          value={filters.q}
+          onSearch={(q) => onChange({ q })}
+          busy={busy}
+        />
+        <DateRangeControl filters={filters} onChange={onChange} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
+        <Select
+          value={filters.status}
+          onValueChange={(value) =>
+            value && onChange({ status: value as StatusFilter })
+          }
+          items={STATUS_FILTER_LABELS}
+        >
+          <SelectTrigger className="w-full lg:w-40" aria-label="Status">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTERS.map((status) => (
+              <SelectItem key={status} value={status}>
+                {STATUS_FILTER_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div
+          className="lg:w-56"
+          title={cashAccounts.ok ? undefined : cashAccounts.message}
+        >
+          <SearchableSelect
+            value={filters.cashAccountId || null}
+            onChange={(value) => onChange({ cashAccountId: value ?? "" })}
+            options={
+              cashAccounts.ok
+                ? cashAccounts.data.map((account) => ({
+                    value: account.id,
+                    label: account.name,
+                    description: account.code,
+                  }))
+                : []
+            }
+            placeholder={
+              cashAccounts.ok
+                ? "All cash accounts"
+                : "Cash accounts unavailable"
+            }
+            emptyText="No matching accounts"
+            clearLabel="All cash accounts"
+            disabled={!cashAccounts.ok}
+          />
+        </div>
+
+        <div className="lg:w-56">
+          <AsyncSearchableSelect
+            aria-label="Account or party"
+            value={filters.accountId || null}
+            valueLabel={selectedAccountName ?? "Unknown account"}
+            onChange={(option) => onChange({ accountId: option?.value ?? "" })}
+            search={searchLineAccounts}
+            placeholder="All accounts / parties"
+            searchPlaceholder="Search parties..."
+            emptyText="No matching parties"
+            clearLabel="All accounts / parties"
+          />
+        </div>
+
+        <div
+          className="lg:w-48"
+          title={cashiers.ok ? undefined : cashiers.message}
+        >
+          <SearchableSelect
+            value={filters.cashierId || null}
+            onChange={(value) => onChange({ cashierId: value ?? "" })}
+            options={
+              cashiers.ok
+                ? cashiers.data.map((cashier) => ({
+                    value: cashier.id,
+                    label: cashier.name,
+                    description: cashier.code,
+                  }))
+                : []
+            }
+            placeholder={cashiers.ok ? "All cashiers" : "Cashiers unavailable"}
+            emptyText="No matching cashiers"
+            clearLabel="All cashiers"
+            disabled={!cashiers.ok}
+          />
+        </div>
+
+        <div className="lg:w-48" title={users.ok ? undefined : users.message}>
+          <SearchableSelect
+            value={filters.createdBy || null}
+            onChange={(value) => onChange({ createdBy: value ?? "" })}
+            options={
+              users.ok
+                ? users.data.map((user) => ({
+                    value: user.id,
+                    label: user.name,
+                  }))
+                : []
+            }
+            placeholder={users.ok ? "Anyone" : "Users unavailable"}
+            emptyText="No matching users"
+            clearLabel="Created by anyone"
+            disabled={!users.ok}
+          />
+        </div>
+
+        <MoreFilters filters={filters} onChange={onChange} />
+
+        {hasActiveFilters(filters) ? (
+          <Button variant="ghost" onClick={onClear} className="lg:ml-auto">
+            <X /> Clear filters
+          </Button>
+        ) : null}
+      </div>
+
+      {!cashAccounts.ok || !users.ok || !cashiers.ok ? (
+        <p className="text-muted-foreground text-xs">
+          {[
+            !cashAccounts.ok
+              ? `Cash account filter: ${cashAccounts.message}`
+              : null,
+            !users.ok ? `Created-by filter: ${users.message}` : null,
+            !cashiers.ok ? `Cashier filter: ${cashiers.message}` : null,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function SearchBox({
+  value,
+  onSearch,
+  busy,
+}: {
+  value: string;
+  onSearch: (q: string) => void;
+  busy: boolean;
+}) {
+  const [text, setText] = useState(value);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+
+  // Follow the URL when it changes underneath (Clear filters, back button).
+  const [lastValue, setLastValue] = useState(value);
+  if (value !== lastValue) {
+    setLastValue(value);
+    setText(value);
+  }
+
+  return (
+    <div className="relative w-full lg:max-w-sm">
+      <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+      <Input
+        type="search"
+        value={text}
+        onChange={(event) => {
+          const next = event.target.value;
+          setText(next);
+          clearTimeout(timer.current);
+          timer.current = setTimeout(
+            () => onSearch(next.trim()),
+            SEARCH_DEBOUNCE_MS,
+          );
+        }}
+        placeholder="Search voucher no, comments or narration..."
+        aria-label="Search receipts"
+        maxLength={100}
+        className="pr-8 pl-8"
+      />
+      {busy ? (
+        <Loader2
+          className="text-muted-foreground absolute top-1/2 right-2.5 size-4 -translate-y-1/2 animate-spin"
+          aria-label="Loading"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function DateRangeControl({
+  filters,
+  onChange,
+}: {
+  filters: CashReceiptFilters;
+  onChange: (next: Partial<CashReceiptFilters>) => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+
+  function setCustom(from: string, to: string) {
+    if (from && to && from > to) {
+      setError("Start date must be on or before the end date.");
+      return;
+    }
+    setError(null);
+    onChange({ range: "custom", from, to });
+  }
+
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start lg:ml-auto">
+      <Select
+        value={filters.range}
+        onValueChange={(value) => {
+          if (!value) return;
+          const range = value as DatePreset;
+          setError(null);
+          if (range === "custom") {
+            const today = uaeToday();
+            onChange({ range, from: startOfMonth(today), to: today });
+          } else {
+            onChange({ range, from: "", to: "" });
+          }
+        }}
+        items={DATE_PRESET_LABELS}
+      >
+        <SelectTrigger className="w-full sm:w-40" aria-label="Date range">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {DATE_PRESETS.map((preset) => (
+            <SelectItem key={preset} value={preset}>
+              {DATE_PRESET_LABELS[preset]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {filters.range === "custom" ? (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              aria-label="From date"
+              value={filters.from}
+              max={filters.to || undefined}
+              onChange={(event) => setCustom(event.target.value, filters.to)}
+              className="w-full sm:w-38"
+            />
+            <span className="text-muted-foreground text-sm">to</span>
+            <Input
+              type="date"
+              aria-label="To date"
+              value={filters.to}
+              min={filters.from || undefined}
+              onChange={(event) => setCustom(filters.from, event.target.value)}
+              className="w-full sm:w-38"
+            />
+          </div>
+          {error ? (
+            <p role="alert" className="text-destructive text-xs">
+              {error}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MoreFilters({
+  filters,
+  onChange,
+}: {
+  filters: CashReceiptFilters;
+  onChange: (next: Partial<CashReceiptFilters>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [min, setMin] = useState("");
+  const [max, setMax] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const activeCount =
+    (filters.amountMin !== null ? 1 : 0) + (filters.amountMax !== null ? 1 : 0);
+
+  function parse(raw: string): number | null | "invalid" {
+    if (raw.trim() === "") return null;
+    const value = Number(raw);
+    return Number.isFinite(value) && value >= 0 ? value : "invalid";
+  }
+
+  function apply() {
+    const amountMin = parse(min);
+    const amountMax = parse(max);
+    if (amountMin === "invalid" || amountMax === "invalid") {
+      setError("Amounts must be zero or more.");
+      return;
+    }
+    if (amountMin !== null && amountMax !== null && amountMin > amountMax) {
+      setError("Minimum can't be more than maximum.");
+      return;
+    }
+    setError(null);
+    setOpen(false);
+    onChange({ amountMin, amountMax });
+  }
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) {
+          // Start from what's applied, not from a half-typed earlier attempt.
+          setMin(filters.amountMin?.toString() ?? "");
+          setMax(filters.amountMax?.toString() ?? "");
+          setError(null);
+        }
+      }}
+    >
+      <PopoverTrigger
+        render={
+          <Button variant="outline" className="w-full lg:w-auto">
+            <SlidersHorizontal /> More filters
+            {activeCount > 0 ? (
+              <Badge variant="secondary" className="ml-1 tabular-nums">
+                {activeCount}
+              </Badge>
+            ) : null}
+          </Button>
+        }
+      />
+      <PopoverContent align="start" className="w-72 space-y-3">
+        <p className="text-sm font-medium">Amount (AED)</p>
+        <form
+          className="space-y-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            apply();
+          }}
+        >
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="amount-min">Minimum</Label>
+              <Input
+                id="amount-min"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={min}
+                onChange={(event) => setMin(event.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="amount-max">Maximum</Label>
+              <Input
+                id="amount-max"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={max}
+                onChange={(event) => setMax(event.target.value)}
+                placeholder="Any"
+              />
+            </div>
+          </div>
+          {error ? (
+            <p role="alert" className="text-destructive text-xs">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setOpen(false);
+                onChange({ amountMin: null, amountMax: null });
+              }}
+              disabled={activeCount === 0}
+            >
+              Reset
+            </Button>
+            <Button type="submit" size="sm">
+              Apply
+            </Button>
+          </div>
+        </form>
+      </PopoverContent>
+    </Popover>
+  );
+}

@@ -39,7 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider>
-      <div className="flex h-svh">
+      <div className="flex h-svh print:block print:h-auto">
         {mobileOpen ? (
           <button
             type="button"
@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <Topbar onToggleSidebar={toggleSidebar} />
-          <main className="bg-muted/30 flex-1 overflow-y-auto p-4 sm:p-6">
+          <main className="bg-muted/30 flex-1 overflow-y-auto p-4 sm:p-6 print:overflow-visible print:bg-transparent print:p-0">
             {children}
           </main>
         </div>

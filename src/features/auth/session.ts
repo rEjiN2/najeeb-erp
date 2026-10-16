@@ -15,3 +15,12 @@ export const getServerSession = cache(async (): Promise<Session | null> => {
   const result = await apiGet<AuthUser>("/auth/me");
   return result.ok ? { user: result.data } : null;
 });
+
+/**
+ * Whether the signed-in user holds `permission`. Only decides what the UI
+ * offers — the backend enforces the same permission on every request.
+ */
+export async function hasPermission(permission: string): Promise<boolean> {
+  const session = await getServerSession();
+  return session?.user.permissions.includes(permission) ?? false;
+}

@@ -4,20 +4,11 @@ import { cookies } from "next/headers";
 
 import { ACCESS_COOKIE_NAME as BACKEND_ACCESS_COOKIE } from "@/features/auth/constants";
 
-export type ApiFailureReason =
-  "unauthorized" | "forbidden" | "unavailable" | "error";
+import { readErrorMessages, reasonFor, type ApiResult } from "./api-types";
 
-export interface ApiFailure {
-  ok: false;
-  reason: ApiFailureReason;
-  status?: number;
-  /** Messages from the backend's error envelope; empty when it sent none. */
-  messages: string[];
-}
+export type { ApiFailure, ApiFailureReason, ApiResult } from "./api-types";
 
-export type ApiResult<T> = { ok: true; data: T } | ApiFailure;
-
-type ApiMethod = "GET" | "POST" | "PATCH" | "DELETE";
+type ApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 function getBaseUrl(): string {
   const baseUrl = process.env.API_BASE_URL;
@@ -27,23 +18,6 @@ function getBaseUrl(): string {
     );
   }
   return baseUrl.replace(/\/+$/, "");
-}
-
-/** Backend error envelope: `message` is a string, or a list for validation errors. */
-async function readErrorMessages(response: Response): Promise<string[]> {
-  try {
-    const body = (await response.json()) as { message?: string | string[] };
-    if (Array.isArray(body.message)) return body.message;
-    return body.message ? [body.message] : [];
-  } catch {
-    return [];
-  }
-}
-
-function reasonFor(status: number): ApiFailureReason {
-  if (status === 401) return "unauthorized";
-  if (status === 403) return "forbidden";
-  return "error";
 }
 
 /**
@@ -100,4 +74,20 @@ export function apiSend<T>(
   body?: unknown,
 ): Promise<ApiResult<T>> {
   return apiRequest<T>(method, path, body);
+}
+
+/**
+ * Raw GET against the backend with the caller's cookie, for responses that
+ * aren't JSON (PDFs, files) and are streamed straight through. Throws only
+ * when the backend can't be reached.
+ */
+export async function apiFetchRaw(path: string): Promise<Response> {
+  const store = await cookies();
+  const accessToken = store.get(BACKEND_ACCESS_COOKIE)?.value;
+  return fetch(`${getBaseUrl()}${path}`, {
+    headers: accessToken
+      ? { Cookie: `${BACKEND_ACCESS_COOKIE}=${accessToken}` }
+      : {},
+    cache: "no-store",
+  });
 }

@@ -24,14 +24,15 @@ export interface VoucherColumn<TLine> {
 interface VoucherLineGridProps<TLine extends { id: string }> {
   columns: VoucherColumn<TLine>[];
   lines: TLine[];
-  onUpdateLine: (id: string, patch: Partial<TLine>) => void;
-  onRemoveLine: (id: string) => void;
+  /** Omit (with onRemoveLine and addRowControl) for a read-only grid. */
+  onUpdateLine?: (id: string, patch: Partial<TLine>) => void;
+  onRemoveLine?: (id: string) => void;
   /**
    * The account picker that turns into a new line once something is
    * selected — rendered as the grid's trailing "add a line" row, so the
    * grid grows the same way it will need to for any future voucher type.
    */
-  addRowControl: ReactNode;
+  addRowControl?: ReactNode;
   emptyMessage?: string;
 }
 
@@ -43,9 +44,12 @@ export function VoucherLineGrid<TLine extends { id: string }>({
   addRowControl,
   emptyMessage = "No lines yet — pick an account below to add one.",
 }: VoucherLineGridProps<TLine>) {
+  const editable = Boolean(onRemoveLine);
+  const span = columns.length + (editable ? 1 : 0);
+
   return (
-    <div className="overflow-hidden rounded-lg border">
-      <Table>
+    <div className="bg-card overflow-x-auto rounded-lg border">
+      <Table className="min-w-[860px]">
         <TableHeader>
           <TableRow>
             {columns.map((column) => (
@@ -53,14 +57,14 @@ export function VoucherLineGrid<TLine extends { id: string }>({
                 {column.header}
               </TableHead>
             ))}
-            <TableHead className="w-10" />
+            {editable ? <TableHead className="w-10" /> : null}
           </TableRow>
         </TableHeader>
         <TableBody>
           {lines.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={columns.length + 1}
+                colSpan={span}
                 className="text-muted-foreground h-20 text-center text-sm"
               >
                 {emptyMessage}
@@ -72,27 +76,31 @@ export function VoucherLineGrid<TLine extends { id: string }>({
                 {columns.map((column) => (
                   <TableCell key={column.key} className={column.className}>
                     {column.render(line, {
-                      update: (patch) => onUpdateLine(line.id, patch),
+                      update: (patch) => onUpdateLine?.(line.id, patch),
                     })}
                   </TableCell>
                 ))}
-                <TableCell>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Remove line"
-                    onClick={() => onRemoveLine(line.id)}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </TableCell>
+                {onRemoveLine ? (
+                  <TableCell>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Remove line"
+                      onClick={() => onRemoveLine(line.id)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </TableCell>
+                ) : null}
               </TableRow>
             ))
           )}
-          <TableRow className="bg-muted/30 hover:bg-muted/30">
-            <TableCell colSpan={columns.length + 1}>{addRowControl}</TableCell>
-          </TableRow>
+          {addRowControl ? (
+            <TableRow className="bg-muted/30 hover:bg-muted/30">
+              <TableCell colSpan={span}>{addRowControl}</TableCell>
+            </TableRow>
+          ) : null}
         </TableBody>
       </Table>
     </div>

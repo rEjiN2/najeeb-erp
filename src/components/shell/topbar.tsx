@@ -11,7 +11,7 @@ import { UserMenu } from "./user-menu";
 
 export function Topbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   return (
-    <header className="border-border bg-background flex h-14 shrink-0 items-center gap-3 border-b px-4">
+    <header className="border-border bg-background flex h-14 shrink-0 items-center gap-3 border-b px-4 print:hidden">
       <Button
         variant="ghost"
         size="icon"
