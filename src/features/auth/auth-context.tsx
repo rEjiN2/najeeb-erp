@@ -11,7 +11,12 @@ import {
 } from "react";
 
 import { backendAuthClient } from "./backend-auth-client";
-import type { AuthClient, LoginCredentials, Session } from "./types";
+import type {
+  AuthClient,
+  ChangePasswordInput,
+  LoginCredentials,
+  Session,
+} from "./types";
 
 // The single place that picks which AuthClient implementation backs the app.
 const authClient: AuthClient = backendAuthClient;
@@ -21,6 +26,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (credentials: LoginCredentials) => Promise<Session>;
   logout: () => Promise<void>;
+  changePassword: (input: ChangePasswordInput) => Promise<Session>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -54,9 +60,15 @@ export function AuthProvider({
     router.refresh();
   }, [router]);
 
+  const changePassword = useCallback(async (input: ChangePasswordInput) => {
+    const nextSession = await authClient.changePassword(input);
+    setSession(nextSession);
+    return nextSession;
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ session, isLoading, login, logout }),
-    [session, isLoading, login, logout],
+    () => ({ session, isLoading, login, logout, changePassword }),
+    [session, isLoading, login, logout, changePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

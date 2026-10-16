@@ -36,7 +36,7 @@ import { CancelVoucherDialog } from "../cancel-voucher-dialog";
 import {
   editVoucherPath,
   newVoucherPath,
-  noPermissionMessage,
+  type VoucherAccess,
   type VoucherConfig,
 } from "../config";
 import { PaymentMethodBadge } from "../payment-method-badge";
@@ -47,7 +47,7 @@ import type {
   VoucherDetail,
 } from "../types";
 import { useVoucherPdf } from "../use-voucher-pdf";
-import { VIEW_COLUMNS } from "../voucher-columns";
+import { viewColumns } from "../voucher-columns";
 
 function Who({ user }: { user: UserRef | null }) {
   return user ? (
@@ -154,7 +154,7 @@ interface VoucherViewProps {
   config: VoucherConfig;
   cancelAction: CancelVoucherAction;
   voucher: VoucherDetail;
-  canManage: boolean;
+  access: VoucherAccess;
   /** Arrived straight from saving: show the "saved" banner. */
   justSaved: boolean;
 }
@@ -163,7 +163,7 @@ export function VoucherView({
   config,
   cancelAction,
   voucher,
-  canManage,
+  access,
   justSaved,
 }: VoucherViewProps) {
   const router = useRouter();
@@ -221,28 +221,22 @@ export function VoucherView({
           <>
             {printButton}
             {downloadButton}
-            {isPosted ? (
-              canManage ? (
-                <>
-                  <Button
-                    variant="outline"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setCancelOpen(true)}
-                  >
-                    <Ban /> Cancel {config.noun}
-                  </Button>
-                  <Link
-                    href={editVoucherPath(config, voucher.id)}
-                    className={buttonVariants()}
-                  >
-                    <Pencil /> Edit
-                  </Link>
-                </>
-              ) : (
-                <Button disabled title={noPermissionMessage(config)}>
-                  <Pencil /> Edit
-                </Button>
-              )
+            {isPosted && access.canCancel ? (
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                onClick={() => setCancelOpen(true)}
+              >
+                <Ban /> Cancel {config.noun}
+              </Button>
+            ) : null}
+            {isPosted && access.canEdit ? (
+              <Link
+                href={editVoucherPath(config, voucher.id)}
+                className={buttonVariants()}
+              >
+                <Pencil /> Edit
+              </Link>
             ) : null}
           </>
         }
@@ -260,7 +254,7 @@ export function VoucherView({
           <div className="flex flex-wrap items-center gap-2">
             {printButton}
             {downloadButton}
-            {canManage ? (
+            {access.canCreate ? (
               <Link
                 href={newVoucherPath(config)}
                 className={buttonVariants({ variant: "outline" })}
@@ -362,7 +356,13 @@ export function VoucherView({
             </CardContent>
           </Card>
 
-          <VoucherLineGrid columns={VIEW_COLUMNS} lines={lines} />
+          <VoucherLineGrid
+            columns={viewColumns({
+              // Left out by the backend without balances:view.
+              showOldBalance: lines.every((line) => line.oldBalance !== null),
+            })}
+            lines={lines}
+          />
 
           <VoucherTotalsFooter
             totals={[

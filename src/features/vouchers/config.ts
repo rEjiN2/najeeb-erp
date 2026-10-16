@@ -28,8 +28,8 @@ export interface VoucherConfig {
   nounPlural: string;
   /** Title-case plural, e.g. "Receipts". */
   NounPlural: string;
-  /** e.g. "Manage cash receipts". */
-  permissionLabel: string;
+  /** Backend permission prefix, e.g. "cash-receipts" (→ cash-receipts:create). */
+  permissionPrefix: string;
 
   /** Account types the lines (and the "Account / party" filter) pick from. */
   lineAccountTypes: readonly string[];
@@ -96,6 +96,12 @@ export function voucherPdfUrl(
   return `${config.pdfApiBase}/${encodeURIComponent(id)}/pdf${download ? "?download=1" : ""}`;
 }
 
-export function noPermissionMessage(config: VoucherConfig): string {
-  return `You don't have permission to ${config.permissionLabel.toLowerCase()}`;
+/** What the signed-in user may do with a voucher type. Reading is implied:
+ * without it the list and view pages are refused by the backend (403). */
+export interface VoucherAccess {
+  canCreate: boolean;
+  canEdit: boolean;
+  canCancel: boolean;
+  /** balances:view — the backend leaves balances out without it. */
+  canViewBalances: boolean;
 }

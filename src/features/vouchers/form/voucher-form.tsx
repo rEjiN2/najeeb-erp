@@ -147,6 +147,10 @@ type VoucherFormProps = {
   cashierPanel: CashierPanelData | null;
   /** parties:manage — offers "Add customer" / "Add supplier" in the line picker. */
   canAddParty: boolean;
+  /** "Own"-scoped user: cashier locked to theirs, header to their accounts. */
+  scoped: boolean;
+  /** balances:view — without it the Old Balance column is left out. */
+  showBalances: boolean;
 } & (
   | { mode: "create"; voucher?: undefined }
   | { mode: "edit"; voucher: VoucherDetail }
@@ -164,11 +168,18 @@ export function VoucherForm({
   myCashierFailed = false,
   cashierPanel,
   canAddParty,
+  scoped,
+  showBalances,
 }: VoucherFormProps) {
   const router = useRouter();
   const partyKind = PARTY_KIND_CONFIG[config.addPartyKind];
   const [initial] = useState<DraftVoucher>(() =>
-    voucher ? draftFromVoucher(voucher) : blankDraft(myCashierId ?? ""),
+    voucher
+      ? draftFromVoucher(voucher)
+      : blankDraft(
+          myCashierId ?? "",
+          headerAccounts.length === 1 ? (headerAccounts[0]?.id ?? "") : "",
+        ),
   );
   const [cashierPanelOpen, setCashierPanelOpen] = useState(false);
   const [partyPanelOpen, setPartyPanelOpen] = useState(false);
@@ -331,7 +342,7 @@ export function VoucherForm({
         narration: "",
         remarks: "",
         // A new party's ledger account starts at zero.
-        oldBalance: 0,
+        oldBalance: showBalances ? 0 : null,
         amount: "",
         vat: "",
       });
@@ -454,13 +465,16 @@ export function VoucherForm({
           onAddCashier={
             cashierPanel ? () => setCashierPanelOpen(true) : undefined
           }
+          cashierLocked={scoped}
           errors={visibleErrors}
           disabled={pending}
         />
 
         <div className="space-y-2">
           <VoucherLineGrid
-            columns={editColumns(visibleErrors)}
+            columns={editColumns(visibleErrors, {
+              showOldBalance: showBalances,
+            })}
             lines={draft.voucher.lines}
             onUpdateLine={draft.updateLine}
             onRemoveLine={draft.removeLine}

@@ -75,9 +75,19 @@ async function send(
     }
   }
 
+  // Data-scope refusals (no linked cashier, an account not assigned to the
+  // user) are 403s that say what to fix; only the guard's bare one is generic.
+  const scopeMessage =
+    !result.ok &&
+    result.reason === "forbidden" &&
+    result.messages.length > 0 &&
+    result.messages[0] !== "Insufficient permissions"
+      ? result.messages.join(" ")
+      : null;
+
   return runMutation(Promise.resolve(result), {
     returnTo,
-    forbiddenMessage: target.forbiddenMessage,
+    forbiddenMessage: scopeMessage ?? target.forbiddenMessage,
     successMessage: (saved) => target.savedMessage(saved.voucherNo),
     getId: (saved) => saved._id,
   });

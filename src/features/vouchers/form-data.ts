@@ -6,6 +6,8 @@ import {
   getMyCashier,
 } from "@/features/cashiers/api";
 import type { CashierLookupItem } from "@/features/cashiers/types";
+import { getServerSession } from "@/features/auth/session";
+import type { AuthUser } from "@/features/auth/types";
 import { getLocations } from "@/features/locations/api";
 import { canManageParties } from "@/features/parties/api";
 import { getUsers } from "@/features/users/api";
@@ -24,6 +26,34 @@ export interface VoucherFormData {
   cashierPanel: CashierPanelData | null;
   /** parties:manage — the line picker offers "Add customer" / "Add supplier". */
   canAddParty: boolean;
+  /**
+   * An "own"-scoped user: the cashier is their linked one and can't be
+   * changed, and the header picks only from their allowed cash accounts.
+   * The backend refuses anything else (403).
+   */
+  scoped: boolean;
+}
+
+/** The header accounts and cashier an "own"-scoped user is limited to. */
+function scopedFormData(user: AuthUser, canAddParty: boolean): VoucherFormData {
+  const linked = user.linkedCashier;
+  const active = linked?.status === "active" ? linked : null;
+  return {
+    headerAccounts: user.allowedCashAccounts.map((account) => ({
+      id: account.id,
+      code: account.code,
+      name: account.name,
+      type: account.type,
+    })),
+    cashiers: active
+      ? [{ id: active.id, code: active.code, name: active.name }]
+      : [],
+    myCashierId: active?.id ?? null,
+    myCashierFailed: false,
+    cashierPanel: null,
+    canAddParty,
+    scoped: true,
+  };
 }
 
 /**
@@ -38,10 +68,14 @@ export async function loadVoucherFormData({
   preselectMine: boolean;
   getHeaderAccounts: () => Promise<ApiResult<AccountLookupItem[]>>;
 }): Promise<{ ok: true; data: VoucherFormData } | ApiFailure> {
-  const [manageCashiers, canAddParty] = await Promise.all([
+  const [manageCashiers, canAddParty, session] = await Promise.all([
     canManageCashiers(),
     canManageParties(),
+    getServerSession(),
   ]);
+  if (session?.user.dataScope === "own") {
+    return { ok: true, data: scopedFormData(session.user, canAddParty) };
+  }
   const [headerAccounts, cashiers, mine, users, locations] = await Promise.all([
     getHeaderAccounts(),
     getCashierLookup(true),
@@ -68,6 +102,7 @@ export async function loadVoucherFormData({
       myCashierId: myCashier?.status === "active" ? myCashier.id : null,
       myCashierFailed: mine !== null && !mine.ok,
       canAddParty,
+      scoped: false,
       cashierPanel: manageCashiers
         ? {
             users: users?.ok ? users.data : null,

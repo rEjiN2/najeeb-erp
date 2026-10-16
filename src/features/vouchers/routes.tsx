@@ -9,6 +9,7 @@ import { getUsers } from "@/features/users/api";
 import { describeFailure, type ApiResult } from "@/lib/api-types";
 import { uaeToday } from "@/lib/datetime";
 
+import { getVoucherAccess } from "./access";
 import type { createVoucherApi } from "./api";
 import {
   editVoucherPath,
@@ -38,8 +39,6 @@ import {
 export interface VoucherModule {
   config: VoucherConfig;
   api: ReturnType<typeof createVoucherApi>;
-  /** Whether the signed-in user holds the voucher's manage permission. */
-  canManage: () => Promise<boolean>;
   createAction: CreateVoucherAction;
   updateAction: UpdateVoucherAction;
   cancelAction: CancelVoucherAction;
@@ -62,7 +61,7 @@ function backToList(config: VoucherConfig) {
 }
 
 export async function VoucherListRoute({
-  module: { config, api, canManage: canManageFn, cancelAction },
+  module: { config, api, cancelAction },
   searchParams,
 }: {
   module: VoucherModule;
@@ -78,7 +77,7 @@ export async function VoucherListRoute({
     users,
     cashiers,
     selectedAccount,
-    canManage,
+    access,
   ] = await Promise.all([
     api.getVouchers(filters),
     // Posted-only and cancelled-only views already know the answer.
@@ -87,7 +86,7 @@ export async function VoucherListRoute({
     getUsers(),
     getCashierLookup(false),
     filters.accountId ? getAccount(filters.accountId) : null,
-    canManageFn(),
+    getVoucherAccess(config),
   ]);
 
   const header = <VoucherListHeading config={config} />;
@@ -159,7 +158,7 @@ export async function VoucherListRoute({
       dateRange={resolveDateRange(filters, uaeToday())}
       postedCount={postedCount}
       isFirstRun={isFirstRun}
-      canManage={canManage}
+      access={access}
       headerAccounts={toLoadable(headerAccounts, returnTo)}
       users={toLoadable(users, returnTo)}
       cashiers={toLoadable(cashiers, returnTo)}
@@ -172,8 +171,9 @@ export async function VoucherNewRoute({ module }: { module: VoucherModule }) {
   const { config, api } = module;
   const title = `New ${config.singular}`;
 
-  if (!(await module.canManage())) {
-    return <ManageForbidden config={config} title={title} />;
+  const access = await getVoucherAccess(config);
+  if (!access.canCreate) {
+    return <ManageForbidden config={config} title={title} action="create" />;
   }
 
   const formData = await loadVoucherFormData({
@@ -195,6 +195,7 @@ export async function VoucherNewRoute({ module }: { module: VoucherModule }) {
     <VoucherForm
       mode="create"
       config={config}
+      showBalances={access.canViewBalances}
       createAction={module.createAction}
       updateAction={module.updateAction}
       {...formData.data}
@@ -212,7 +213,7 @@ function isMissing(result: ApiResult<unknown>): boolean {
 }
 
 export async function VoucherDetailRoute({
-  module: { config, api, canManage: canManageFn, cancelAction },
+  module: { config, api, cancelAction },
   id,
   searchParams,
 }: {
@@ -220,9 +221,9 @@ export async function VoucherDetailRoute({
   id: string;
   searchParams: SearchParams;
 }) {
-  const [voucher, canManage] = await Promise.all([
+  const [voucher, access] = await Promise.all([
     api.getVoucher(id),
-    canManageFn(),
+    getVoucherAccess(config),
   ]);
 
   if (!voucher.ok) {
@@ -244,7 +245,7 @@ export async function VoucherDetailRoute({
       config={config}
       cancelAction={cancelAction}
       voucher={voucher.data}
-      canManage={canManage}
+      access={access}
       justSaved={searchParams.saved === "1"}
     />
   );
@@ -261,8 +262,9 @@ export async function VoucherEditRoute({
   const title = `Edit ${config.singular}`;
   const returnTo = editVoucherPath(config, id);
 
-  if (!(await module.canManage())) {
-    return <ManageForbidden config={config} title={title} />;
+  const access = await getVoucherAccess(config);
+  if (!access.canEdit) {
+    return <ManageForbidden config={config} title={title} action="edit" />;
   }
 
   const [voucher, formData] = await Promise.all([
@@ -310,6 +312,7 @@ export async function VoucherEditRoute({
     <VoucherForm
       mode="edit"
       config={config}
+      showBalances={access.canViewBalances}
       createAction={module.createAction}
       updateAction={module.updateAction}
       voucher={voucher.data}

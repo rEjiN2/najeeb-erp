@@ -14,6 +14,10 @@ export default async function ProtectedLayout({
   if (!session) {
     redirect("/login");
   }
+  // The backend refuses everything else until the password is changed.
+  if (session.user.mustChangePassword) {
+    redirect("/change-password");
+  }
 
   return <AppShell>{children}</AppShell>;
 }

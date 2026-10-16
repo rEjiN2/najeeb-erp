@@ -67,8 +67,9 @@ export interface VoucherLine {
   accountName: string | null;
   narration: string;
   remarks: string;
-  /** Account balance when the voucher was posted — a snapshot. */
-  oldBalance: number;
+  /** Account balance when the voucher was posted — a snapshot. null when
+   * the backend leaves it out (no balances:view). */
+  oldBalance: number | null;
   amount: number;
   vat: number;
   netAmount: number;
@@ -105,7 +106,8 @@ export interface AccountLookupItem {
   code: string;
   name: string;
   type: string;
-  balance: number;
+  /** Absent without balances:view. */
+  balance?: number;
 }
 
 /** What the form submits (create and edit). Totals are the backend's job. */

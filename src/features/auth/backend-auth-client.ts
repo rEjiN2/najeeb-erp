@@ -1,5 +1,11 @@
 import { BACKEND_PROXY_PATH } from "./constants";
-import type { AuthClient, AuthUser, LoginCredentials, Session } from "./types";
+import type {
+  AuthClient,
+  AuthUser,
+  ChangePasswordInput,
+  LoginCredentials,
+  Session,
+} from "./types";
 
 /**
  * Browser-side AuthClient. The session lives entirely in the httpOnly cookies
@@ -76,4 +82,41 @@ async function getSession(): Promise<Session | null> {
   return session;
 }
 
-export const backendAuthClient: AuthClient = { login, logout, getSession };
+/**
+ * Goes through the proxy like login: the backend answers with fresh cookies
+ * (the old refresh token stops working), which must land in the browser.
+ */
+async function changePassword({
+  currentPassword,
+  newPassword,
+}: ChangePasswordInput): Promise<Session> {
+  let response: Response;
+  try {
+    response = await fetch(`${getApiBaseUrl()}/auth/change-password`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  } catch {
+    throw new Error(
+      "Can't reach the server. Check your connection and try again.",
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      await readErrorMessage(response, "Couldn't change your password."),
+    );
+  }
+
+  const user = (await response.json()) as AuthUser;
+  return { user };
+}
+
+export const backendAuthClient: AuthClient = {
+  login,
+  logout,
+  getSession,
+  changePassword,
+};

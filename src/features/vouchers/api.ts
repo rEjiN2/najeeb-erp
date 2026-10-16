@@ -51,7 +51,8 @@ interface RawLine {
   accountId: string;
   narration?: string | null;
   remarks?: string | null;
-  oldBalance: number;
+  /** Absent without balances:view. */
+  oldBalance?: number;
   amount: number;
   vat: number;
   netAmount: number;
@@ -224,7 +225,7 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
           accountName: names.get(line.accountId) ?? null,
           narration: line.narration ?? "",
           remarks: line.remarks ?? "",
-          oldBalance: line.oldBalance,
+          oldBalance: line.oldBalance ?? null,
           amount: line.amount,
           vat: line.vat,
           netAmount: line.netAmount,

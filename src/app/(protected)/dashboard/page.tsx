@@ -1,5 +1,11 @@
+import { ShieldX } from "lucide-react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
+
+import { StatePanel } from "@/components/master/state-panel";
+import { homePath } from "@/config/nav";
+import { PERMISSIONS } from "@/features/auth/permissions";
 
 import {
   CashSummaryCard,
@@ -18,6 +24,18 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const session = await getServerSession();
+  const permissions = session?.user.permissions ?? [];
+
+  // Hidden from the menu without dashboard:view; send them somewhere useful.
+  if (!permissions.includes(PERMISSIONS.DASHBOARD_VIEW)) {
+    const home = homePath(permissions);
+    if (home !== "/dashboard") redirect(home);
+    return (
+      <StatePanel icon={ShieldX} title="You don't have permission">
+        Your role has no screens assigned yet. Ask an administrator for access.
+      </StatePanel>
+    );
+  }
 
   return (
     <div className="space-y-6">

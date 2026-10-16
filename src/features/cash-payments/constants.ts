@@ -9,9 +9,6 @@ export const CASH_PAYMENTS_DESCRIPTION =
 /** Entity type under which payments appear in audit logs and comments. */
 export const CASH_PAYMENT_ENTITY_TYPE = "cash-payment";
 
-/** Needed for create, edit and cancel; reading and commenting need none. */
-export const CASH_PAYMENTS_MANAGE_PERMISSION = "cash-payments:manage";
-
 /** Account types a payment's lines (and the "Account / party" filter) pick
  * from. Never the company's own cash, wallet or bank accounts: that would be
  * a transfer, not a payment. */
@@ -39,7 +36,7 @@ export const CASH_PAYMENT_CONFIG: VoucherConfig = {
   Noun: "Payment",
   nounPlural: "payments",
   NounPlural: "Payments",
-  permissionLabel: "Manage cash payments",
+  permissionPrefix: "cash-payments",
   lineAccountTypes: PAYMENT_LINE_ACCOUNT_TYPES,
   showPaymentDetails: true,
   addPartyKind: "supplier",

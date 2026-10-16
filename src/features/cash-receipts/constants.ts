@@ -9,9 +9,6 @@ export const CASH_RECEIPTS_DESCRIPTION =
 /** Entity type under which receipts appear in audit logs and comments. */
 export const CASH_RECEIPT_ENTITY_TYPE = "cash-receipt";
 
-/** Needed for create, edit and cancel; reading and commenting need none. */
-export const CASH_RECEIPTS_MANAGE_PERMISSION = "cash-receipts:manage";
-
 /** Account types a receipt's lines (and the "Account / party" filter) pick
  * from — the backend's RECEIPT_LINE_ACCOUNT_TYPES. */
 export const LINE_ACCOUNT_TYPES = [
@@ -44,7 +41,7 @@ export const CASH_RECEIPT_CONFIG: VoucherConfig = {
   Noun: "Receipt",
   nounPlural: "receipts",
   NounPlural: "Receipts",
-  permissionLabel: "Manage cash receipts",
+  permissionPrefix: "cash-receipts",
   lineAccountTypes: LINE_ACCOUNT_TYPES,
   showPaymentDetails: false,
   addPartyKind: "customer",

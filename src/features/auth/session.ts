@@ -24,3 +24,9 @@ export async function hasPermission(permission: string): Promise<boolean> {
   const session = await getServerSession();
   return session?.user.permissions.includes(permission) ?? false;
 }
+
+/** Whether the signed-in user's role sees only their own vouchers. */
+export async function isOwnScope(): Promise<boolean> {
+  const session = await getServerSession();
+  return session?.user.dataScope === "own";
+}

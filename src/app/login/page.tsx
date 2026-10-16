@@ -16,7 +16,8 @@ function resolveRedirectTo(from: string | undefined) {
   if (from && from.startsWith("/") && !from.startsWith("//")) {
     return from;
   }
-  return "/dashboard";
+  // The root page picks the first screen this user may open.
+  return "/";
 }
 
 export default async function LoginPage({

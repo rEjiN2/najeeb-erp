@@ -25,8 +25,13 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
     setError(null);
 
     try {
-      await login({ email, password, rememberMe });
-      router.push(redirectTo);
+      const session = await login({ email, password, rememberMe });
+      // A first login (or an admin reset) must set a new password first.
+      router.push(
+        session.user.mustChangePassword
+          ? `/change-password?${new URLSearchParams({ from: redirectTo })}`
+          : redirectTo,
+      );
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in.");

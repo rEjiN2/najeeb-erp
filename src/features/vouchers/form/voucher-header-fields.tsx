@@ -34,6 +34,8 @@ interface VoucherHeaderFieldsProps {
   currentCashier?: CashierRef | null;
   /** Opens the Cashiers master in a side panel; only with cashiers:manage. */
   onAddCashier?: () => void;
+  /** "Own"-scoped user: the cashier is theirs and shown read-only. */
+  cashierLocked?: boolean;
   headerAccounts: AccountLookupItem[];
   /** The voucher's current header account, when it's no longer in the active
    * lookup (deactivated since) — kept selectable so the form shows it. */
@@ -52,6 +54,7 @@ export function VoucherHeaderFields({
   cashiers,
   currentCashier,
   onAddCashier,
+  cashierLocked = false,
   errors,
   disabled,
 }: VoucherHeaderFieldsProps) {
@@ -71,6 +74,9 @@ export function VoucherHeaderFields({
       description: `Inactive — kept on this ${config.noun}`,
     });
   }
+  const lockedCashier = cashierOptions.find(
+    (option) => option.value === voucher.cashierId,
+  );
   const legacyCashierText =
     currentCashier && !currentCashier.id ? currentCashier.name : null;
 
@@ -147,9 +153,11 @@ export function VoucherHeaderFields({
               options={options}
               placeholder="Select account"
               emptyText={
-                headerAccounts.length === 0
-                  ? "No active cash, wallet or bank accounts. Add one under Masters → Accounts."
-                  : "No matching accounts"
+                headerAccounts.length > 0
+                  ? "No matching accounts"
+                  : cashierLocked
+                    ? "No cash accounts are assigned to your user. Ask an administrator to assign one."
+                    : "No active cash, wallet or bank accounts. Add one under Masters → Accounts."
               }
               allowClear={false}
               disabled={disabled}
@@ -157,7 +165,9 @@ export function VoucherHeaderFields({
           </div>
           <FieldError id="cash-account-error" message={errors.headerAccount} />
           <p className="text-muted-foreground text-xs">
-            Cash, wallet or bank account
+            {cashierLocked
+              ? "The cash accounts assigned to you"
+              : "Cash, wallet or bank account"}
           </p>
         </div>
 
@@ -177,25 +187,41 @@ export function VoucherHeaderFields({
               </button>
             ) : null}
           </div>
-          <div
-            className={cn(
-              errors.cashier && "ring-destructive/40 rounded-lg ring-2",
-            )}
-          >
-            <SearchableSelect
-              value={voucher.cashierId || null}
-              onChange={(value) => onChange({ cashierId: value ?? "" })}
-              options={cashierOptions}
-              placeholder="Select cashier"
-              emptyText={
-                cashiers.length === 0
-                  ? "No active cashiers. Add one under Masters → Cashiers."
-                  : "No matching cashiers"
-              }
-              allowClear={false}
-              disabled={disabled}
-            />
-          </div>
+          {cashierLocked ? (
+            lockedCashier ? (
+              <Input
+                aria-label="Cashier"
+                value={`${lockedCashier.label} (${lockedCashier.description})`}
+                readOnly
+                className="bg-muted/50"
+              />
+            ) : (
+              <p className="text-destructive text-sm">
+                Your user isn&apos;t linked to an active cashier. Ask an
+                administrator to link you to one.
+              </p>
+            )
+          ) : (
+            <div
+              className={cn(
+                errors.cashier && "ring-destructive/40 rounded-lg ring-2",
+              )}
+            >
+              <SearchableSelect
+                value={voucher.cashierId || null}
+                onChange={(value) => onChange({ cashierId: value ?? "" })}
+                options={cashierOptions}
+                placeholder="Select cashier"
+                emptyText={
+                  cashiers.length === 0
+                    ? "No active cashiers. Add one under Masters → Cashiers."
+                    : "No matching cashiers"
+                }
+                allowClear={false}
+                disabled={disabled}
+              />
+            </div>
+          )}
           <FieldError id="cashier-error" message={errors.cashier} />
           {legacyCashierText && !voucher.cashierId ? (
             <p className="text-muted-foreground text-xs">

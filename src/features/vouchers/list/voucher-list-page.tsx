@@ -24,7 +24,11 @@ import {
   CancelVoucherDialog,
   type CancelTarget,
 } from "../cancel-voucher-dialog";
-import { newVoucherPath, type VoucherConfig } from "../config";
+import {
+  newVoucherPath,
+  type VoucherAccess,
+  type VoucherConfig,
+} from "../config";
 import {
   DATE_PRESET_LABELS,
   PAGE_SIZES,
@@ -55,7 +59,7 @@ interface VoucherListPageProps {
   postedCount: number;
   /** No voucher exists at all — not just none matching the filters. */
   isFirstRun: boolean;
-  canManage: boolean;
+  access: VoucherAccess;
   headerAccounts: Loadable<AccountLookupItem[]>;
   users: Loadable<UserRef[]>;
   cashiers: Loadable<CashierLookupItem[]>;
@@ -140,7 +144,7 @@ export function VoucherListPage({
   dateRange,
   postedCount,
   isFirstRun,
-  canManage,
+  access,
   headerAccounts,
   users,
   cashiers,
@@ -186,7 +190,7 @@ export function VoucherListPage({
         <h1 className="font-heading text-2xl font-semibold">{config.title}</h1>
         <p className="text-muted-foreground text-sm">{config.description}</p>
       </div>
-      {canManage && !isFirstRun ? (
+      {access.canCreate && !isFirstRun ? (
         <Link href={newPath} className={buttonVariants()}>
           <Plus /> {config.copy.createButton}
         </Link>
@@ -202,14 +206,14 @@ export function VoucherListPage({
           icon={HandCoins}
           title={`No ${config.title.toLowerCase()} yet`}
           action={
-            canManage ? (
+            access.canCreate ? (
               <Link href={newPath} className={buttonVariants()}>
                 <Plus /> {config.copy.firstCreateButton}
               </Link>
             ) : undefined
           }
         >
-          {canManage
+          {access.canCreate
             ? config.copy.firstRunText
             : `${config.NounPlural} will appear here once someone records one.`}
         </StatePanel>
@@ -282,7 +286,8 @@ export function VoucherListPage({
             rows={page.items}
             filters={filters}
             onSort={sortBy}
-            canManage={canManage}
+            canEdit={access.canEdit}
+            canCancel={access.canCancel}
             busy={isNavigating}
             onPrint={(row) => void pdf.print(row.id, row.voucherNo)}
             onActivity={(row) =>

@@ -11,8 +11,9 @@ export interface DraftLine {
   accountName: string | null;
   narration: string;
   remarks: string;
-  /** Snapshot shown in the grid; the backend re-takes it on save. */
-  oldBalance: number;
+  /** Snapshot shown in the grid; the backend re-takes it on save. null
+   * when balances aren't returned to this user. */
+  oldBalance: number | null;
   amount: string;
   vat: string;
 }
@@ -29,11 +30,12 @@ export interface DraftVoucher {
   lines: DraftLine[];
 }
 
-/** `cashierId`: the signed-in user's own cashier, when they have an active one. */
-export function blankDraft(cashierId = ""): DraftVoucher {
+/** `cashierId`: the signed-in user's own cashier, when they have an active
+ * one; `headerAccountId`: pre-picked when only one account is allowed. */
+export function blankDraft(cashierId = "", headerAccountId = ""): DraftVoucher {
   return {
     voucherDate: uaeToday(),
-    headerAccountId: "",
+    headerAccountId,
     cashierId,
     paymentReference: "",
     comments: "",

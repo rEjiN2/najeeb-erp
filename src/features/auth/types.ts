@@ -7,7 +7,26 @@ export interface AuthUser {
     name: string;
   };
   permissions: string[];
+  /** "own": sees and posts only their own vouchers (backend data-scope.ts). */
+  dataScope: DataScope;
+  /** Set after first login or an admin reset: only /change-password works. */
+  mustChangePassword: boolean;
+  linkedCashier: {
+    id: string;
+    code: string;
+    name: string;
+    status: string;
+  } | null;
+  /** Cash/wallet accounts an "own"-scoped user may receive money into. */
+  allowedCashAccounts: {
+    id: string;
+    code: string;
+    name: string;
+    type: string;
+  }[];
 }
+
+export type DataScope = "own" | "all";
 
 export interface Session {
   user: AuthUser;
@@ -28,4 +47,10 @@ export interface AuthClient {
   login(credentials: LoginCredentials): Promise<Session>;
   logout(): Promise<void>;
   getSession(): Promise<Session | null>;
+  changePassword(input: ChangePasswordInput): Promise<Session>;
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
 }

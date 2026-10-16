@@ -27,101 +27,126 @@ function Money({ value, strong = false }: { value: number; strong?: boolean }) {
   );
 }
 
+interface ColumnOptions {
+  /** Off when the user can't see balances (the backend leaves them out). */
+  showOldBalance: boolean;
+}
+
+function withoutOldBalance<T>(
+  columns: VoucherColumn<T>[],
+  { showOldBalance }: ColumnOptions,
+): VoucherColumn<T>[] {
+  return showOldBalance
+    ? columns
+    : columns.filter((column) => column.key !== "oldBalance");
+}
+
 /** Editable grid for the create/edit form. */
 export function editColumns(
   errors: Pick<DraftErrors, "lineAmount" | "lineVat">,
+  options: ColumnOptions,
 ): VoucherColumn<DraftLine>[] {
-  return [
-    {
-      key: "account",
-      header: "Account",
-      render: (line) => <AccountName name={line.accountName} />,
-    },
-    {
-      key: "narration",
-      header: "Narration",
-      render: (line, { update }) => (
-        <Input
-          value={line.narration}
-          onChange={(event) => update({ narration: event.target.value })}
-          placeholder="Narration"
-          aria-label={`Narration for ${line.accountName ?? "line"}`}
-          className="min-w-40"
-        />
-      ),
-    },
-    {
-      key: "remarks",
-      header: "Remarks",
-      render: (line, { update }) => (
-        <Input
-          value={line.remarks}
-          onChange={(event) => update({ remarks: event.target.value })}
-          placeholder="Remarks"
-          aria-label={`Remarks for ${line.accountName ?? "line"}`}
-          className="min-w-32"
-        />
-      ),
-    },
-    {
-      key: "oldBalance",
-      header: "Old Balance",
-      className: "text-right",
-      render: (line) => <Money value={line.oldBalance} />,
-    },
-    {
-      key: "amount",
-      header: "Amount",
-      className: "text-right",
-      render: (line, { update }) => (
-        <Input
-          inputMode="decimal"
-          value={line.amount}
-          onChange={(event) => update({ amount: event.target.value })}
-          placeholder="0.00"
-          aria-label={`Amount for ${line.accountName ?? "line"}`}
-          aria-invalid={errors.lineAmount[line.id] ? true : undefined}
-          title={errors.lineAmount[line.id]}
-          className="ml-auto w-28 text-right font-mono tabular-nums"
-        />
-      ),
-    },
-    {
-      key: "vat",
-      header: "VAT",
-      className: "text-right",
-      render: (line, { update }) => (
-        <Input
-          inputMode="decimal"
-          value={line.vat}
-          onChange={(event) => update({ vat: event.target.value })}
-          placeholder="0.00"
-          aria-label={`VAT for ${line.accountName ?? "line"}`}
-          aria-invalid={errors.lineVat[line.id] ? true : undefined}
-          title={errors.lineVat[line.id]}
-          className="ml-auto w-24 text-right font-mono tabular-nums"
-        />
-      ),
-    },
-    {
-      key: "netAmount",
-      header: "Net Amount",
-      className: "text-right",
-      render: (line) => {
-        const amount = parseMoney(line.amount, true);
-        const vat = parseMoney(line.vat, true);
-        return Number.isNaN(amount) || Number.isNaN(vat) ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <Money value={amount + vat} strong />
-        );
+  return withoutOldBalance<DraftLine>(
+    [
+      {
+        key: "account",
+        header: "Account",
+        render: (line) => <AccountName name={line.accountName} />,
       },
-    },
-  ];
+      {
+        key: "narration",
+        header: "Narration",
+        render: (line, { update }) => (
+          <Input
+            value={line.narration}
+            onChange={(event) => update({ narration: event.target.value })}
+            placeholder="Narration"
+            aria-label={`Narration for ${line.accountName ?? "line"}`}
+            className="min-w-40"
+          />
+        ),
+      },
+      {
+        key: "remarks",
+        header: "Remarks",
+        render: (line, { update }) => (
+          <Input
+            value={line.remarks}
+            onChange={(event) => update({ remarks: event.target.value })}
+            placeholder="Remarks"
+            aria-label={`Remarks for ${line.accountName ?? "line"}`}
+            className="min-w-32"
+          />
+        ),
+      },
+      {
+        key: "oldBalance",
+        header: "Old Balance",
+        className: "text-right",
+        render: (line) =>
+          line.oldBalance === null ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <Money value={line.oldBalance} />
+          ),
+      },
+      {
+        key: "amount",
+        header: "Amount",
+        className: "text-right",
+        render: (line, { update }) => (
+          <Input
+            inputMode="decimal"
+            value={line.amount}
+            onChange={(event) => update({ amount: event.target.value })}
+            placeholder="0.00"
+            aria-label={`Amount for ${line.accountName ?? "line"}`}
+            aria-invalid={errors.lineAmount[line.id] ? true : undefined}
+            title={errors.lineAmount[line.id]}
+            className="ml-auto w-28 text-right font-mono tabular-nums"
+          />
+        ),
+      },
+      {
+        key: "vat",
+        header: "VAT",
+        className: "text-right",
+        render: (line, { update }) => (
+          <Input
+            inputMode="decimal"
+            value={line.vat}
+            onChange={(event) => update({ vat: event.target.value })}
+            placeholder="0.00"
+            aria-label={`VAT for ${line.accountName ?? "line"}`}
+            aria-invalid={errors.lineVat[line.id] ? true : undefined}
+            title={errors.lineVat[line.id]}
+            className="ml-auto w-24 text-right font-mono tabular-nums"
+          />
+        ),
+      },
+      {
+        key: "netAmount",
+        header: "Net Amount",
+        className: "text-right",
+        render: (line) => {
+          const amount = parseMoney(line.amount, true);
+          const vat = parseMoney(line.vat, true);
+          return Number.isNaN(amount) || Number.isNaN(vat) ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <Money value={amount + vat} strong />
+          );
+        },
+      },
+    ],
+    options,
+  );
 }
 
+type ViewLine = VoucherLine & { id: string };
+
 /** Read-only grid for the view page. */
-export const VIEW_COLUMNS: VoucherColumn<VoucherLine & { id: string }>[] = [
+const VIEW_COLUMNS: VoucherColumn<ViewLine>[] = [
   {
     key: "account",
     header: "Account",
@@ -143,7 +168,12 @@ export const VIEW_COLUMNS: VoucherColumn<VoucherLine & { id: string }>[] = [
     key: "oldBalance",
     header: "Old Balance",
     className: "text-right",
-    render: (line) => <Money value={line.oldBalance} />,
+    render: (line) =>
+      line.oldBalance === null ? (
+        <span className="text-muted-foreground">—</span>
+      ) : (
+        <Money value={line.oldBalance} />
+      ),
   },
   {
     key: "amount",
@@ -164,3 +194,7 @@ export const VIEW_COLUMNS: VoucherColumn<VoucherLine & { id: string }>[] = [
     render: (line) => <Money value={line.netAmount} strong />,
   },
 ];
+
+export function viewColumns(options: ColumnOptions): VoucherColumn<ViewLine>[] {
+  return withoutOldBalance(VIEW_COLUMNS, options);
+}

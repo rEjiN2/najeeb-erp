@@ -7,7 +7,8 @@ import { ACCOUNT_TYPE_BADGES } from "./constants";
 import type { AccountLookupItem } from "./types";
 
 export interface LineAccountOption extends SearchableSelectOption {
-  balance: number;
+  /** null when the backend leaves balances out (no balances:view). */
+  balance: number | null;
 }
 
 export type LineAccountSearch = (
@@ -49,8 +50,12 @@ function createSearch(types: readonly string[]): LineAccountSearch {
         value: account.id,
         label: account.name,
         badge: ACCOUNT_TYPE_BADGES[account.type] ?? account.type,
-        description: `${account.code} · Balance ${formatAmount(account.balance)}`,
-        balance: account.balance,
+        // Without balances:view the picker shows name and code only.
+        description:
+          account.balance === undefined
+            ? account.code
+            : `${account.code} · Balance ${formatAmount(account.balance)}`,
+        balance: account.balance ?? null,
       })),
     };
   };

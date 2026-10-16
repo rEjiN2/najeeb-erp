@@ -11,11 +11,15 @@ import {
   MapPin,
   Receipt,
   Settings,
+  ShieldCheck,
   Tags,
   Truck,
+  Users,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+
+import { PERMISSIONS } from "@/features/auth/permissions";
 
 export interface NavLeaf {
   title: string;
@@ -38,7 +42,12 @@ export function isNavGroup(entry: NavEntry): entry is NavGroup {
 }
 
 export const NAV_ITEMS: NavEntry[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+    permission: PERMISSIONS.DASHBOARD_VIEW,
+  },
   {
     title: "Accounting & Inventory",
     icon: Boxes,
@@ -51,31 +60,37 @@ export const NAV_ITEMS: NavEntry[] = [
             title: "Accounts",
             href: "/accounting-inventory/masters/accounts",
             icon: Wallet,
+            permission: PERMISSIONS.ACCOUNTS_MANAGE,
           },
           {
             title: "Customers",
             href: "/accounting-inventory/masters/customers",
             icon: Building,
+            permission: PERMISSIONS.PARTIES_MANAGE,
           },
           {
             title: "Suppliers",
             href: "/accounting-inventory/masters/suppliers",
             icon: Truck,
+            permission: PERMISSIONS.PARTIES_MANAGE,
           },
           {
             title: "Cashiers",
             href: "/accounting-inventory/masters/cashiers",
             icon: IdCard,
+            permission: PERMISSIONS.CASHIERS_MANAGE,
           },
           {
             title: "Locations",
             href: "/accounting-inventory/masters/locations",
             icon: MapPin,
+            permission: PERMISSIONS.LOCATIONS_MANAGE,
           },
           {
             title: "Product Groups",
             href: "/accounting-inventory/masters/product-groups",
             icon: Tags,
+            permission: PERMISSIONS.PRODUCT_GROUPS_MANAGE,
           },
         ],
       },
@@ -87,11 +102,13 @@ export const NAV_ITEMS: NavEntry[] = [
             title: "Cash Receipts",
             href: "/accounting-inventory/transactions/cash-receipts",
             icon: HandCoins,
+            permission: PERMISSIONS.CASH_RECEIPTS_READ,
           },
           {
             title: "Cash Payments",
             href: "/accounting-inventory/transactions/cash-payments",
             icon: Banknote,
+            permission: PERMISSIONS.CASH_PAYMENTS_READ,
           },
         ],
       },
@@ -99,6 +116,8 @@ export const NAV_ITEMS: NavEntry[] = [
         title: "Reports",
         href: "/accounting-inventory/reports",
         icon: BarChart3,
+        // No reports permission exists yet; reports are balances.
+        permission: PERMISSIONS.BALANCES_VIEW,
       },
     ],
   },
@@ -110,7 +129,19 @@ export const NAV_ITEMS: NavEntry[] = [
         title: "Company Profile",
         href: "/administration/company-profile",
         icon: Building2,
-        permission: "company:manage",
+        permission: PERMISSIONS.COMPANY_MANAGE,
+      },
+      {
+        title: "Users",
+        href: "/administration/users",
+        icon: Users,
+        permission: PERMISSIONS.USERS_MANAGE,
+      },
+      {
+        title: "Roles",
+        href: "/administration/roles",
+        icon: ShieldCheck,
+        permission: PERMISSIONS.ROLES_MANAGE,
       },
     ],
   },
@@ -155,6 +186,16 @@ export function containsActivePath(
     isNavGroup(entry)
       ? containsActivePath(entry.children, pathname)
       : isActivePath(entry.href, pathname),
+  );
+}
+
+/**
+ * Where this user lands after signing in: the dashboard when they may see
+ * it, else the first screen the menu offers them.
+ */
+export function homePath(permissions: readonly string[]): string {
+  return (
+    flatten(visibleNavItems(NAV_ITEMS, permissions))[0]?.href ?? "/dashboard"
   );
 }
 

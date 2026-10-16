@@ -12,13 +12,15 @@ function backTo(config: VoucherConfig) {
   return { href: config.basePath, label: config.title };
 }
 
-/** The user can read vouchers but not create/edit them (no manage permission). */
+/** The user can read vouchers but not create or edit them. */
 export function ManageForbidden({
   config,
   title,
+  action,
 }: {
   config: VoucherConfig;
   title: string;
+  action: "create" | "edit";
 }) {
   return (
     <div className="space-y-6">
@@ -35,9 +37,8 @@ export function ManageForbidden({
           </Link>
         }
       >
-        Creating and editing {config.title.toLowerCase()} needs the &ldquo;
-        {config.permissionLabel}&rdquo; permission. Ask an administrator for
-        access.
+        Your role can&apos;t {action} {config.nounPlural}. Ask an administrator
+        for access.
       </StatePanel>
     </div>
   );
