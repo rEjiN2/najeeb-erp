@@ -5,6 +5,7 @@ recharts. UAE dates-trading ERP replacing a legacy system (atACC).
 Backend: the NestJS API at API_BASE_URL (server-only env var).
 
 ## Working rules (read first)
+
 - Be economical. Read only the files you need; do not scan the whole repo.
   Check "Where things live" before searching.
 - Before building anything, look for a shared component or pattern that
@@ -19,6 +20,7 @@ Backend: the NestJS API at API_BASE_URL (server-only env var).
   you checked, anything I must decide.
 
 ## Where things live (verify on first use, then correct this section)
+
 src/features/<domain>/ (api.ts typed server functions, components, types),
 src/components/ (shared UI), src/lib/ (server-only API client, helpers),
 AuthContext abstraction, (protected) route group with the app shell,
@@ -26,6 +28,7 @@ design tokens in one file, shared Master pattern, shared Voucher pattern,
 shared Activity panel, DemoDataBadge.
 
 ## Conventions
+
 - Data: fetch on the server through one typed function per feature
   (features/<x>/api.ts), forwarding the user's cookie. Use cache: "no-store"
   for lookups and live data. Every screen handles 401 (go to login), 403
@@ -52,10 +55,12 @@ shared Activity panel, DemoDataBadge.
   variants. Do not restyle individual components.
 
 ## Business context
+
 Dates trading company: customers and suppliers, cash/bank/wallet accounts,
 a location tree (Branch > Warehouse / Store / Van, vans can nest), product
 groups (Dates, Packaging, Gift & Bundle) and bundling as a core feature.
 
 ## Not built, do not build unless asked
+
 Journal Entry, Credit/Debit Note, Advance Allocation, Bank Reconciliation,
 Contra Voucher.
