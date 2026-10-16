@@ -1,20 +1,17 @@
+import { BACKEND_PROXY_PATH } from "./constants";
 import type { AuthClient, AuthUser, LoginCredentials, Session } from "./types";
 
 /**
- * Browser-side AuthClient talking straight to the backend. The session lives
- * entirely in the httpOnly cookies the backend sets — this file never sees,
- * stores, or forwards a token; `credentials: "include"` lets the browser
- * attach and accept them on its own.
+ * Browser-side AuthClient. The session lives entirely in the httpOnly cookies
+ * the backend sets — this file never sees, stores, or forwards a token.
+ *
+ * Requests go to the same-origin proxy (see next.config.ts), not the backend's
+ * own URL, so those cookies are set on this site's domain where the auth gate
+ * and server-side session check can read them.
  */
 
 function getApiBaseUrl(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!baseUrl) {
-    throw new Error(
-      "NEXT_PUBLIC_API_BASE_URL is not set. Add it to .env.local (see .env.example).",
-    );
-  }
-  return baseUrl.replace(/\/+$/, "");
+  return BACKEND_PROXY_PATH;
 }
 
 /** Backend error envelope: `message` is a string, or a list for validation errors. */
