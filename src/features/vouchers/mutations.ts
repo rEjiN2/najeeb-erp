@@ -53,7 +53,8 @@ function isWarning(value: unknown): value is VoucherWarning {
   );
 }
 
-async function send(
+/** Sends one voucher write; a 409 with warnings comes back to confirm. */
+export async function sendVoucher(
   target: VoucherWriteTarget,
   method: "POST" | "PATCH",
   path: string,
@@ -101,7 +102,7 @@ export function createVoucher(
   const comments = input.comments.trim();
   const reference = input.paymentReference.trim();
 
-  return send(
+  return sendVoucher(
     target,
     "POST",
     target.path,
@@ -136,7 +137,7 @@ export function updateVoucher(
 ): Promise<VoucherSaveResult> {
   const note = changeNote.trim();
 
-  return send(
+  return sendVoucher(
     target,
     "PATCH",
     `${target.path}/${encodeURIComponent(id)}`,

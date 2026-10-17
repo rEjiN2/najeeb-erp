@@ -125,21 +125,30 @@ function positiveInt(value: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-/** URL → filters. Values the backend would reject are dropped here rather
- * than turning a hand-edited link into an error page. */
-export function parseFilters(params: SearchParams): VoucherFilters {
-  let range = oneOf(first(params.range), DATE_PRESETS, DEFAULT_FILTERS.range);
+/** The ?range=&from=&to= part of a URL; reports share it. */
+export function parseDateRange(
+  params: SearchParams,
+  fallback: DatePreset = DEFAULT_FILTERS.range,
+): Pick<VoucherFilters, "range" | "from" | "to"> {
+  let range = oneOf(first(params.range), DATE_PRESETS, fallback);
   let from = first(params.from);
   let to = first(params.to);
   if (range === "custom") {
     from = isIsoDay(from) ? from : "";
     to = isIsoDay(to) ? to : "";
     if (from && to && from > to) [from, to] = [to, from];
-    if (!from && !to) range = DEFAULT_FILTERS.range;
+    if (!from && !to) range = fallback;
   } else {
     from = "";
     to = "";
   }
+  return { range, from, to };
+}
+
+/** URL → filters. Values the backend would reject are dropped here rather
+ * than turning a hand-edited link into an error page. */
+export function parseFilters(params: SearchParams): VoucherFilters {
+  const { range, from, to } = parseDateRange(params);
 
   let amountMin = amount(first(params.min));
   let amountMax = amount(first(params.max));

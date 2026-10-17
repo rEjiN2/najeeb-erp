@@ -37,6 +37,9 @@ export interface VoucherConfig {
   showPaymentDetails: boolean;
   /** Which party master the line picker's "Add …" opens. */
   addPartyKind: PartyKind;
+  /** One account and amount per voucher (handovers): the view leaves out
+   * narration, remarks, VAT and the gross/tax totals. */
+  simpleLines?: boolean;
 
   copy: {
     /** "Received Into" / "Paid From". */
@@ -45,6 +48,8 @@ export interface VoucherConfig {
     headerFilterAny: string;
     /** "Received From" / "Paid To". */
     counterpartyLabel: string;
+    /** "Cashier" / "Handed By". */
+    cashierLabel: string;
     /** List summary label, e.g. "Total received". */
     totalLabel: string;
     createButton: string;

@@ -44,6 +44,13 @@ export interface VoucherModule {
   cancelAction: CancelVoucherAction;
 }
 
+/** What the list and view pages need — voucher types with their own form
+ * (handovers) supply only this. */
+export type VoucherReadModule = Pick<
+  VoucherModule,
+  "config" | "api" | "cancelAction"
+>;
+
 type SearchParams = Record<string, string | string[] | undefined>;
 
 /** A filter's lookup: failing it disables that one filter, not the page —
@@ -64,7 +71,7 @@ export async function VoucherListRoute({
   module: { config, api, cancelAction },
   searchParams,
 }: {
-  module: VoucherModule;
+  module: VoucherReadModule;
   searchParams: SearchParams;
 }) {
   const filters = parseFilters(searchParams);
@@ -204,7 +211,7 @@ export async function VoucherNewRoute({ module }: { module: VoucherModule }) {
 }
 
 /** 400 is a malformed id — as far as the user can tell, no such voucher. */
-function isMissing(result: ApiResult<unknown>): boolean {
+export function isMissing(result: ApiResult<unknown>): boolean {
   return (
     !result.ok &&
     result.reason === "error" &&
@@ -217,7 +224,7 @@ export async function VoucherDetailRoute({
   id,
   searchParams,
 }: {
-  module: VoucherModule;
+  module: VoucherReadModule;
   id: string;
   searchParams: SearchParams;
 }) {

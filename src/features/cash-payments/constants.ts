@@ -44,6 +44,7 @@ export const CASH_PAYMENT_CONFIG: VoucherConfig = {
     headerLabel: "Paid From",
     headerFilterAny: "Paid from: any",
     counterpartyLabel: "Paid To",
+    cashierLabel: "Cashier",
     totalLabel: "Total paid",
     createButton: "Create Payment",
     firstCreateButton: "Create your first payment",

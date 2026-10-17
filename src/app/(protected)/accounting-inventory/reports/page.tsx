@@ -1,11 +1,8 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { PlaceholderScreen } from "@/components/shared/placeholder-screen";
+import { SALESMAN_COLLECTIONS_PATH } from "@/features/reports/salesman-collections/constants";
 
-export const metadata: Metadata = {
-  title: "Reports | ALA Dates",
-};
-
+/** The only report so far; the menu lists reports under their own group. */
 export default function ReportsPage() {
-  return <PlaceholderScreen title="Reports" />;
+  redirect(SALESMAN_COLLECTIONS_PATH);
 }

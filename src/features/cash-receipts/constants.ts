@@ -49,6 +49,7 @@ export const CASH_RECEIPT_CONFIG: VoucherConfig = {
     headerLabel: "Received Into",
     headerFilterAny: "Received into: any",
     counterpartyLabel: "Received From",
+    cashierLabel: "Cashier",
     totalLabel: "Total received",
     createButton: "Create Receipt",
     firstCreateButton: "Create your first receipt",

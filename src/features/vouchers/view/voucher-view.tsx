@@ -322,9 +322,16 @@ export function VoucherView({
                     </span>
                   )}
                 </Field>
-                <Field label="Cashier">
+                <Field label={config.copy.cashierLabel}>
                   <CashierName cashier={voucher.cashier} />
                 </Field>
+                {voucher.extraFields.map((field) => (
+                  <Field key={field.key} label={field.label}>
+                    {field.value ?? (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </Field>
+                ))}
                 {config.showPaymentDetails ? (
                   <>
                     <Field label="Method">
@@ -360,16 +367,27 @@ export function VoucherView({
             columns={viewColumns({
               // Left out by the backend without balances:view.
               showOldBalance: lines.every((line) => line.oldBalance !== null),
+              simpleLines: config.simpleLines ?? false,
             })}
             lines={lines}
           />
 
           <VoucherTotalsFooter
             totals={[
-              { label: "Gross", value: formatAmount(voucher.grossTotal) },
-              { label: "Total Tax", value: formatAmount(voucher.totalTax) },
+              ...(config.simpleLines
+                ? []
+                : [
+                    {
+                      label: "Gross",
+                      value: formatAmount(voucher.grossTotal),
+                    },
+                    {
+                      label: "Total Tax",
+                      value: formatAmount(voucher.totalTax),
+                    },
+                  ]),
               {
-                label: "Grand Total",
+                label: config.simpleLines ? "Amount" : "Grand Total",
                 value: formatAmount(voucher.grandTotal),
                 emphasize: true,
               },

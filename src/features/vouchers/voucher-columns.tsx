@@ -30,15 +30,21 @@ function Money({ value, strong = false }: { value: number; strong?: boolean }) {
 interface ColumnOptions {
   /** Off when the user can't see balances (the backend leaves them out). */
   showOldBalance: boolean;
+  /** Account and amount only (see VoucherConfig.simpleLines). */
+  simpleLines?: boolean;
 }
+
+const LINE_DETAIL_KEYS = ["narration", "remarks", "vat", "netAmount"];
 
 function withoutOldBalance<T>(
   columns: VoucherColumn<T>[],
-  { showOldBalance }: ColumnOptions,
+  { showOldBalance, simpleLines = false }: ColumnOptions,
 ): VoucherColumn<T>[] {
-  return showOldBalance
-    ? columns
-    : columns.filter((column) => column.key !== "oldBalance");
+  return columns.filter(
+    (column) =>
+      (showOldBalance || column.key !== "oldBalance") &&
+      (!simpleLines || !LINE_DETAIL_KEYS.includes(column.key)),
+  );
 }
 
 /** Editable grid for the create/edit form. */

@@ -228,7 +228,9 @@ export function VoucherFilterBar({
               ? `${config.copy.headerLabel} filter: ${headerAccounts.message}`
               : null,
             !users.ok ? `Created-by filter: ${users.message}` : null,
-            !cashiers.ok ? `Cashier filter: ${cashiers.message}` : null,
+            !cashiers.ok
+              ? `${config.copy.cashierLabel} filter: ${cashiers.message}`
+              : null,
           ]
             .filter(Boolean)
             .join(" ")}
@@ -292,12 +294,13 @@ function SearchBox({
   );
 }
 
-function DateRangeControl({
+/** Preset or custom range; the report screens use it too. */
+export function DateRangeControl({
   filters,
   onChange,
 }: {
-  filters: VoucherFilters;
-  onChange: (next: Partial<VoucherFilters>) => void;
+  filters: Pick<VoucherFilters, "range" | "from" | "to">;
+  onChange: (next: Pick<VoucherFilters, "range" | "from" | "to">) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
 

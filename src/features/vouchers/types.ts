@@ -39,6 +39,8 @@ export interface VoucherListRow {
   headerAccount: NamedRef;
   /** id null on vouchers from before the cashier master; name is their old text. */
   cashier: CashierRef;
+  /** A second line under the cashier, e.g. "to Ali" on a handover. */
+  cashierNote?: string | null;
   paymentMethod: PaymentMethod;
   /** First line's account, plus how many other distinct accounts it touches. */
   partiesSummary: { firstAccount: NamedRef | null; othersCount: number };
@@ -98,6 +100,17 @@ export interface VoucherDetail {
   cancelledBy: UserRef | null;
   cancelledAt: string | null;
   cancelReason: string | null;
+  /** Fields only one voucher type has (e.g. a handover's Received By). */
+  extraFields: VoucherExtraField[];
+}
+
+export interface VoucherExtraField {
+  key: string;
+  label: string;
+  /** Display text; null shows a dash. */
+  value: string | null;
+  /** The referenced record's id, when the field names one. */
+  id?: string | null;
 }
 
 /** GET /accounts/lookup item. */

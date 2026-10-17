@@ -243,6 +243,7 @@ function VoucherCards(props: VouchersTableProps) {
                 <p className="text-muted-foreground text-xs">
                   {formatCalendarDate(row.date)}
                   {row.cashier.name ? ` · ${row.cashier.name}` : ""}
+                  {row.cashierNote ? ` ${row.cashierNote}` : ""}
                 </p>
               </div>
               <div
@@ -301,7 +302,7 @@ export function VouchersTable(props: VouchersTableProps) {
                 Date
               </SortableHead>
               <TableHead>{config.copy.headerLabel}</TableHead>
-              <TableHead>Cashier</TableHead>
+              <TableHead>{config.copy.cashierLabel}</TableHead>
               <TableHead>{config.copy.counterpartyLabel}</TableHead>
               <SortableHead
                 field="amount"
@@ -378,6 +379,11 @@ export function VouchersTable(props: VouchersTableProps) {
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
+                    {row.cashierNote ? (
+                      <p className="text-muted-foreground truncate text-xs">
+                        {row.cashierNote}
+                      </p>
+                    ) : null}
                   </TableCell>
                   <TableCell className="max-w-56 text-sm">
                     <CounterpartyText row={row} />

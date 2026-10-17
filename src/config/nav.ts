@@ -1,6 +1,8 @@
 import {
+  ArrowRightLeft,
   Banknote,
   BarChart3,
+  ClipboardList,
   Boxes,
   Building,
   Building2,
@@ -110,14 +112,25 @@ export const NAV_ITEMS: NavEntry[] = [
             icon: Banknote,
             permission: PERMISSIONS.CASH_PAYMENTS_READ,
           },
+          {
+            title: "Cash Handovers",
+            href: "/accounting-inventory/transactions/cash-handovers",
+            icon: ArrowRightLeft,
+            permission: PERMISSIONS.CASH_HANDOVERS_READ,
+          },
         ],
       },
       {
         title: "Reports",
-        href: "/accounting-inventory/reports",
         icon: BarChart3,
-        // No reports permission exists yet; reports are balances.
-        permission: PERMISSIONS.BALANCES_VIEW,
+        children: [
+          {
+            title: "Salesman Collections",
+            href: "/accounting-inventory/reports/salesman-collections",
+            icon: ClipboardList,
+            permission: PERMISSIONS.REPORTS_SALESMAN,
+          },
+        ],
       },
     ],
   },

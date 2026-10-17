@@ -13,6 +13,7 @@ import type {
   PaymentMethod,
   UserRef,
   VoucherDetail,
+  VoucherExtraField,
   VoucherListRow,
   VoucherPage,
   VoucherStatus,
@@ -32,6 +33,10 @@ export interface VoucherEndpoint {
   methodFilter: boolean;
   /** Whether the account lookup is narrowed with scope=company. */
   scopedLookup: boolean;
+  /** List rows not shaped like the shared VoucherListRow (handovers). */
+  mapListRow?: (raw: Record<string, unknown>) => VoucherListRow;
+  /** Fields only this voucher type has, for the view page. */
+  detailExtras?: (raw: Record<string, unknown>) => VoucherExtraField[];
 }
 
 type RawListRow = Omit<VoucherListRow, "headerAccount" | "paymentMethod"> & {
@@ -127,6 +132,9 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
       data: {
         ...result.data,
         items: result.data.items.map((item): VoucherListRow => {
+          if (endpoint.mapListRow) {
+            return endpoint.mapListRow(item as Record<string, unknown>);
+          }
           const {
             [endpoint.listHeaderKey]: header,
             paymentMethod,
@@ -241,6 +249,7 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
         cancelledBy: raw.cancelledBy ?? null,
         cancelledAt: raw.cancelledAt ?? null,
         cancelReason: raw.cancelReason ?? null,
+        extraFields: endpoint.detailExtras?.(raw) ?? [],
       },
     };
   }
