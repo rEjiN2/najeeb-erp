@@ -29,8 +29,6 @@ interface SidebarNavGroupProps {
   pathname: string;
   isFavourite: (href: string) => boolean;
   onTogglePin: (href: string) => void;
-  /** Nesting depth (0 = top level). Each level indents a bit further. */
-  level?: number;
 }
 
 export function SidebarNavGroup({
@@ -39,11 +37,9 @@ export function SidebarNavGroup({
   pathname,
   isFavourite,
   onTogglePin,
-  level = 0,
 }: SidebarNavGroupProps) {
-  const [open, setOpen] = useState(() =>
-    containsActivePath(group.children, pathname),
-  );
+  const hasActive = containsActivePath(group.children, pathname);
+  const [open, setOpen] = useState(hasActive);
   const Icon = group.icon;
 
   if (collapsed) {
@@ -51,7 +47,14 @@ export function SidebarNavGroup({
       <Tooltip>
         <TooltipTrigger
           render={
-            <div className="text-sidebar-foreground/80 flex items-center justify-center rounded-md px-2 py-2.5">
+            <div
+              className={cn(
+                "flex items-center justify-center rounded-md px-2 py-2.5",
+                hasActive
+                  ? "bg-sidebar-primary/12 text-sidebar-primary"
+                  : "text-sidebar-foreground/60",
+              )}
+            >
               <Icon className="size-4" />
             </div>
           }
@@ -64,24 +67,30 @@ export function SidebarNavGroup({
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger
-        style={
-          level > 0 ? { paddingLeft: `${0.5 + level * 1.1}rem` } : undefined
-        }
         className={cn(
-          "text-sidebar-foreground/80 flex w-full items-center gap-2 rounded-md px-2 py-2.5 text-sm",
-          "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          "group/nav-group flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-sm transition-colors",
+          "hover:text-sidebar-foreground hover:bg-white/5",
+          hasActive || open
+            ? "text-sidebar-foreground font-medium"
+            : "text-sidebar-foreground/75",
         )}
       >
-        <Icon className="size-4 shrink-0" />
+        <Icon
+          className={cn(
+            "size-4 shrink-0",
+            hasActive ? "text-sidebar-primary" : "text-sidebar-foreground/55",
+          )}
+        />
         <span className="min-w-0 flex-1 truncate text-left">{group.title}</span>
         <ChevronRight
           className={cn(
-            "size-4 shrink-0 transition-transform",
+            "text-sidebar-foreground/40 size-3.5 shrink-0 transition-transform duration-200",
             open && "rotate-90",
           )}
         />
       </CollapsibleTrigger>
-      <CollapsibleContent className="divide-sidebar-border divide-y">
+      {/* Children hang off a thin tree line under the group's icon. */}
+      <CollapsibleContent className="border-sidebar-border mt-0.5 ml-[1.05rem] space-y-0.5 border-l pl-2">
         {group.children.map((child) =>
           isNavGroup(child) ? (
             <SidebarNavGroup
@@ -91,7 +100,6 @@ export function SidebarNavGroup({
               pathname={pathname}
               isFavourite={isFavourite}
               onTogglePin={onTogglePin}
-              level={level + 1}
             />
           ) : (
             <SidebarLeafLink
@@ -101,7 +109,7 @@ export function SidebarNavGroup({
               active={isActivePath(child.href, pathname)}
               pinned={isFavourite(child.href)}
               onTogglePin={() => onTogglePin(child.href)}
-              level={level + 1}
+              nested
             />
           ),
         )}

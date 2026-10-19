@@ -1,8 +1,9 @@
 "use client";
 
-import { Sprout } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { BrandLogo } from "@/components/shared/brand-logo";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   NAV_ITEMS,
@@ -47,23 +48,39 @@ export function Sidebar({
         collapsed ? "lg:w-16" : "lg:w-64",
       )}
     >
-      <div className="border-sidebar-border flex h-14 items-center gap-2 border-b px-4">
-        <Sprout className="text-primary size-5 shrink-0" />
+      {/* Brand header — same 56px height as the topbar so the rules line up. */}
+      <Link
+        href="/"
+        className={cn(
+          "border-sidebar-border flex h-14 shrink-0 items-center gap-3 border-b",
+          collapsed ? "justify-center px-2" : "px-4",
+        )}
+      >
+        <BrandLogo
+          size={collapsed ? 34 : 36}
+          priority
+          className="ring-sidebar-primary/40 ring-1"
+        />
         {!collapsed ? (
-          <span className="font-heading truncate text-sm font-semibold">
-            ALA Dates
-          </span>
+          <div className="min-w-0 leading-tight">
+            <p className="font-heading truncate text-[15px] text-sidebar-foreground font-bold tracking-wide">
+              ALA DATES
+            </p>
+            <p className="text-sidebar-primary truncate text-[10px] font-medium tracking-[0.18em] uppercase">
+              Trading ERP
+            </p>
+          </div>
         ) : null}
-      </div>
+      </Link>
 
-      <ScrollArea className="flex-1">
-        <div className="space-y-4 px-2 py-3">
+      <ScrollArea className="min-h-0 flex-1">
+        <div className="space-y-5 px-2 py-4">
           {favouriteItems.length > 0 ? (
             <div>
               <SidebarSectionLabel collapsed={collapsed}>
                 Favourites
               </SidebarSectionLabel>
-              <nav className="divide-sidebar-border divide-y">
+              <nav className="space-y-0.5">
                 {favouriteItems.map((item) => (
                   <SidebarLeafLink
                     key={item.href}
@@ -78,31 +95,42 @@ export function Sidebar({
             </div>
           ) : null}
 
-          <nav className="divide-sidebar-border divide-y">
-            {navItems.map((entry) =>
-              isNavGroup(entry) ? (
-                <SidebarNavGroup
-                  key={entry.title}
-                  group={entry}
-                  collapsed={collapsed}
-                  pathname={pathname}
-                  isFavourite={isFavourite}
-                  onTogglePin={toggleFavourite}
-                />
-              ) : (
-                <SidebarLeafLink
-                  key={entry.href}
-                  item={entry}
-                  collapsed={collapsed}
-                  active={isActivePath(entry.href, pathname)}
-                  pinned={isFavourite(entry.href)}
-                  onTogglePin={() => toggleFavourite(entry.href)}
-                />
-              ),
-            )}
-          </nav>
+          <div>
+            {favouriteItems.length > 0 ? (
+              <SidebarSectionLabel collapsed={collapsed}>Menu</SidebarSectionLabel>
+            ) : null}
+            <nav className="space-y-0.5">
+              {navItems.map((entry) =>
+                isNavGroup(entry) ? (
+                  <SidebarNavGroup
+                    key={entry.title}
+                    group={entry}
+                    collapsed={collapsed}
+                    pathname={pathname}
+                    isFavourite={isFavourite}
+                    onTogglePin={toggleFavourite}
+                  />
+                ) : (
+                  <SidebarLeafLink
+                    key={entry.href}
+                    item={entry}
+                    collapsed={collapsed}
+                    active={isActivePath(entry.href, pathname)}
+                    pinned={isFavourite(entry.href)}
+                    onTogglePin={() => toggleFavourite(entry.href)}
+                  />
+                ),
+              )}
+            </nav>
+          </div>
         </div>
       </ScrollArea>
+
+      {!collapsed ? (
+        <div className="border-sidebar-border text-sidebar-foreground/40 shrink-0 border-t px-4 py-3 text-[11px]">
+          ALA Dates L.L.C · UAE
+        </div>
+      ) : null}
     </aside>
   );
 }

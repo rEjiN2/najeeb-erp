@@ -5,10 +5,12 @@ export function SidebarSectionLabel({
   children: string;
   collapsed: boolean;
 }) {
-  if (collapsed) return null;
+  if (collapsed) {
+    return <div className="bg-sidebar-border mx-3 mb-2 h-px" aria-hidden />;
+  }
 
   return (
-    <p className="text-muted-foreground px-2 pb-1 text-xs font-medium tracking-wide uppercase">
+    <p className="text-sidebar-foreground/45 px-2.5 pb-1.5 text-[11px] font-semibold tracking-[0.08em] uppercase">
       {children}
     </p>
   );

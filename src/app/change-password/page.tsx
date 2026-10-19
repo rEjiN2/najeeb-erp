@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
+import { BrandLogo } from "@/components/shared/brand-logo";
 import { ChangePasswordForm } from "@/features/auth/change-password-form";
 import { getServerSession } from "@/features/auth/session";
 
@@ -30,8 +31,9 @@ export default async function ChangePasswordPage({
   }
 
   return (
-    <div className="flex min-h-svh items-center justify-center p-6">
+    <div className="bg-muted/30 flex min-h-svh items-center justify-center p-6">
       <div className="w-full max-w-sm space-y-6">
+        <BrandLogo size={64} priority />
         <div className="space-y-1">
           <h1 className="font-heading text-2xl font-semibold">
             Change your password

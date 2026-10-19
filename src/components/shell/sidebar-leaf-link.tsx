@@ -17,8 +17,8 @@ interface SidebarLeafLinkProps {
   active: boolean;
   pinned: boolean;
   onTogglePin: () => void;
-  /** Nesting depth (0 = top level). Each level indents a bit further. */
-  level?: number;
+  /** Nested under a group: the active marker sits on the group's tree line. */
+  nested?: boolean;
 }
 
 export function SidebarLeafLink({
@@ -27,26 +27,35 @@ export function SidebarLeafLink({
   active,
   pinned,
   onTogglePin,
-  level = 0,
+  nested = false,
 }: SidebarLeafLinkProps) {
   const Icon = item.icon;
 
   const link = (
     <Link
       href={item.href}
-      style={
-        level > 0 && !collapsed
-          ? { marginLeft: `${level * 1.1}rem` }
-          : undefined
-      }
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "group/nav-item flex items-center gap-2 rounded-md px-2 py-2.5 text-sm transition-colors",
+        "group/nav-item relative flex items-center gap-2.5 rounded-md text-sm transition-colors",
+        collapsed ? "justify-center px-2 py-2.5" : "px-2.5 py-2",
         active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          ? "bg-sidebar-primary/12 text-sidebar-primary font-medium"
+          : "text-sidebar-foreground/75 hover:text-sidebar-foreground hover:bg-white/5",
+        // Gold marker: on the tree line for nested items, on the sidebar
+        // edge for top-level ones.
+        active &&
+          (nested
+            ? "before:bg-sidebar-primary before:absolute before:top-1/2 before:-left-[9px] before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full"
+            : "before:bg-sidebar-primary before:absolute before:top-1/2 before:-left-2 before:h-5 before:w-1 before:-translate-y-1/2 before:rounded-r-full"),
       )}
     >
-      <Icon className="size-4 shrink-0" />
+      <Icon
+        className={cn(
+          "size-4 shrink-0",
+          active ? "text-sidebar-primary" : "text-sidebar-foreground/55",
+          "group-hover/nav-item:text-current",
+        )}
+      />
       {!collapsed ? (
         <span className="min-w-0 flex-1 truncate">{item.title}</span>
       ) : null}
@@ -59,10 +68,10 @@ export function SidebarLeafLink({
             onTogglePin();
           }}
           className={cn(
-            "text-muted-foreground/60 hover:text-primary shrink-0",
+            "hover:text-sidebar-primary shrink-0",
             pinned
-              ? "text-primary"
-              : "opacity-0 group-hover/nav-item:opacity-100",
+              ? "text-sidebar-primary"
+              : "text-sidebar-foreground/40 opacity-0 group-hover/nav-item:opacity-100",
           )}
         >
           <Star className={cn("size-3.5", pinned && "fill-current")} />
