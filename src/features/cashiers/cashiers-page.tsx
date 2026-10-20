@@ -298,7 +298,10 @@ export function CashiersPage({
                 }
                 items={TYPE_FILTER_ITEMS}
               >
-                <SelectTrigger className="w-[150px]" aria-label="Filter by type">
+                <SelectTrigger
+                  className="w-[150px]"
+                  aria-label="Filter by type"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -408,7 +411,9 @@ export function CashiersPage({
             crud.cancelDelete();
           }
         }}
-        itemLabel={target ? `${target.code} ${target.name}` : "this staff member"}
+        itemLabel={
+          target ? `${target.code} ${target.name}` : "this staff member"
+        }
         onConfirm={crud.confirmDelete}
         pending={crud.isDeleting || isDeactivating}
         errors={[...crud.deleteErrors, ...deactivateErrors]}

@@ -63,7 +63,7 @@ export function Sidebar({
         />
         {!collapsed ? (
           <div className="min-w-0 leading-tight">
-            <p className="font-heading truncate text-[15px] text-sidebar-foreground font-bold tracking-wide">
+            <p className="font-heading text-sidebar-foreground truncate text-[15px] font-bold tracking-wide">
               ALA DATES
             </p>
             <p className="text-sidebar-primary truncate text-[10px] font-medium tracking-[0.18em] uppercase">
@@ -97,7 +97,9 @@ export function Sidebar({
 
           <div>
             {favouriteItems.length > 0 ? (
-              <SidebarSectionLabel collapsed={collapsed}>Menu</SidebarSectionLabel>
+              <SidebarSectionLabel collapsed={collapsed}>
+                Menu
+              </SidebarSectionLabel>
             ) : null}
             <nav className="space-y-0.5">
               {navItems.map((entry) =>

@@ -198,10 +198,7 @@ export function VoucherFilterBar({
         ) : null}
 
         {users ? (
-          <div
-            className="lg:w-48"
-            title={users.ok ? undefined : users.message}
-          >
+          <div className="lg:w-48" title={users.ok ? undefined : users.message}>
             <SearchableSelect
               value={filters.createdBy || null}
               onChange={(value) => onChange({ createdBy: value ?? "" })}

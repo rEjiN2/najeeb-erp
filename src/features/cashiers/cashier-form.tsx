@@ -194,7 +194,9 @@ export function CashierForm({
             onValueChange={(value) => {
               if (!value) return;
               setStaffType(value as StaffType);
-              setSettlesWithOffice(defaultSettlesWithOffice(value as StaffType));
+              setSettlesWithOffice(
+                defaultSettlesWithOffice(value as StaffType),
+              );
             }}
             items={STAFF_TYPE_LABELS}
           >
@@ -279,8 +281,8 @@ export function CashierForm({
             />
           )}
           <p className="text-muted-foreground text-xs">
-            Receipts this user creates pick this staff member automatically.
-            One staff member per user.
+            Receipts this user creates pick this staff member automatically. One
+            staff member per user.
           </p>
           <FieldError
             id="cashier-user-error"

@@ -5,6 +5,7 @@ recharts. UAE dates-trading ERP replacing legacy atACC. Backend: NestJS API
 at API_BASE_URL (server-only env var).
 
 ## Token rules (always)
+
 - Minimal diff. Smallest change that meets "Done when". No refactors, no
   extra docs/README/summary files, no unrelated cleanup.
 - Read only files you need; check "Where things live" first. Do not re-read
@@ -22,6 +23,7 @@ at API_BASE_URL (server-only env var).
   line, continue.
 
 ## Where things live (verify on first use, then correct this section)
+
 src/features/<domain>/ (api.ts typed server functions, components, types),
 src/components/ (shared UI), src/lib/ (server-only API client, helpers),
 AuthContext abstraction, (protected) route group with app shell, design
@@ -29,6 +31,7 @@ tokens in one file, shared Master pattern, Voucher pattern, Activity panel,
 DemoDataBadge.
 
 ## Status (update after each step)
+
 Built: login/shell, dashboard (cash card live, other widgets demo), locations,
 product groups, accounts, customers/suppliers, cashiers, company profile, cash
 receipts, cash payments, Staff (cashier module renamed in UI; type +
@@ -37,6 +40,7 @@ In progress: Cash Handover + salesman report.
 Planned: products, opening balances, purchase, sales, stock, bundling, reports.
 
 ## Conventions
+
 - Data: fetch on the server through one typed function per feature
   (features/<x>/api.ts), forwarding the user's cookie. cache: "no-store" for
   lookups and live data. Every screen handles 401 (to login), 403 ("no
@@ -80,11 +84,13 @@ Planned: products, opening balances, purchase, sales, stock, bundling, reports.
   restyle individual components.
 
 ## Business context
+
 Dates trading: customers, suppliers, cash/bank/wallet accounts, location tree
 (Branch > Warehouse / Store / Van, vans nest), product groups (Dates,
 Packaging, Gift & Bundle), bundling is core. Van salesmen collect receipts
 all day and settle cash with the office at night for approval.
 
 ## Not built, do not build unless asked
+
 Journal Entry, Credit/Debit Note, Advance Allocation, Bank Reconciliation,
 Contra Voucher.
