@@ -2,6 +2,7 @@
 
 import { Star } from "lucide-react";
 import Link from "next/link";
+import { createContext, useContext } from "react";
 
 import {
   Tooltip,
@@ -10,6 +11,11 @@ import {
 } from "@/components/ui/tooltip";
 import type { NavLeaf } from "@/config/nav";
 import { cn } from "@/lib/utils";
+
+export const NO_BADGES: Record<string, number> = {};
+
+/** Counts shown beside menu items, by href; set by the app shell. */
+export const NavBadgesContext = createContext(NO_BADGES);
 
 interface SidebarLeafLinkProps {
   item: NavLeaf;
@@ -30,6 +36,7 @@ export function SidebarLeafLink({
   nested = false,
 }: SidebarLeafLinkProps) {
   const Icon = item.icon;
+  const badge = useContext(NavBadgesContext)[item.href] ?? 0;
 
   const link = (
     <Link
@@ -58,6 +65,18 @@ export function SidebarLeafLink({
       />
       {!collapsed ? (
         <span className="min-w-0 flex-1 truncate">{item.title}</span>
+      ) : null}
+      {badge > 0 ? (
+        <span
+          aria-label={`${badge} pending`}
+          className={cn(
+            "bg-sidebar-primary text-sidebar-primary-foreground rounded-full px-1.5 text-xs leading-5 font-medium tabular-nums",
+            collapsed &&
+              "absolute top-0.5 right-0.5 px-1 text-[10px] leading-4",
+          )}
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
       ) : null}
       {!collapsed ? (
         <button

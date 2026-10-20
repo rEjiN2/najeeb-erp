@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { startOfMonth, uaeToday } from "@/lib/datetime";
 
 import type { CashierLookupItem } from "@/features/cashiers/types";
@@ -31,9 +32,9 @@ import { ACCOUNT_TYPE_BADGES } from "../constants";
 import {
   DATE_PRESETS,
   DATE_PRESET_LABELS,
+  DEFAULT_STATUS_FILTERS,
   METHOD_FILTERS,
   METHOD_FILTER_LABELS,
-  STATUS_FILTERS,
   STATUS_FILTER_LABELS,
   hasActiveFilters,
   type DatePreset,
@@ -78,6 +79,20 @@ export function VoucherFilterBar({
 }: VoucherFilterBarProps) {
   return (
     <div className="bg-card space-y-3 rounded-lg border p-3 sm:p-4">
+      {config.statusFilters ? (
+        <Tabs
+          value={filters.status}
+          onValueChange={(value) => onChange({ status: value as StatusFilter })}
+        >
+          <TabsList className="w-full overflow-x-auto sm:w-fit">
+            {config.statusFilters.map((status) => (
+              <TabsTrigger key={status} value={status}>
+                {STATUS_FILTER_LABELS[status]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      ) : null}
       <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
         <SearchBox
           value={filters.q}
@@ -90,24 +105,26 @@ export function VoucherFilterBar({
       </div>
 
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
-        <Select
-          value={filters.status}
-          onValueChange={(value) =>
-            value && onChange({ status: value as StatusFilter })
-          }
-          items={STATUS_FILTER_LABELS}
-        >
-          <SelectTrigger className="w-full lg:w-40" aria-label="Status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_FILTERS.map((status) => (
-              <SelectItem key={status} value={status}>
-                {STATUS_FILTER_LABELS[status]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {config.statusFilters ? null : (
+          <Select
+            value={filters.status}
+            onValueChange={(value) =>
+              value && onChange({ status: value as StatusFilter })
+            }
+            items={STATUS_FILTER_LABELS}
+          >
+            <SelectTrigger className="w-full lg:w-40" aria-label="Status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DEFAULT_STATUS_FILTERS.map((status) => (
+                <SelectItem key={status} value={status}>
+                  {STATUS_FILTER_LABELS[status]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         {config.showPaymentDetails ? (
           <Select

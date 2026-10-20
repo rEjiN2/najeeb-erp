@@ -31,12 +31,31 @@ export const DATE_PRESET_LABELS: Record<DatePreset, string> = {
   custom: "Custom range",
 };
 
-export const STATUS_FILTERS = ["all", "posted", "cancelled"] as const;
+/** Every status a list can filter on; each voucher type offers its own
+ * subset (VoucherConfig.statusFilters). */
+export const STATUS_FILTERS = [
+  "all",
+  "posted",
+  "submitted",
+  "approved",
+  "rejected",
+  "cancelled",
+] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+/** What receipts and payments offer. */
+export const DEFAULT_STATUS_FILTERS: readonly StatusFilter[] = [
+  "all",
+  "posted",
+  "cancelled",
+];
 
 export const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
   all: "All statuses",
   posted: "Posted",
+  submitted: "Pending approval",
+  approved: "Approved",
+  rejected: "Rejected",
   cancelled: "Cancelled",
 };
 
@@ -147,7 +166,10 @@ export function parseDateRange(
 
 /** URL → filters. Values the backend would reject are dropped here rather
  * than turning a hand-edited link into an error page. */
-export function parseFilters(params: SearchParams): VoucherFilters {
+export function parseFilters(
+  params: SearchParams,
+  statusFilters: readonly StatusFilter[] = DEFAULT_STATUS_FILTERS,
+): VoucherFilters {
   const { range, from, to } = parseDateRange(params);
 
   let amountMin = amount(first(params.min));
@@ -166,7 +188,7 @@ export function parseFilters(params: SearchParams): VoucherFilters {
     range,
     from,
     to,
-    status: oneOf(first(params.status), STATUS_FILTERS, DEFAULT_FILTERS.status),
+    status: oneOf(first(params.status), statusFilters, DEFAULT_FILTERS.status),
     method: oneOf(first(params.method), METHOD_FILTERS, DEFAULT_FILTERS.method),
     headerAccountId: idParam("cash"),
     accountId: idParam("account"),

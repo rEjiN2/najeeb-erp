@@ -1,14 +1,19 @@
-import type { SalesmanCollectionsReport } from "./types";
+import type {
+  SalesmanCollectionFigures,
+  SalesmanCollectionsReport,
+} from "./types";
 
 const HEADERS = [
-  "Cashier Code",
-  "Cashier",
+  "Staff Code",
+  "Staff",
   "Location",
-  "Opening Pending",
+  "Opening Unsettled",
   "Collected Cash",
   "Collected Bank",
-  "Handed Over",
-  "Closing Pending",
+  "Pending Approval",
+  "Settled",
+  "Shortage",
+  "Closing Unsettled",
   "Receipts",
   "Handovers",
 ];
@@ -21,33 +26,29 @@ function field(value: string | number): string {
 
 const count = (value: number) => String(value);
 
+function figures(f: SalesmanCollectionFigures): string[] {
+  return [
+    field(f.unsettledOpening),
+    field(f.collectedCash),
+    field(f.collectedBank),
+    field(f.pendingApproval),
+    field(f.settled),
+    field(f.openShortage),
+    field(f.unsettledClosing),
+    count(f.receiptCount),
+    count(f.handoverCount),
+  ];
+}
+
 /** The report as shown, with a totals row; amounts in AED, 2 decimals. */
 export function toCsv(report: SalesmanCollectionsReport): string {
   const rows = report.rows.map((row) => [
     field(row.cashier.code),
     field(row.cashier.name),
     field(row.cashier.location?.name ?? ""),
-    field(row.openingPending),
-    field(row.collectedCash),
-    field(row.collectedBank),
-    field(row.handedOver),
-    field(row.closingPending),
-    count(row.receiptCount),
-    count(row.handoverCount),
+    ...figures(row),
   ]);
-  const t = report.totals;
-  rows.push([
-    "",
-    "Total",
-    "",
-    field(t.openingPending),
-    field(t.collectedCash),
-    field(t.collectedBank),
-    field(t.handedOver),
-    field(t.closingPending),
-    count(t.receiptCount),
-    count(t.handoverCount),
-  ]);
+  rows.push(["", "Total", "", ...figures(report.totals)]);
   return [HEADERS, ...rows].map((line) => line.join(",")).join("\r\n");
 }
 

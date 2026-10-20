@@ -36,7 +36,9 @@ Built: login/shell, dashboard (cash card live, other widgets demo), locations,
 product groups, accounts, customers/suppliers, cashiers, company profile, cash
 receipts, cash payments, Staff (cashier module renamed in UI; type +
 settles-with-office), Users/Roles + scoped UI, change-password.
-In progress: Cash Handover + salesman report.
+Built (untested end to end): Cash Handover submit/approve/reject, pending
+badge, salesman unsettled banner, Salesman Collections report.
+In progress: none.
 Planned: products, opening balances, purchase, sales, stock, bundling, reports.
 
 ## Conventions

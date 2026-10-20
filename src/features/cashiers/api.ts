@@ -63,12 +63,18 @@ export async function getCashiers(
   };
 }
 
-/** Cashiers for a dropdown — active ones only unless `activeOnly` is false. */
+/** Cashiers for a dropdown — active ones only unless `activeOnly` is false;
+ * `settlesWithOffice` narrows to staff who hand cash over (handovers). */
 export function getCashierLookup(
   activeOnly: boolean,
+  settlesWithOffice?: boolean,
 ): Promise<ApiResult<CashierLookupItem[]>> {
+  const settles =
+    settlesWithOffice === undefined
+      ? ""
+      : `&settlesWithOffice=${settlesWithOffice}`;
   return apiGet<CashierLookupItem[]>(
-    `/cashiers/lookup?activeOnly=${activeOnly}&limit=100`,
+    `/cashiers/lookup?activeOnly=${activeOnly}&limit=100${settles}`,
   );
 }
 

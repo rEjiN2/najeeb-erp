@@ -1,5 +1,6 @@
 import type { VoucherFilters } from "@/features/vouchers/filters";
-import type { PaymentMethod } from "@/features/vouchers/types";
+import type { StaffType } from "@/features/cashiers/types";
+import type { PaymentMethod, VoucherStatus } from "@/features/vouchers/types";
 
 // Mirrors the backend's reports module (salesman-collections.service.ts).
 // Dates arrive as ISO strings.
@@ -7,18 +8,23 @@ import type { PaymentMethod } from "@/features/vouchers/types";
 type Ref = { id: string; name: string | null };
 
 export interface SalesmanCollectionFigures {
-  /** Cash collected minus cash handed over before the range. */
-  openingPending: number;
+  /** Cash receipts dated before the range and not settled by then. */
+  unsettledOpening: number;
   /** Receipts into cash or wallet accounts in the range. */
   collectedCash: number;
-  /** Receipts into bank accounts in the range: shown, never pending. */
+  /** Receipts into bank accounts in the range: verified on handover, never unsettled. */
   collectedBank: number;
-  /** Handovers this cashier handed over in the range. */
-  handedOver: number;
-  /** openingPending + collectedCash - handedOver. */
-  closingPending: number;
+  /** Expected cash on submitted handovers awaiting approval. */
+  pendingApproval: number;
+  /** Cash received on handovers approved in the range. */
+  settled: number;
+  /** Expected minus received on approved handovers: still in the van account. */
+  openShortage: number;
+  /** Cash receipts not settled by the end of the range (pending approval included). */
+  unsettledClosing: number;
   /** Receipts in the range, cash and bank. */
   receiptCount: number;
+  /** Submitted or approved handovers in the range. */
   handoverCount: number;
 }
 
@@ -28,6 +34,7 @@ export interface SalesmanCollectionRow extends SalesmanCollectionFigures {
     code: string;
     name: string;
     status: string;
+    staffType: StaffType;
     location: Ref | null;
   };
 }
@@ -50,17 +57,22 @@ export interface SalesmanCollectionDetails {
     account: Ref;
     paymentMethod: PaymentMethod;
     amount: number;
-    /** Cash/wallet receipts count towards pending; bank ones don't. */
-    countsAsPending: boolean;
+    /** null on receipts of staff who don't settle with the office. */
+    settlementStatus: "unsettled" | "submitted" | "settled" | null;
+    handover: { id: string; voucherNo: string | null } | null;
   }[];
   handovers: {
     id: string;
     voucherNo: string;
     date: string;
-    fromAccount: Ref;
-    toAccount: Ref | null;
-    receivedBy: Ref;
-    amount: number;
+    status: VoucherStatus;
+    sourceAccount: Ref;
+    receivedInto: Ref | null;
+    expectedCash: number;
+    bankTotal: number;
+    receivedCash: number | null;
+    shortage: number;
+    approvedAt: string | null;
   }[];
 }
 

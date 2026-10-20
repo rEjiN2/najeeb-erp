@@ -1,6 +1,7 @@
 import "server-only";
 
 import { notFound, redirect } from "next/navigation";
+import type { ReactNode } from "react";
 
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { getAccount } from "@/features/accounts/api";
@@ -28,6 +29,7 @@ import type {
   CancelVoucherAction,
   CreateVoucherAction,
   UpdateVoucherAction,
+  VoucherDetail,
 } from "./types";
 import { VoucherView } from "./view/voucher-view";
 import {
@@ -50,7 +52,12 @@ export interface VoucherModule {
 export type VoucherReadModule = Pick<
   VoucherModule,
   "config" | "api" | "cancelAction"
->;
+> & {
+  /** Shown under the list heading, e.g. a salesman's unsettled cash. */
+  listBanner?: () => Promise<ReactNode>;
+  /** Replaces the view page's lines and totals (handovers). */
+  detailBody?: (voucher: VoucherDetail) => Promise<ReactNode>;
+};
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -69,13 +76,13 @@ function backToList(config: VoucherConfig) {
 }
 
 export async function VoucherListRoute({
-  module: { config, api, cancelAction },
+  module: { config, api, cancelAction, listBanner },
   searchParams,
 }: {
   module: VoucherReadModule;
   searchParams: SearchParams;
 }) {
-  const filters = parseFilters(searchParams);
+  const filters = parseFilters(searchParams, config.statusFilters);
   const returnTo = `${config.basePath}${toSearch(filters)}`;
   // An "own"-scoped user sees only their own vouchers: no staff or
   // created-by filters to pick other people from.
@@ -83,21 +90,23 @@ export async function VoucherListRoute({
 
   const [
     vouchers,
-    posted,
+    cancelled,
     headerAccounts,
     users,
     cashiers,
     selectedAccount,
     access,
+    banner,
   ] = await Promise.all([
     api.getVouchers(filters),
-    // Posted-only and cancelled-only views already know the answer.
-    filters.status === "all" ? api.countPosted(filters) : null,
+    // Single-status views already know the answer.
+    filters.status === "all" ? api.countCancelled(filters) : null,
     api.getHeaderAccounts(),
     scoped ? null : getUsers(),
     scoped ? null : getCashierLookup(false),
     filters.accountId ? getAccount(filters.accountId) : null,
     getVoucherAccess(config),
+    listBanner?.() ?? null,
   ]);
 
   const header = <VoucherListHeading config={config} />;
@@ -113,10 +122,10 @@ export async function VoucherListRoute({
       />
     );
   }
-  if (posted && !posted.ok) {
+  if (cancelled && !cancelled.ok) {
     return (
       <LoadFailure
-        failure={posted}
+        failure={cancelled}
         returnTo={returnTo}
         subject={subject}
         header={header}
@@ -148,11 +157,12 @@ export async function VoucherListRoute({
     isFirstRun = !any.data;
   }
 
-  const postedCount = posted
-    ? posted.data
-    : filters.status === "posted"
-      ? summary.count
-      : 0;
+  // Everything but cancelled ones: what the summary total counts.
+  const postedCount = cancelled
+    ? summary.count - cancelled.data
+    : filters.status === "cancelled"
+      ? 0
+      : summary.count;
 
   let selectedAccountName: string | null = null;
   if (selectedAccount) {
@@ -174,6 +184,7 @@ export async function VoucherListRoute({
       users={users ? toLoadable(users, returnTo) : null}
       cashiers={cashiers ? toLoadable(cashiers, returnTo) : null}
       selectedAccountName={selectedAccountName}
+      banner={banner}
     />
   );
 }
@@ -224,7 +235,7 @@ export function isMissing(result: ApiResult<unknown>): boolean {
 }
 
 export async function VoucherDetailRoute({
-  module: { config, api, cancelAction },
+  module: { config, api, cancelAction, detailBody },
   id,
   searchParams,
 }: {
@@ -258,6 +269,7 @@ export async function VoucherDetailRoute({
       voucher={voucher.data}
       access={access}
       justSaved={searchParams.saved === "1"}
+      body={detailBody ? await detailBody(voucher.data) : undefined}
     />
   );
 }

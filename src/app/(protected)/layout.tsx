@@ -2,7 +2,10 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
+import { PERMISSIONS } from "@/features/auth/permissions";
 import { getServerSession } from "@/features/auth/session";
+import { countPendingApprovals } from "@/features/cash-handovers/api";
+import { CASH_HANDOVERS_PATH } from "@/features/cash-handovers/constants";
 
 export default async function ProtectedLayout({
   children,
@@ -19,5 +22,18 @@ export default async function ProtectedLayout({
     redirect("/change-password");
   }
 
-  return <AppShell>{children}</AppShell>;
+  // Pending-approvals badge on Cash Handovers, for those who approve them.
+  const pending = session.user.permissions.includes(
+    PERMISSIONS.CASH_HANDOVERS_APPROVE,
+  )
+    ? await countPendingApprovals()
+    : null;
+
+  return (
+    <AppShell
+      navBadges={pending ? { [CASH_HANDOVERS_PATH]: pending } : undefined}
+    >
+      {children}
+    </AppShell>
+  );
 }

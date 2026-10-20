@@ -1,151 +1,129 @@
 import "server-only";
 
-import { notFound } from "next/navigation";
-
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
-import { hasPermission } from "@/features/auth/session";
 import { PERMISSIONS } from "@/features/auth/permissions";
+import { getServerSession } from "@/features/auth/session";
+import { getCashierLookup } from "@/features/cashiers/api";
+import { STAFF_TYPE_LABELS } from "@/features/cashiers/types";
 import { getVoucherAccess } from "@/features/vouchers/access";
-import { editVoucherPath, newVoucherPath } from "@/features/vouchers/config";
-import { loadVoucherFormData } from "@/features/vouchers/form-data";
+import { newVoucherPath } from "@/features/vouchers/config";
 import { LoadFailure } from "@/features/vouchers/load-failure";
-import { isMissing, type VoucherReadModule } from "@/features/vouchers/routes";
-import {
-  CancelledNotEditable,
-  ManageForbidden,
-} from "@/features/vouchers/voucher-states";
+import type { VoucherReadModule } from "@/features/vouchers/routes";
+import type { AccountLookupItem } from "@/features/vouchers/types";
+import { ManageForbidden } from "@/features/vouchers/voucher-states";
+import { uaeToday } from "@/lib/datetime";
 
+import { cancelCashHandover } from "./actions";
 import {
-  cancelCashHandover,
-  createCashHandover,
-  updateCashHandover,
-} from "./actions";
-import { cashHandoversApi as api } from "./api";
-import { CASH_HANDOVER_CONFIG as config } from "./constants";
+  cashHandoversApi as api,
+  getHandoverDetail,
+  getUnsettledReceipts,
+} from "./api";
+import {
+  CASH_HANDOVER_CONFIG as config,
+  HANDOVER_SOURCE_ACCOUNT_TYPES,
+} from "./constants";
 import { HandoverForm } from "./handover-form";
+import { HandoverReceiptsPanel } from "./handover-receipts-panel";
 
-/** The list and view pages are the shared voucher ones. */
+/** The list and view pages are the shared voucher ones; the view shows the
+ * handover's receipts and, while pending, the approver's controls. */
 export const CASH_HANDOVERS_MODULE: VoucherReadModule = {
   config,
   api,
   cancelAction: cancelCashHandover,
+  detailBody: async (voucher) => {
+    const session = await getServerSession();
+    const canApprove =
+      session?.user.permissions.includes(PERMISSIONS.CASH_HANDOVERS_APPROVE) ??
+      false;
+    const [detail, accounts] = await Promise.all([
+      getHandoverDetail(voucher.id),
+      canApprove && voucher.status === "submitted"
+        ? api.getHeaderAccounts()
+        : null,
+    ]);
+    if (!detail.ok) return undefined;
+    return (
+      <HandoverReceiptsPanel
+        detail={detail.data}
+        receiveAccounts={accounts?.ok ? accounts.data : null}
+      />
+    );
+  },
 };
 
-const back = { href: config.basePath, label: config.title };
+const isSource = (account: AccountLookupItem) =>
+  HANDOVER_SOURCE_ACCOUNT_TYPES.includes(account.type);
 
-/**
- * Accounts and cashiers for the form. A scoped user hands over from their
- * assigned accounts as their own cashier, but may pay into any account.
- */
-async function loadHandoverFormData(preselectMine: boolean) {
-  const [formData, canSeePending] = await Promise.all([
-    loadVoucherFormData({
-      preselectMine,
-      getHeaderAccounts: api.getHeaderAccounts,
-    }),
-    hasPermission(PERMISSIONS.REPORTS_SALESMAN),
-  ]);
-  if (!formData.ok) return formData;
-
-  const { headerAccounts, cashiers, myCashierId, scoped } = formData.data;
-  let toAccounts = headerAccounts;
-  if (scoped) {
-    const all = await api.getHeaderAccounts();
-    if (!all.ok) return all;
-    toAccounts = all.data;
-  }
-  return {
-    ok: true as const,
-    data: {
-      fromAccounts: headerAccounts,
-      toAccounts,
-      cashiers,
-      myCashierId,
-      scoped,
-      canSeePending,
-    },
-  };
-}
-
-export async function HandoverNewRoute() {
+export async function HandoverNewRoute({ staffParam }: { staffParam: string }) {
   const title = `New ${config.singular}`;
   if (!(await getVoucherAccess(config)).canCreate) {
     return <ManageForbidden config={config} title={title} action="create" />;
   }
-
-  const formData = await loadHandoverFormData(true);
-  if (!formData.ok) {
-    return (
-      <LoadFailure
-        failure={formData}
-        returnTo={newVoucherPath(config)}
-        subject={`the ${config.noun} form`}
-        header={<VoucherToolbar title={title} back={back} />}
-      />
-    );
-  }
-
-  return (
-    <HandoverForm
-      mode="create"
-      createAction={createCashHandover}
-      updateAction={updateCashHandover}
-      {...formData.data}
+  const failure = (result: Parameters<typeof LoadFailure>[0]["failure"]) => (
+    <LoadFailure
+      failure={result}
+      returnTo={newVoucherPath(config)}
+      subject={`the ${config.noun} form`}
+      header={
+        <VoucherToolbar
+          title={title}
+          back={{ href: config.basePath, label: config.title }}
+        />
+      }
     />
   );
-}
 
-export async function HandoverEditRoute({ id }: { id: string }) {
-  const title = `Edit ${config.singular}`;
-  if (!(await getVoucherAccess(config)).canEdit) {
-    return <ManageForbidden config={config} title={title} action="edit" />;
+  const user = (await getServerSession())?.user;
+  const linked = user?.linkedCashier ?? null;
+  const ownStaff =
+    linked?.status === "active" && linked.settlesWithOffice ? linked : null;
+
+  // A salesman ("own" scope) hands over only their own receipts, from their
+  // assigned accounts; the backend picks their staff record.
+  if (user?.dataScope === "own") {
+    const unsettled = ownStaff ? await getUnsettledReceipts(null) : null;
+    if (unsettled && !unsettled.ok) return failure(unsettled);
+    return (
+      <HandoverForm
+        staff={null}
+        staffId={ownStaff?.id ?? null}
+        lockedStaffLabel={
+          ownStaff
+            ? `${ownStaff.name} (${ownStaff.code}) · ${STAFF_TYPE_LABELS[ownStaff.staffType]}`
+            : null
+        }
+        sourceAccounts={user.allowedCashAccounts.filter(isSource)}
+        unsettled={unsettled?.data ?? null}
+        today={uaeToday()}
+      />
+    );
   }
 
-  const [voucher, formData] = await Promise.all([
-    api.getVoucher(id),
-    loadHandoverFormData(false),
+  const [staff, accounts] = await Promise.all([
+    getCashierLookup(true, true),
+    api.getHeaderAccounts(),
   ]);
-  const header = <VoucherToolbar title={title} back={back} />;
-  const returnTo = editVoucherPath(config, id);
+  if (!staff.ok) return failure(staff);
+  if (!accounts.ok) return failure(accounts);
 
-  if (!voucher.ok) {
-    if (isMissing(voucher)) notFound();
-    return (
-      <LoadFailure
-        failure={voucher}
-        returnTo={returnTo}
-        subject={`this ${config.singular.toLowerCase()}`}
-        header={header}
-      />
-    );
-  }
-  if (voucher.data.status === "cancelled") {
-    return (
-      <CancelledNotEditable
-        config={config}
-        id={id}
-        voucherNo={voucher.data.voucherNo}
-      />
-    );
-  }
-  if (!formData.ok) {
-    return (
-      <LoadFailure
-        failure={formData}
-        returnTo={returnTo}
-        subject={`the ${config.noun} form`}
-        header={header}
-      />
-    );
-  }
+  const known = (id: string | undefined) =>
+    id && staff.data.some((member) => member.id === id) ? id : null;
+  const staffId = known(staffParam) ?? known(ownStaff?.id);
+  const unsettled = staffId ? await getUnsettledReceipts(staffId) : null;
+  if (unsettled && !unsettled.ok) return failure(unsettled);
 
   return (
     <HandoverForm
-      mode="edit"
-      voucher={voucher.data}
-      createAction={createCashHandover}
-      updateAction={updateCashHandover}
-      {...formData.data}
+      // Fresh receipts and selection for each staff member.
+      key={staffId ?? "none"}
+      staff={staff.data}
+      staffId={staffId}
+      lockedStaffLabel={null}
+      sourceAccounts={accounts.data.filter(isSource)}
+      unsettled={unsettled?.data ?? null}
+      today={uaeToday()}
     />
   );
 }

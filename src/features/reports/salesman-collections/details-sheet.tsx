@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { VoucherStatusBadge } from "@/components/voucher/voucher-status-badge";
 import { cashHandoverPath } from "@/features/cash-handovers/constants";
 import { cashReceiptPath } from "@/features/cash-receipts/constants";
 import { PaymentMethodBadge } from "@/features/vouchers/payment-method-badge";
@@ -21,6 +22,12 @@ import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 import type { SalesmanCollectionDetails, SalesmanCollectionRow } from "./types";
+
+const SETTLEMENT_LABELS = {
+  unsettled: "Not handed over",
+  submitted: "On a handover, pending approval",
+  settled: "Settled",
+} as const;
 
 type State =
   | { status: "loading" }
@@ -126,10 +133,12 @@ export function SalesmanDetailsSheet({
             <dl className="bg-muted/40 grid grid-cols-2 gap-3 rounded-lg border p-3 text-sm">
               {(
                 [
-                  ["Opening pending", row.openingPending],
+                  ["Opening unsettled", row.unsettledOpening],
                   ["Collected cash", row.collectedCash],
                   ["Collected bank", row.collectedBank],
-                  ["Handed over", row.handedOver],
+                  ["Pending approval", row.pendingApproval],
+                  ["Settled", row.settled],
+                  ["Shortage", row.openShortage],
                 ] as const
               ).map(([label, value]) => (
                 <div key={label}>
@@ -141,10 +150,10 @@ export function SalesmanDetailsSheet({
               ))}
               <div className="col-span-2 border-t pt-2">
                 <dt className="text-muted-foreground text-xs">
-                  Closing pending
+                  Closing unsettled
                 </dt>
                 <dd className="font-mono text-base font-semibold tabular-nums">
-                  {formatAmount(row.closingPending)}
+                  {formatAmount(row.unsettledClosing)}
                 </dd>
               </div>
             </dl>
@@ -185,15 +194,23 @@ export function SalesmanDetailsSheet({
                         </span>
                         <PaymentMethodBadge method={receipt.paymentMethod} />
                       </p>
-                      {!receipt.countsAsPending ? (
-                        <p className="text-muted-foreground text-xs">
-                          Into a bank account — not pending
-                        </p>
-                      ) : null}
+                      <p className="text-muted-foreground text-xs">
+                        {receipt.paymentMethod === "bank"
+                          ? "Bank — verified on handover"
+                          : receipt.settlementStatus
+                            ? SETTLEMENT_LABELS[receipt.settlementStatus]
+                            : null}
+                        {receipt.handover?.voucherNo
+                          ? ` · ${receipt.handover.voucherNo}`
+                          : ""}
+                      </p>
                     </div>
                     <Amount
                       value={receipt.amount}
-                      muted={!receipt.countsAsPending}
+                      muted={
+                        receipt.paymentMethod === "bank" ||
+                        receipt.settlementStatus === "settled"
+                      }
                     />
                   </li>
                 ))}
@@ -210,22 +227,29 @@ export function SalesmanDetailsSheet({
                     className="flex items-start justify-between gap-3 p-3"
                   >
                     <div className="min-w-0 space-y-0.5">
-                      <Link
-                        href={cashHandoverPath(handover.id)}
-                        className="font-mono text-sm font-medium hover:underline"
-                      >
-                        {handover.voucherNo}
-                      </Link>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Link
+                          href={cashHandoverPath(handover.id)}
+                          className="font-mono text-sm font-medium hover:underline"
+                        >
+                          {handover.voucherNo}
+                        </Link>
+                        <VoucherStatusBadge status={handover.status} />
+                      </span>
                       <p className="text-muted-foreground text-xs">
-                        {formatCalendarDate(handover.date)} · to{" "}
-                        {handover.receivedBy.name ?? "unknown cashier"}
+                        {formatCalendarDate(handover.date)}
+                        {handover.shortage > 0
+                          ? ` · ${formatAmount(handover.shortage)} short`
+                          : ""}
                       </p>
                       <p className="text-muted-foreground truncate text-xs">
-                        {handover.fromAccount.name ?? "Unknown account"} →{" "}
-                        {handover.toAccount?.name ?? "Unknown account"}
+                        {handover.sourceAccount.name ?? "Unknown account"} →{" "}
+                        {handover.receivedInto?.name ?? "not received yet"}
                       </p>
                     </div>
-                    <Amount value={handover.amount} />
+                    <Amount
+                      value={handover.receivedCash ?? handover.expectedCash}
+                    />
                   </li>
                 ))}
               </Section>

@@ -7,7 +7,11 @@ import { getAccount } from "@/features/accounts/api";
 import type { StaffType } from "@/features/cashiers/types";
 
 import { MONEY_ACCOUNT_TYPES } from "./constants";
-import { resolveDateRange, type VoucherFilters } from "./filters";
+import {
+  resolveDateRange,
+  type StatusFilter,
+  type VoucherFilters,
+} from "./filters";
 import type {
   AccountLookupItem,
   NamedRef,
@@ -38,6 +42,8 @@ export interface VoucherEndpoint {
   mapListRow?: (raw: Record<string, unknown>) => VoucherListRow;
   /** Fields only this voucher type has, for the view page. */
   detailExtras?: (raw: Record<string, unknown>) => VoucherExtraField[];
+  /** How a status filter goes on the query; default `status=<filter>`. */
+  statusQuery?: (status: StatusFilter) => Record<string, string>;
 }
 
 type RawListRow = Omit<VoucherListRow, "headerAccount" | "paymentMethod"> & {
@@ -103,7 +109,7 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
       pageSize: String(filters.pageSize),
       sortBy: filters.sortBy,
       sortDir: filters.sortDir,
-      status: filters.status,
+      ...(endpoint.statusQuery?.(filters.status) ?? { status: filters.status }),
     });
     const { dateFrom, dateTo } = resolveDateRange(filters, uaeToday());
     if (dateFrom) query.set("dateFrom", dateFrom);
@@ -158,14 +164,17 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
   }
 
   /**
-   * How many of the filtered vouchers are posted. The backend's summary count
-   * includes cancelled ones; the summary strip counts what the total counts.
+   * How many of the filtered vouchers are cancelled. The backend's summary
+   * count includes them; the summary strip counts what the total counts.
    */
-  async function countPosted(
+  async function countCancelled(
     filters: VoucherFilters,
   ): Promise<ApiResult<number>> {
     const result = await list(
-      toBackendQuery(filters, { status: "posted", page: "1", pageSize: "1" }),
+      toBackendQuery(
+        { ...filters, status: "cancelled" },
+        { page: "1", pageSize: "1" },
+      ),
     );
     return result.ok ? { ok: true, data: result.data.summary.count } : result;
   }
@@ -260,5 +269,5 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
     };
   }
 
-  return { getVouchers, countPosted, hasAny, getHeaderAccounts, getVoucher };
+  return { getVouchers, countCancelled, hasAny, getHeaderAccounts, getVoucher };
 }

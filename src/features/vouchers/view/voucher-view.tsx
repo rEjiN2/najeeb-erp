@@ -26,7 +26,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { VoucherLineGrid } from "@/components/voucher/voucher-line-grid";
-import { VoucherStatusBadge } from "@/components/voucher/voucher-status-badge";
+import {
+  VoucherStatusBadge,
+  isVoidStatus,
+} from "@/components/voucher/voucher-status-badge";
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { VoucherTotalsFooter } from "@/components/voucher/voucher-totals-footer";
 import { formatCalendarDate } from "@/lib/datetime";
@@ -158,6 +161,8 @@ interface VoucherViewProps {
   access: VoucherAccess;
   /** Arrived straight from saving: show the "saved" banner. */
   justSaved: boolean;
+  /** Replaces the lines and totals (handovers show their receipts). */
+  body?: ReactNode;
 }
 
 export function VoucherView({
@@ -166,6 +171,7 @@ export function VoucherView({
   voucher,
   access,
   justSaved,
+  body,
 }: VoucherViewProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -175,7 +181,7 @@ export function VoucherView({
   const pdf = useVoucherPdf(config, {
     onPrinted: () => setPrintCount((n) => n + 1),
   });
-  const isPosted = voucher.status === "posted";
+  const isPosted = !isVoidStatus(voucher.status);
 
   const printButton = (
     <Button
@@ -364,36 +370,40 @@ export function VoucherView({
             </CardContent>
           </Card>
 
-          <VoucherLineGrid
-            columns={viewColumns({
-              // Left out by the backend without balances:view.
-              showOldBalance: lines.every((line) => line.oldBalance !== null),
-              simpleLines: config.simpleLines ?? false,
-            })}
-            lines={lines}
-          />
+          {body ?? (
+            <VoucherLineGrid
+              columns={viewColumns({
+                // Left out by the backend without balances:view.
+                showOldBalance: lines.every((line) => line.oldBalance !== null),
+                simpleLines: config.simpleLines ?? false,
+              })}
+              lines={lines}
+            />
+          )}
 
-          <VoucherTotalsFooter
-            totals={[
-              ...(config.simpleLines
-                ? []
-                : [
-                    {
-                      label: "Gross",
-                      value: formatAmount(voucher.grossTotal),
-                    },
-                    {
-                      label: "Total Tax",
-                      value: formatAmount(voucher.totalTax),
-                    },
-                  ]),
-              {
-                label: config.simpleLines ? "Amount" : "Grand Total",
-                value: formatAmount(voucher.grandTotal),
-                emphasize: true,
-              },
-            ]}
-          />
+          {body ? null : (
+            <VoucherTotalsFooter
+              totals={[
+                ...(config.simpleLines
+                  ? []
+                  : [
+                      {
+                        label: "Gross",
+                        value: formatAmount(voucher.grossTotal),
+                      },
+                      {
+                        label: "Total Tax",
+                        value: formatAmount(voucher.totalTax),
+                      },
+                    ]),
+                {
+                  label: config.simpleLines ? "Amount" : "Grand Total",
+                  value: formatAmount(voucher.grandTotal),
+                  emphasize: true,
+                },
+              ]}
+            />
+          )}
         </div>
 
         <Card className="h-fit xl:sticky xl:top-0 print:hidden">

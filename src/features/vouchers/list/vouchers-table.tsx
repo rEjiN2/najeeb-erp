@@ -33,7 +33,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { VoucherStatusBadge } from "@/components/voucher/voucher-status-badge";
+import {
+  VoucherStatusBadge,
+  isVoidStatus,
+} from "@/components/voucher/voucher-status-badge";
 import { PaymentMethodBadge } from "../payment-method-badge";
 import { StaffTypeBadge } from "@/features/cashiers/staff-type-badge";
 import { formatCalendarDate } from "@/lib/datetime";
@@ -139,7 +142,7 @@ function RowActions({
   "config" | "canEdit" | "canCancel" | "onPrint" | "onActivity" | "onCancel"
 > & { row: VoucherListRow }) {
   const router = useRouter();
-  const isPosted = row.status === "posted";
+  const isPosted = !isVoidStatus(row.status);
   const viewHref = voucherPath(config, row.id);
 
   return (
@@ -222,7 +225,7 @@ function VoucherCards(props: VouchersTableProps) {
     >
       {rows.map((row) => {
         const viewHref = voucherPath(config, row.id);
-        const isPosted = row.status === "posted";
+        const isPosted = !isVoidStatus(row.status);
         return (
           <li
             key={row.id}
@@ -325,7 +328,7 @@ export function VouchersTable(props: VouchersTableProps) {
           <TableBody>
             {rows.map((row) => {
               const viewHref = voucherPath(config, row.id);
-              const isPosted = row.status === "posted";
+              const isPosted = !isVoidStatus(row.status);
               const headerName = row.headerAccount.name ?? (
                 <span className="text-muted-foreground italic">
                   Unknown account

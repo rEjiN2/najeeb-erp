@@ -38,11 +38,13 @@ import type {
 } from "./types";
 
 const AMOUNT_COLUMNS = [
-  ["openingPending", "Opening Pending"],
+  ["unsettledOpening", "Opening Unsettled"],
   ["collectedCash", "Collected Cash"],
   ["collectedBank", "Collected Bank"],
-  ["handedOver", "Handed Over"],
-  ["closingPending", "Closing Pending"],
+  ["pendingApproval", "Pending Approval"],
+  ["settled", "Settled"],
+  ["openShortage", "Shortage"],
+  ["unsettledClosing", "Closing Unsettled"],
 ] as const satisfies readonly (readonly [
   keyof SalesmanCollectionFigures,
   string,
@@ -228,7 +230,7 @@ export function SalesmanCollectionsPage({
                       </span>
                     </div>
                     <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                      {AMOUNT_COLUMNS.slice(0, 4).map(([key, label]) => (
+                      {AMOUNT_COLUMNS.slice(0, -1).map(([key, label]) => (
                         <div key={key} className="flex justify-between gap-2">
                           <dt className="text-muted-foreground">{label}</dt>
                           <dd>
@@ -239,9 +241,9 @@ export function SalesmanCollectionsPage({
                     </dl>
                     <div className="flex items-baseline justify-between border-t pt-2 text-sm">
                       <span className="text-muted-foreground">
-                        Closing pending
+                        Closing unsettled
                       </span>
-                      <Money value={figures.closingPending} strong />
+                      <Money value={figures.unsettledClosing} strong />
                     </div>
                   </button>
                 </li>
@@ -250,7 +252,7 @@ export function SalesmanCollectionsPage({
           </ul>
 
           <div className="bg-card hidden overflow-x-auto rounded-lg border md:block">
-            <Table className="min-w-[900px]">
+            <Table className="min-w-[1100px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Cashier</TableHead>
@@ -293,7 +295,7 @@ export function SalesmanCollectionsPage({
                       <TableCell key={key} className="text-right text-sm">
                         <Money
                           value={row[key]}
-                          strong={key === "closingPending"}
+                          strong={key === "unsettledClosing"}
                         />
                       </TableCell>
                     ))}

@@ -1,93 +1,115 @@
 "use server";
 
+import { apiSend } from "@/lib/api";
 import type { MutationResult } from "@/lib/mutation";
+import { runMutation } from "@/lib/run-mutation";
 import {
   cancelVoucher,
-  sendVoucher,
   type VoucherWriteTarget,
 } from "@/features/vouchers/mutations";
-import type { VoucherSaveResult } from "@/features/vouchers/types";
 
 import { CASH_HANDOVERS_PATH, cashHandoverPath } from "./constants";
-import type { HandoverInput } from "./types";
+import type { ApproveInput, HandoverInput } from "./types";
 
 // Server Actions are public endpoints: the backend authenticates the forwarded
 // cookie, checks the cash-handovers permissions and data scope, and validates
 // every field. Bodies are rebuilt field by field because the backend rejects
 // unknown properties.
 
+interface SavedHandover {
+  _id: string;
+  voucherNo: string;
+}
+
 const TARGET: VoucherWriteTarget = {
   path: "/cash-handovers",
-  headerKey: "fromAccountId",
-  sendsReference: true,
-  // Taking a cash or wallet "from" account below zero comes back as a 409.
-  acknowledgesWarnings: true,
+  headerKey: "sourceAccountId",
+  sendsReference: false,
+  acknowledgesWarnings: false,
   listPath: CASH_HANDOVERS_PATH,
   viewPath: cashHandoverPath,
-  forbiddenMessage: "You don't have permission to manage cash handovers.",
-  savedMessage: (voucherNo) => `Handover ${voucherNo} saved`,
+  forbiddenMessage: "You don't have permission to do that with cash handovers.",
+  savedMessage: (voucherNo) => `Handover ${voucherNo} submitted`,
   cancelledMessage: (voucherNo) => `Cash handover ${voucherNo} cancelled`,
 };
 
-function toBody(input: HandoverInput) {
-  return {
-    voucherDate: input.voucherDate,
-    fromAccountId: input.fromAccountId,
-    toAccountId: input.toAccountId,
-    amount: input.amount,
-    handedByCashierId: input.handedByCashierId,
-    receivedByCashierId: input.receivedByCashierId,
-  };
+/** 403s from the data scope say what to fix; only the guard's bare one is generic. */
+function forbidden(messages: string[]): string {
+  return messages.length > 0 && messages[0] !== "Insufficient permissions"
+    ? messages.join(" ")
+    : TARGET.forbiddenMessage;
 }
 
-export async function createCashHandover(
+async function send(
+  path: string,
+  body: Record<string, unknown>,
+  returnTo: string,
+  successMessage: (saved: SavedHandover) => string,
+): Promise<MutationResult> {
+  const result = await apiSend<SavedHandover>("POST", path, body);
+  return runMutation(Promise.resolve(result), {
+    returnTo,
+    forbiddenMessage:
+      !result.ok && result.reason === "forbidden"
+        ? forbidden(result.messages)
+        : TARGET.forbiddenMessage,
+    successMessage,
+    getId: (saved) => saved._id,
+  });
+}
+
+/** Submits the receipts and locks them until approved or rejected. */
+export async function submitCashHandover(
   input: HandoverInput,
-  acknowledgeWarnings: boolean,
-): Promise<VoucherSaveResult> {
-  const reference = input.reference.trim();
+): Promise<MutationResult> {
   const notes = input.notes.trim();
-  return sendVoucher(
-    TARGET,
-    "POST",
+  return send(
     TARGET.path,
     {
-      ...toBody(input),
-      ...(reference ? { reference } : {}),
+      voucherDate: input.voucherDate,
+      ...(input.staffId ? { staffId: input.staffId } : {}),
+      sourceAccountId: input.sourceAccountId,
+      receiptIds: input.receiptIds,
+      countedCash: input.countedCash,
       ...(notes ? { notes } : {}),
-      ...(acknowledgeWarnings ? { acknowledgeWarnings: true } : {}),
     },
-    TARGET.listPath,
+    `${CASH_HANDOVERS_PATH}/new`,
+    (saved) => TARGET.savedMessage(saved.voucherNo),
   );
 }
 
-/**
- * Sends the whole handover; the backend diffs it and answers "No changes to
- * save" when nothing changed. Blank reference and notes are sent as "" so
- * clearing them is an edit.
- */
-export async function updateCashHandover(
+/** Posts the received cash and settles every receipt. */
+export async function approveCashHandover(
   id: string,
-  input: HandoverInput,
-  changeNote: string,
-  acknowledgeWarnings: boolean,
-): Promise<VoucherSaveResult> {
-  const note = changeNote.trim();
-  return sendVoucher(
-    TARGET,
-    "PATCH",
-    `${TARGET.path}/${encodeURIComponent(id)}`,
+  input: ApproveInput,
+): Promise<MutationResult> {
+  const reason = input.varianceReason.trim();
+  return send(
+    `${TARGET.path}/${encodeURIComponent(id)}/approve`,
     {
-      ...toBody(input),
-      reference: input.reference.trim(),
-      notes: input.notes.trim(),
-      ...(note ? { changeNote: note } : {}),
-      ...(acknowledgeWarnings ? { acknowledgeWarnings: true } : {}),
+      receivedCash: input.receivedCash,
+      receivedIntoAccountId: input.receivedIntoAccountId,
+      ...(reason ? { varianceReason: reason } : {}),
     },
-    TARGET.viewPath(id),
+    cashHandoverPath(id),
+    (saved) => `Handover ${saved.voucherNo} approved`,
   );
 }
 
-/** Reverses the posting; the handover stays, marked cancelled. */
+/** Unlocks the receipts so they can be handed over again. */
+export async function rejectCashHandover(
+  id: string,
+  reason: string,
+): Promise<MutationResult> {
+  return send(
+    `${TARGET.path}/${encodeURIComponent(id)}/reject`,
+    { reason: reason.trim() },
+    cashHandoverPath(id),
+    (saved) => `Handover ${saved.voucherNo} rejected`,
+  );
+}
+
+/** Submitter before approval, or cash-handovers:cancel (reverses an approval). */
 export async function cancelCashHandover(
   id: string,
   reason: string,

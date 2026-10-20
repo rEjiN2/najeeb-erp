@@ -3,7 +3,7 @@
 import { CalendarRange, HandCoins, Plus, SearchX } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 
 import { ActivitySheet } from "@/components/activity/activity-sheet";
 import { MasterPagination } from "@/components/master/master-pagination";
@@ -65,6 +65,8 @@ interface VoucherListPageProps {
   users: Loadable<UserRef[]> | null;
   cashiers: Loadable<CashierLookupItem[]> | null;
   selectedAccountName: string | null;
+  /** Under the heading, e.g. a salesman's unsettled cash. */
+  banner?: ReactNode;
 }
 
 const PAGE_SIZE_ITEMS = Object.fromEntries(
@@ -150,6 +152,7 @@ export function VoucherListPage({
   users,
   cashiers,
   selectedAccountName,
+  banner,
 }: VoucherListPageProps) {
   const router = useRouter();
   const pdf = useVoucherPdf(config);
@@ -186,17 +189,22 @@ export function VoucherListPage({
   );
 
   const header = (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold">{config.title}</h1>
-        <p className="text-muted-foreground text-sm">{config.description}</p>
+    <>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold">
+            {config.title}
+          </h1>
+          <p className="text-muted-foreground text-sm">{config.description}</p>
+        </div>
+        {access.canCreate && !isFirstRun ? (
+          <Link href={newPath} className={buttonVariants()}>
+            <Plus /> {config.copy.createButton}
+          </Link>
+        ) : null}
       </div>
-      {access.canCreate && !isFirstRun ? (
-        <Link href={newPath} className={buttonVariants()}>
-          <Plus /> {config.copy.createButton}
-        </Link>
-      ) : null}
-    </div>
+      {banner}
+    </>
   );
 
   if (isFirstRun) {

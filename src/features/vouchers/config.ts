@@ -1,5 +1,7 @@
 import type { PartyKind } from "@/features/parties/types";
 
+import type { StatusFilter } from "./filters";
+
 /**
  * Everything that differs between cash/bank voucher screens — the list,
  * form, view and dialogs are shared. Plain data only, so a server page can
@@ -40,6 +42,9 @@ export interface VoucherConfig {
   /** One account and amount per voucher (handovers): the view leaves out
    * narration, remarks, VAT and the gross/tax totals. */
   simpleLines?: boolean;
+  /** Status filter choices; receipts and payments: all / posted / cancelled.
+   * When set, the list shows them as tabs. */
+  statusFilters?: readonly StatusFilter[];
 
   copy: {
     /** "Received Into" / "Paid From". */

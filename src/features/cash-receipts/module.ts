@@ -1,6 +1,12 @@
 import "server-only";
 
-import type { VoucherModule } from "@/features/vouchers/routes";
+import { createElement } from "react";
+
+import { UnsettledBanner } from "@/features/cash-handovers/unsettled-banner";
+import type {
+  VoucherModule,
+  VoucherReadModule,
+} from "@/features/vouchers/routes";
 
 import {
   cancelCashReceipt,
@@ -10,10 +16,13 @@ import {
 import { cashReceiptsApi } from "./api";
 import { CASH_RECEIPT_CONFIG } from "./constants";
 
-export const CASH_RECEIPTS_MODULE: VoucherModule = {
+export const CASH_RECEIPTS_MODULE: VoucherModule &
+  Pick<VoucherReadModule, "listBanner"> = {
   config: CASH_RECEIPT_CONFIG,
   api: cashReceiptsApi,
   createAction: createCashReceipt,
   updateAction: updateCashReceipt,
   cancelAction: cancelCashReceipt,
+  // A salesman's unsettled cash and the way to hand it over.
+  listBanner: async () => createElement(UnsettledBanner),
 };

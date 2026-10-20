@@ -6,13 +6,21 @@ import { useState, type ReactNode } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { Sidebar } from "./sidebar";
+import { NO_BADGES, NavBadgesContext } from "./sidebar-leaf-link";
 import { Topbar } from "./topbar";
 
 // Tailwind's `lg` breakpoint — read only inside the click handler, never
 // during render, so there's no SSR/hydration mismatch risk.
 const LG_BREAKPOINT = 1024;
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({
+  children,
+  navBadges,
+}: {
+  children: ReactNode;
+  /** Counts beside menu items, by href (e.g. handovers awaiting approval). */
+  navBadges?: Record<string, number>;
+}) {
   const pathname = usePathname();
   const [desktopExpanded, setDesktopExpanded] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -39,30 +47,32 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <TooltipProvider>
-      <div className="flex h-svh print:block print:h-auto">
-        {mobileOpen ? (
-          <button
-            type="button"
-            aria-label="Close sidebar"
-            onClick={() => setMobileOpen(false)}
-            className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+      <NavBadgesContext value={navBadges ?? NO_BADGES}>
+        <div className="flex h-svh print:block print:h-auto">
+          {mobileOpen ? (
+            <button
+              type="button"
+              aria-label="Close sidebar"
+              onClick={() => setMobileOpen(false)}
+              className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+            />
+          ) : null}
+
+          <Sidebar
+            // The mobile drawer is always shown in full (never icon-only) —
+            // only fall back to the desktop rail state when it's not open.
+            collapsed={mobileOpen ? false : !desktopExpanded}
+            mobileOpen={mobileOpen}
           />
-        ) : null}
 
-        <Sidebar
-          // The mobile drawer is always shown in full (never icon-only) —
-          // only fall back to the desktop rail state when it's not open.
-          collapsed={mobileOpen ? false : !desktopExpanded}
-          mobileOpen={mobileOpen}
-        />
-
-        <div className="flex min-w-0 flex-1 flex-col">
-          <Topbar onToggleSidebar={toggleSidebar} />
-          <main className="bg-muted/30 flex-1 overflow-y-auto p-4 sm:p-6 print:overflow-visible print:bg-transparent print:p-0">
-            {children}
-          </main>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <Topbar onToggleSidebar={toggleSidebar} />
+            <main className="bg-muted/30 flex-1 overflow-y-auto p-4 sm:p-6 print:overflow-visible print:bg-transparent print:p-0">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </NavBadgesContext>
     </TooltipProvider>
   );
 }
