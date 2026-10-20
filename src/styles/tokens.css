@@ -105,6 +105,10 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: var(--brand-400);
 
+  /* Auth screens (login, change password): warm ivory canvas beside the
+     black-and-gold brand panel, softer than the app's pure-white canvas. */
+  --auth-canvas: oklch(0.982 0.004 85);
+
   /* Radius */
   --radius: 0.75rem;
   /* Form controls (input/select/textarea) get an exact, flat radius —
@@ -153,6 +157,8 @@
   --sidebar-accent-foreground: var(--brand-300);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: var(--brand-400);
+
+  --auth-canvas: var(--neutral-900);
 }
 
 /* 3. Typography — Space Grotesk everywhere (body and headings alike, see

@@ -8,6 +8,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PERMISSIONS } from "@/features/auth/permissions";
+import { getServerSession } from "@/features/auth/session";
 
 export const metadata: Metadata = {
   title: "Masters | ALA Dates",
@@ -19,40 +21,51 @@ const MASTER_LINKS = [
     title: "Accounts",
     description: "Cash, bank, wallet, income and expense accounts.",
     icon: Wallet,
+    permission: PERMISSIONS.ACCOUNTS_MANAGE,
   },
   {
     href: "/accounting-inventory/masters/customers",
     title: "Customers",
     description: "Who you sell to, with addresses, credit terms and documents.",
     icon: Building,
+    permission: PERMISSIONS.PARTIES_MANAGE,
   },
   {
     href: "/accounting-inventory/masters/suppliers",
     title: "Suppliers",
     description: "Who you buy from, with credit terms and documents.",
     icon: Truck,
+    permission: PERMISSIONS.PARTIES_MANAGE,
   },
   {
     href: "/accounting-inventory/masters/cashiers",
-    title: "Cashiers",
-    description: "People who collect cash, linked to logins and locations.",
+    title: "Staff",
+    description:
+      "People who collect or pay out money, linked to logins and locations.",
     icon: IdCard,
+    permission: PERMISSIONS.CASHIERS_MANAGE,
   },
   {
     href: "/accounting-inventory/masters/locations",
     title: "Locations",
     description: "Branches, warehouses, stores and vans.",
     icon: MapPin,
+    permission: PERMISSIONS.LOCATIONS_MANAGE,
   },
   {
     href: "/accounting-inventory/masters/product-groups",
     title: "Product Groups",
     description: "How products are grouped and nested.",
     icon: Tags,
+    permission: PERMISSIONS.PRODUCT_GROUPS_MANAGE,
   },
 ];
 
-export default function MastersPage() {
+export default async function MastersPage() {
+  const permissions = (await getServerSession())?.user.permissions ?? [];
+  const links = MASTER_LINKS.filter((link) =>
+    permissions.includes(link.permission),
+  );
   return (
     <div className="space-y-6">
       <div>
@@ -63,7 +76,7 @@ export default function MastersPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {MASTER_LINKS.map(({ href, title, description, icon: Icon }) => (
+        {links.map(({ href, title, description, icon: Icon }) => (
           <Link key={href} href={href}>
             <Card className="hover:bg-muted/50 transition-colors">
               <CardHeader className="flex-row items-center gap-3 space-y-0">

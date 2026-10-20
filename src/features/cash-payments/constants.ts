@@ -44,7 +44,7 @@ export const CASH_PAYMENT_CONFIG: VoucherConfig = {
     headerLabel: "Paid From",
     headerFilterAny: "Paid from: any",
     counterpartyLabel: "Paid To",
-    cashierLabel: "Cashier",
+    cashierLabel: "Paid By",
     totalLabel: "Total paid",
     createButton: "Create Payment",
     firstCreateButton: "Create your first payment",
@@ -68,7 +68,7 @@ export const CASH_PAYMENT_CONFIG: VoucherConfig = {
     searchPlaceholder: "Search voucher no, reference, comments or narration...",
     commentsPlaceholder: "Optional notes about this payment",
     headerRequired: "Select the account the money was paid from.",
-    cashierRequired: "Select the cashier who paid out the money.",
+    cashierRequired: "Select who paid out the money.",
     linesRequired: "Add at least one account to pay to.",
     inactivePartyHint: "Reactivate it under Suppliers to pay it.",
     cancelledNotEditableHint:

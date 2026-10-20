@@ -9,6 +9,7 @@ import {
 import { GeneratedCode } from "@/components/master/generated-code";
 import { MasterFormFooter } from "@/components/master/master-form-footer";
 import { SearchableSelect } from "@/components/shared/searchable-select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,13 +29,23 @@ import { groupErrors, type MutationResult } from "@/lib/mutation";
 import {
   CASHIER_STATUSES,
   CASHIER_STATUS_LABELS,
+  STAFF_TYPES,
+  STAFF_TYPE_LABELS,
+  defaultSettlesWithOffice,
   type Cashier,
   type CashierInput,
   type CashierStatus,
+  type StaffType,
 } from "./types";
 
 type CashierField =
-  "name" | "mobile" | "email" | "status" | "linkedUserId" | "locationId";
+  | "name"
+  | "mobile"
+  | "email"
+  | "status"
+  | "staffType"
+  | "linkedUserId"
+  | "locationId";
 
 // Backend messages → field, first match wins. class-validator text starts
 // with the property name; the service's 409s read 'An active cashier named
@@ -45,6 +56,7 @@ const FIELD_MATCHERS = [
   ["mobile", /^mobile\b/i],
   ["email", /^email\b/i],
   ["status", /^status\b/i],
+  ["staffType", /^staffType\b|^settlesWithOffice\b/i],
   ["name", /^name\b|cashier named|cashier with this name/i],
 ] as const;
 
@@ -74,6 +86,12 @@ export function CashierForm({
   const [email, setEmail] = useState(initialValue?.email ?? "");
   const [status, setStatus] = useState<CashierStatus>(
     initialValue?.status ?? "active",
+  );
+  const [staffType, setStaffType] = useState<StaffType>(
+    initialValue?.staffType ?? "cashier",
+  );
+  const [settlesWithOffice, setSettlesWithOffice] = useState(
+    initialValue?.settlesWithOffice ?? defaultSettlesWithOffice("cashier"),
   );
   const [linkedUserId, setLinkedUserId] = useState<string | null>(
     initialValue?.linkedUserId ?? null,
@@ -123,6 +141,8 @@ export function CashierForm({
       mobile,
       email,
       status,
+      staffType,
+      settlesWithOffice,
       linkedUserId,
       locationId,
     };
@@ -163,6 +183,50 @@ export function CashierForm({
             required
           />
           <FieldError id="cashier-name-error" message={fieldErrors.name} />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="cashier-type">
+            Type <span className="text-destructive">*</span>
+          </Label>
+          <Select
+            value={staffType}
+            onValueChange={(value) => {
+              if (!value) return;
+              setStaffType(value as StaffType);
+              setSettlesWithOffice(defaultSettlesWithOffice(value as StaffType));
+            }}
+            items={STAFF_TYPE_LABELS}
+          >
+            <SelectTrigger
+              id="cashier-type"
+              className="w-full"
+              aria-invalid={Boolean(fieldErrors.staffType)}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STAFF_TYPES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {STAFF_TYPE_LABELS[value]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <label className="flex cursor-pointer items-center gap-2 text-sm select-none">
+            <Checkbox
+              checked={settlesWithOffice}
+              onCheckedChange={(checked) =>
+                setSettlesWithOffice(checked === true)
+              }
+            />
+            Settles cash with office
+          </label>
+          <p className="text-muted-foreground text-xs">
+            Holds collected cash and hands it over to the office. On by default
+            for van salesmen.
+          </p>
+          <FieldError id="cashier-type-error" message={fieldErrors.staffType} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -215,8 +279,8 @@ export function CashierForm({
             />
           )}
           <p className="text-muted-foreground text-xs">
-            Receipts this user creates pick this cashier automatically. One
-            cashier per user.
+            Receipts this user creates pick this staff member automatically.
+            One staff member per user.
           </p>
           <FieldError
             id="cashier-user-error"
@@ -276,14 +340,14 @@ export function CashierForm({
             </SelectContent>
           </Select>
           <p className="text-muted-foreground text-xs">
-            Inactive cashiers can&apos;t be picked on new receipts.
+            Inactive staff can&apos;t be picked on new receipts.
           </p>
           <FieldError id="cashier-status-error" message={fieldErrors.status} />
         </div>
       </fieldset>
 
       <MasterFormFooter
-        submitLabel={isEdit ? "Save changes" : "Add cashier"}
+        submitLabel={isEdit ? "Save changes" : "Add staff"}
         pending={pending}
       />
     </form>

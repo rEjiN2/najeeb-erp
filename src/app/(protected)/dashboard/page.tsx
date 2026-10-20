@@ -37,6 +37,9 @@ export default async function DashboardPage() {
     );
   }
 
+  // Company cash/bank totals and party balances need balances:view.
+  const canViewBalances = permissions.includes(PERMISSIONS.BALANCES_VIEW);
+
   return (
     <div className="space-y-6">
       <div className="space-y-1">
@@ -49,12 +52,14 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="md:col-span-2">
+        <div className={canViewBalances ? "md:col-span-2" : "md:col-span-3"}>
           <IncomeExpenseCard />
         </div>
-        <Suspense fallback={<CashSummaryCardSkeleton />}>
-          <CashSummaryCard />
-        </Suspense>
+        {canViewBalances ? (
+          <Suspense fallback={<CashSummaryCardSkeleton />}>
+            <CashSummaryCard />
+          </Suspense>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -62,10 +67,12 @@ export default async function DashboardPage() {
         <SalesAnalysisCard />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <PartyBalancesCard />
-        <SupplierBalancesCard />
-      </div>
+      {canViewBalances ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <PartyBalancesCard />
+          <SupplierBalancesCard />
+        </div>
+      ) : null}
     </div>
   );
 }

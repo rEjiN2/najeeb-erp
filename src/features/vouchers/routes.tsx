@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { getAccount } from "@/features/accounts/api";
+import { isOwnScope } from "@/features/auth/session";
 import { getCashierLookup } from "@/features/cashiers/api";
 import { getUsers } from "@/features/users/api";
 import { describeFailure, type ApiResult } from "@/lib/api-types";
@@ -76,6 +77,9 @@ export async function VoucherListRoute({
 }) {
   const filters = parseFilters(searchParams);
   const returnTo = `${config.basePath}${toSearch(filters)}`;
+  // An "own"-scoped user sees only their own vouchers: no staff or
+  // created-by filters to pick other people from.
+  const scoped = await isOwnScope();
 
   const [
     vouchers,
@@ -90,8 +94,8 @@ export async function VoucherListRoute({
     // Posted-only and cancelled-only views already know the answer.
     filters.status === "all" ? api.countPosted(filters) : null,
     api.getHeaderAccounts(),
-    getUsers(),
-    getCashierLookup(false),
+    scoped ? null : getUsers(),
+    scoped ? null : getCashierLookup(false),
     filters.accountId ? getAccount(filters.accountId) : null,
     getVoucherAccess(config),
   ]);
@@ -167,8 +171,8 @@ export async function VoucherListRoute({
       isFirstRun={isFirstRun}
       access={access}
       headerAccounts={toLoadable(headerAccounts, returnTo)}
-      users={toLoadable(users, returnTo)}
-      cashiers={toLoadable(cashiers, returnTo)}
+      users={users ? toLoadable(users, returnTo) : null}
+      cashiers={cashiers ? toLoadable(cashiers, returnTo) : null}
       selectedAccountName={selectedAccountName}
     />
   );

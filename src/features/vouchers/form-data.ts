@@ -46,7 +46,15 @@ function scopedFormData(user: AuthUser, canAddParty: boolean): VoucherFormData {
       type: account.type,
     })),
     cashiers: active
-      ? [{ id: active.id, code: active.code, name: active.name }]
+      ? [
+          {
+            id: active.id,
+            code: active.code,
+            name: active.name,
+            staffType: active.staffType ?? "cashier",
+            settlesWithOffice: active.settlesWithOffice ?? false,
+          },
+        ]
       : [],
     myCashierId: active?.id ?? null,
     myCashierFailed: false,

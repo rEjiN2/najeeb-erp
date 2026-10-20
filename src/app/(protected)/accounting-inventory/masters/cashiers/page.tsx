@@ -19,7 +19,7 @@ import { getUsers } from "@/features/users/api";
 import type { ApiFailure } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "Cashiers | ALA Dates",
+  title: "Staff | ALA Dates",
 };
 
 function toLogin(): never {
@@ -36,7 +36,7 @@ function LoadFailure({ failure }: { failure: ApiFailure }) {
       />
       <MasterLoadError
         reason={failure.reason}
-        subject="cashiers"
+        subject="staff"
         status={failure.status}
         messages={failure.messages}
       />

@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { VoucherStatusBadge } from "@/components/voucher/voucher-status-badge";
 import { PaymentMethodBadge } from "../payment-method-badge";
+import { StaffTypeBadge } from "@/features/cashiers/staff-type-badge";
 import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -370,7 +371,7 @@ export function VouchersTable(props: VouchersTableProps) {
                         title={
                           row.cashier.id
                             ? undefined
-                            : "Entered before cashiers were set up"
+                            : "Entered before staff were set up"
                         }
                         className={cn(!row.cashier.id && "italic")}
                       >
@@ -379,6 +380,11 @@ export function VouchersTable(props: VouchersTableProps) {
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
+                    {row.cashier.staffType ? (
+                      <div>
+                        <StaffTypeBadge type={row.cashier.staffType} />
+                      </div>
+                    ) : null}
                     {row.cashierNote ? (
                       <p className="text-muted-foreground truncate text-xs">
                         {row.cashierNote}

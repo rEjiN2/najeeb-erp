@@ -31,6 +31,7 @@ import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { VoucherTotalsFooter } from "@/components/voucher/voucher-totals-footer";
 import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
+import { StaffTypeBadge } from "@/features/cashiers/staff-type-badge";
 
 import { CancelVoucherDialog } from "../cancel-voucher-dialog";
 import {
@@ -138,12 +139,12 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 function CashierName({ cashier }: { cashier: CashierRef }) {
   if (!cashier.name) return <span className="text-muted-foreground">—</span>;
   return (
-    <span>
+    <span className="inline-flex flex-wrap items-center gap-1.5">
       {cashier.name}
+      <StaffTypeBadge type={cashier.staffType} />
       {cashier.id ? null : (
         <span className="text-muted-foreground text-xs">
-          {" "}
-          (entered before cashiers were set up)
+          (entered before staff were set up)
         </span>
       )}
     </span>

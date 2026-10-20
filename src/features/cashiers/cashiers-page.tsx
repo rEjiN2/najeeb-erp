@@ -36,8 +36,10 @@ import {
 } from "./actions";
 import { CashierForm, type UserOption } from "./cashier-form";
 import { CASHIERS_DESCRIPTION, CASHIERS_TITLE } from "./constants";
+import { StaffTypeBadge } from "./staff-type-badge";
 import {
   CASHIER_STATUS_LABELS,
+  STAFF_TYPE_LABELS,
   type Cashier,
   type CashierFilters,
   type CashierInput,
@@ -50,12 +52,25 @@ const STATUS_FILTER_ITEMS: Record<CashierFilters["status"], string> = {
   inactive: "Inactive",
 };
 
+const TYPE_FILTER_ITEMS: Record<CashierFilters["staffType"], string> = {
+  all: "All types",
+  ...STAFF_TYPE_LABELS,
+};
+
+const SETTLES_FILTER_ITEMS: Record<CashierFilters["settles"], string> = {
+  all: "Any settlement",
+  yes: "Settles with office",
+  no: "Doesn't settle",
+};
+
 const SEARCH_DEBOUNCE_MS = 300;
 
 function toSearch(filters: CashierFilters): string {
   const params = new URLSearchParams();
   if (filters.q) params.set("q", filters.q);
   if (filters.status !== "all") params.set("status", filters.status);
+  if (filters.staffType !== "all") params.set("type", filters.staffType);
+  if (filters.settles !== "all") params.set("settles", filters.settles);
   if (filters.page > 1) params.set("page", String(filters.page));
   const search = params.toString();
   return search ? `?${search}` : "";
@@ -128,6 +143,21 @@ export function CashiersPage({
       key: "name",
       header: "Name",
       render: (cashier) => <span className="font-medium">{cashier.name}</span>,
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (cashier) => <StaffTypeBadge type={cashier.staffType} />,
+    },
+    {
+      key: "settles",
+      header: "Settles With Office",
+      render: (cashier) =>
+        cashier.settlesWithOffice ? (
+          <span className="text-sm">Yes</span>
+        ) : (
+          muted
+        ),
     },
     {
       key: "contact",
@@ -216,7 +246,11 @@ export function CashiersPage({
     });
   }
 
-  const isFiltered = filters.q !== "" || filters.status !== "all";
+  const isFiltered =
+    filters.q !== "" ||
+    filters.status !== "all" ||
+    filters.staffType !== "all" ||
+    filters.settles !== "all";
   const isEmpty = page.total === 0 && !isFiltered;
 
   return (
@@ -224,7 +258,7 @@ export function CashiersPage({
       <MasterPageHeader
         title={CASHIERS_TITLE}
         description={CASHIERS_DESCRIPTION}
-        actionLabel={isEmpty || !canManage ? undefined : "Add Cashier"}
+        actionLabel={isEmpty || !canManage ? undefined : "Add Staff"}
         onAction={crud.openCreate}
       />
 
@@ -232,14 +266,14 @@ export function CashiersPage({
         canManage ? (
           <MasterEmptyState
             icon={IdCard}
-            title="No cashiers yet"
-            description="Add the people who collect cash. Link one to a login so their receipts pick them automatically."
-            actionLabel="Add Cashier"
+            title="No staff yet"
+            description="Add the people who collect or pay out money. Link one to a login so their receipts pick them automatically."
+            actionLabel="Add Staff"
             onAction={crud.openCreate}
           />
         ) : (
           <div className="text-muted-foreground flex min-h-40 items-center justify-center rounded-lg border border-dashed text-sm">
-            No cashiers have been set up yet.
+            No staff have been set up yet.
           </div>
         )
       ) : (
@@ -255,7 +289,50 @@ export function CashiersPage({
                 aria-label="Loading"
               />
             ) : null}
-            <div className="flex gap-2 sm:ml-auto">
+            <div className="flex flex-wrap gap-2 sm:ml-auto">
+              <Select
+                value={filters.staffType}
+                onValueChange={(value) =>
+                  value &&
+                  navigate({ staffType: value as CashierFilters["staffType"] })
+                }
+                items={TYPE_FILTER_ITEMS}
+              >
+                <SelectTrigger className="w-[150px]" aria-label="Filter by type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(TYPE_FILTER_ITEMS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.settles}
+                onValueChange={(value) =>
+                  value &&
+                  navigate({ settles: value as CashierFilters["settles"] })
+                }
+                items={SETTLES_FILTER_ITEMS}
+              >
+                <SelectTrigger
+                  className="w-[180px]"
+                  aria-label="Filter by cash settlement"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SETTLES_FILTER_ITEMS).map(
+                    ([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
               <Select
                 value={filters.status}
                 onValueChange={(value) =>
@@ -291,7 +368,7 @@ export function CashiersPage({
             onDelete={crud.requestDelete}
             readOnlyNote={canManage ? undefined : () => "View only"}
             busy={isNavigating}
-            emptyMessage="No cashiers match these filters."
+            emptyMessage="No staff match these filters."
           />
 
           {page.total > 0 ? (
@@ -311,8 +388,8 @@ export function CashiersPage({
         onOpenChange={(open) => {
           if (!open) crud.closeForm();
         }}
-        title={crud.editing ? "Edit Cashier" : "Add Cashier"}
-        description="Receipts are posted against a cashier."
+        title={crud.editing ? "Edit Staff" : "Add Staff"}
+        description="Receipts and payments name a staff member."
       >
         <CashierForm
           key={crud.editing?.id ?? "new"}
@@ -331,7 +408,7 @@ export function CashiersPage({
             crud.cancelDelete();
           }
         }}
-        itemLabel={target ? `${target.code} ${target.name}` : "this cashier"}
+        itemLabel={target ? `${target.code} ${target.name}` : "this staff member"}
         onConfirm={crud.confirmDelete}
         pending={crud.isDeleting || isDeactivating}
         errors={[...crud.deleteErrors, ...deactivateErrors]}

@@ -77,7 +77,7 @@ export const NAV_ITEMS: NavEntry[] = [
             permission: PERMISSIONS.PARTIES_MANAGE,
           },
           {
-            title: "Cashiers",
+            title: "Staff",
             href: "/accounting-inventory/masters/cashiers",
             icon: IdCard,
             permission: PERMISSIONS.CASHIERS_MANAGE,

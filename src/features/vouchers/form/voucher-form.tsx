@@ -299,7 +299,13 @@ export function VoucherForm({
       const id = result.id;
       setAddedCashiers((prev) => [
         ...prev,
-        { id, code: "New", name: values.name.trim() },
+        {
+          id,
+          code: "New",
+          name: values.name.trim(),
+          staffType: values.staffType,
+          settlesWithOffice: values.settlesWithOffice,
+        },
       ]);
       // Only an active cashier can be posted against.
       if (values.status === "active") draft.updateVoucher({ cashierId: id });
@@ -539,8 +545,8 @@ export function VoucherForm({
         <MasterFormSheet
           open={cashierPanelOpen}
           onOpenChange={setCashierPanelOpen}
-          title="Add Cashier"
-          description={`Saved to the Cashiers master and picked on this ${config.noun}.`}
+          title="Add Staff"
+          description={`Saved to the Staff master and picked on this ${config.noun}.`}
         >
           {cashierPanelOpen ? (
             <CashierForm

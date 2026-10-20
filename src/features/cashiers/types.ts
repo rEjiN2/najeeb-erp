@@ -11,6 +11,29 @@ export const CASHIER_STATUS_LABELS: Record<CashierStatus, MasterStatus> = {
   inactive: "Inactive",
 };
 
+// The UI calls the cashier master "Staff"; routes and API keep "cashier".
+export const STAFF_TYPES = [
+  "cashier",
+  "van_salesman",
+  "accountant",
+  "owner",
+  "other",
+] as const;
+export type StaffType = (typeof STAFF_TYPES)[number];
+
+export const STAFF_TYPE_LABELS: Record<StaffType, string> = {
+  cashier: "Cashier",
+  van_salesman: "Van Salesman",
+  accountant: "Accountant",
+  owner: "Owner",
+  other: "Other",
+};
+
+/** Only van salesmen settle cash with the office by default. */
+export function defaultSettlesWithOffice(staffType: StaffType): boolean {
+  return staffType === "van_salesman";
+}
+
 /** A cashier as the UI uses it (from the serialized document). */
 export interface Cashier {
   id: string;
@@ -19,6 +42,8 @@ export interface Cashier {
   mobile: string | null;
   email: string | null;
   status: CashierStatus;
+  staffType: StaffType;
+  settlesWithOffice: boolean;
   linkedUserId: string | null;
   locationId: string | null;
 }
@@ -31,6 +56,9 @@ export interface RawCashier {
   mobile?: string | null;
   email?: string | null;
   status: CashierStatus;
+  /** Absent on records from before staff types: they're cashiers. */
+  staffType?: StaffType;
+  settlesWithOffice?: boolean;
   linkedUserId?: string | null;
   locationId?: string | null;
 }
@@ -43,6 +71,8 @@ export function toCashier(raw: RawCashier): Cashier {
     mobile: raw.mobile ?? null,
     email: raw.email ?? null,
     status: raw.status,
+    staffType: raw.staffType ?? "cashier",
+    settlesWithOffice: raw.settlesWithOffice ?? false,
     linkedUserId: raw.linkedUserId ?? null,
     locationId: raw.locationId ?? null,
   };
@@ -61,6 +91,8 @@ export interface CashierLookupItem {
   id: string;
   code: string;
   name: string;
+  staffType: StaffType;
+  settlesWithOffice: boolean;
 }
 
 /** What the form submits. Never `code` — the backend generates it. */
@@ -69,6 +101,8 @@ export interface CashierInput {
   mobile: string;
   email: string;
   status: CashierStatus;
+  staffType: StaffType;
+  settlesWithOffice: boolean;
   linkedUserId: string | null;
   locationId: string | null;
 }
@@ -76,5 +110,7 @@ export interface CashierInput {
 export interface CashierFilters {
   q: string;
   status: CashierStatus | "all";
+  staffType: StaffType | "all";
+  settles: "yes" | "no" | "all";
   page: number;
 }

@@ -61,8 +61,9 @@ interface VoucherListPageProps {
   isFirstRun: boolean;
   access: VoucherAccess;
   headerAccounts: Loadable<AccountLookupItem[]>;
-  users: Loadable<UserRef[]>;
-  cashiers: Loadable<CashierLookupItem[]>;
+  /** null for an "own"-scoped user: those filters are hidden. */
+  users: Loadable<UserRef[]> | null;
+  cashiers: Loadable<CashierLookupItem[]> | null;
   selectedAccountName: string | null;
 }
 

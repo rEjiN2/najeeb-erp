@@ -56,9 +56,11 @@ interface VoucherFilterBarProps {
   onClear: () => void;
   busy: boolean;
   headerAccounts: Loadable<AccountLookupItem[]>;
-  users: Loadable<UserRef[]>;
-  /** Every cashier, inactive ones too — old vouchers may name them. */
-  cashiers: Loadable<CashierLookupItem[]>;
+  /** null hides the filter ("own"-scoped user). */
+  users: Loadable<UserRef[]> | null;
+  /** Every cashier, inactive ones too — old vouchers may name them.
+   * null hides the filter ("own"-scoped user). */
+  cashiers: Loadable<CashierLookupItem[]> | null;
   /** Name of the account in the "Account / party" filter, resolved server-side. */
   selectedAccountName: string | null;
 }
@@ -170,47 +172,54 @@ export function VoucherFilterBar({
           />
         </div>
 
-        <div
-          className="lg:w-48"
-          title={cashiers.ok ? undefined : cashiers.message}
-        >
-          <SearchableSelect
-            value={filters.cashierId || null}
-            onChange={(value) => onChange({ cashierId: value ?? "" })}
-            options={
-              cashiers.ok
-                ? cashiers.data.map((cashier) => ({
-                    value: cashier.id,
-                    label: cashier.name,
-                    description: cashier.code,
-                  }))
-                : []
-            }
-            placeholder={cashiers.ok ? "All cashiers" : "Cashiers unavailable"}
-            emptyText="No matching cashiers"
-            clearLabel="All cashiers"
-            disabled={!cashiers.ok}
-          />
-        </div>
+        {cashiers ? (
+          <div
+            className="lg:w-48"
+            title={cashiers.ok ? undefined : cashiers.message}
+          >
+            <SearchableSelect
+              value={filters.cashierId || null}
+              onChange={(value) => onChange({ cashierId: value ?? "" })}
+              options={
+                cashiers.ok
+                  ? cashiers.data.map((cashier) => ({
+                      value: cashier.id,
+                      label: cashier.name,
+                      description: cashier.code,
+                    }))
+                  : []
+              }
+              placeholder={cashiers.ok ? "All staff" : "Staff unavailable"}
+              emptyText="No matching staff"
+              clearLabel="All staff"
+              disabled={!cashiers.ok}
+            />
+          </div>
+        ) : null}
 
-        <div className="lg:w-48" title={users.ok ? undefined : users.message}>
-          <SearchableSelect
-            value={filters.createdBy || null}
-            onChange={(value) => onChange({ createdBy: value ?? "" })}
-            options={
-              users.ok
-                ? users.data.map((user) => ({
-                    value: user.id,
-                    label: user.name,
-                  }))
-                : []
-            }
-            placeholder={users.ok ? "Anyone" : "Users unavailable"}
-            emptyText="No matching users"
-            clearLabel="Created by anyone"
-            disabled={!users.ok}
-          />
-        </div>
+        {users ? (
+          <div
+            className="lg:w-48"
+            title={users.ok ? undefined : users.message}
+          >
+            <SearchableSelect
+              value={filters.createdBy || null}
+              onChange={(value) => onChange({ createdBy: value ?? "" })}
+              options={
+                users.ok
+                  ? users.data.map((user) => ({
+                      value: user.id,
+                      label: user.name,
+                    }))
+                  : []
+              }
+              placeholder={users.ok ? "Anyone" : "Users unavailable"}
+              emptyText="No matching users"
+              clearLabel="Created by anyone"
+              disabled={!users.ok}
+            />
+          </div>
+        ) : null}
 
         <MoreFilters filters={filters} onChange={onChange} />
 
@@ -221,14 +230,14 @@ export function VoucherFilterBar({
         ) : null}
       </div>
 
-      {!headerAccounts.ok || !users.ok || !cashiers.ok ? (
+      {!headerAccounts.ok || users?.ok === false || cashiers?.ok === false ? (
         <p className="text-muted-foreground text-xs">
           {[
             !headerAccounts.ok
               ? `${config.copy.headerLabel} filter: ${headerAccounts.message}`
               : null,
-            !users.ok ? `Created-by filter: ${users.message}` : null,
-            !cashiers.ok
+            users && !users.ok ? `Created-by filter: ${users.message}` : null,
+            cashiers && !cashiers.ok
               ? `${config.copy.cashierLabel} filter: ${cashiers.message}`
               : null,
           ]

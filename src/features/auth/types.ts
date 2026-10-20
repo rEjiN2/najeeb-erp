@@ -1,3 +1,5 @@
+import type { StaffType } from "@/features/cashiers/types";
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -16,6 +18,8 @@ export interface AuthUser {
     code: string;
     name: string;
     status: string;
+    staffType: StaffType;
+    settlesWithOffice: boolean;
   } | null;
   /** Cash/wallet accounts an "own"-scoped user may receive money into. */
   allowedCashAccounts: {

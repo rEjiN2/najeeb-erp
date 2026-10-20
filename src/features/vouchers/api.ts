@@ -4,6 +4,7 @@ import { apiGet, type ApiResult } from "@/lib/api";
 import { uaeToday } from "@/lib/datetime";
 
 import { getAccount } from "@/features/accounts/api";
+import type { StaffType } from "@/features/cashiers/types";
 
 import { MONEY_ACCOUNT_TYPES } from "./constants";
 import { resolveDateRange, type VoucherFilters } from "./filters";
@@ -70,6 +71,7 @@ type RawVoucher = Record<string, unknown> & {
   voucherDate: string;
   cashierId?: string | null;
   cashierName?: string | null;
+  cashierStaffType?: StaffType | null;
   /** Absent on vouchers from before bank support: they're cash. */
   paymentMethod?: PaymentMethod;
   paymentReference?: string | null;
@@ -224,7 +226,11 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
         voucherNo: raw.voucherNo,
         voucherDate: raw.voucherDate,
         headerAccount: { id: headerId, name: names.get(headerId) ?? null },
-        cashier: { id: raw.cashierId ?? null, name: raw.cashierName ?? null },
+        cashier: {
+          id: raw.cashierId ?? null,
+          name: raw.cashierName ?? null,
+          staffType: raw.cashierStaffType ?? null,
+        },
         paymentMethod: raw.paymentMethod ?? "cash",
         paymentReference: raw.paymentReference ?? null,
         comments: raw.comments ?? "",

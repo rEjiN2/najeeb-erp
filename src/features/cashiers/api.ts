@@ -6,6 +6,7 @@ import { apiGet, type ApiResult } from "@/lib/api";
 import { CASHIERS_MANAGE_PERMISSION, CASHIERS_PAGE_SIZE } from "./constants";
 import {
   CASHIER_STATUSES,
+  STAFF_TYPES,
   toCashier,
   type Cashier,
   type CashierFilters,
@@ -23,12 +24,18 @@ function first(value: string | string[] | undefined): string {
 /** URL → filters; anything unrecognised falls back to the default. */
 export function parseCashierFilters(params: SearchParams): CashierFilters {
   const status = first(params.status);
+  const staffType = first(params.type);
+  const settles = first(params.settles);
   const page = Number.parseInt(first(params.page), 10);
   return {
     q: first(params.q).trim().slice(0, 100),
     status: (CASHIER_STATUSES as readonly string[]).includes(status)
       ? (status as CashierFilters["status"])
       : "all",
+    staffType: (STAFF_TYPES as readonly string[]).includes(staffType)
+      ? (staffType as CashierFilters["staffType"])
+      : "all",
+    settles: settles === "yes" || settles === "no" ? settles : "all",
     page: Number.isFinite(page) && page > 0 ? page : 1,
   };
 }
@@ -42,6 +49,9 @@ export async function getCashiers(
   });
   if (filters.q) query.set("q", filters.q);
   if (filters.status !== "all") query.set("status", filters.status);
+  if (filters.staffType !== "all") query.set("staffType", filters.staffType);
+  if (filters.settles !== "all")
+    query.set("settlesWithOffice", String(filters.settles === "yes"));
 
   const result = await apiGet<
     Omit<CashierPage, "items"> & { items: RawCashier[] }

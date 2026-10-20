@@ -1,4 +1,5 @@
 import type { VoucherStatus } from "@/components/voucher/voucher-status-badge";
+import type { StaffType } from "@/features/cashiers/types";
 import type { MutationResult } from "@/lib/mutation";
 
 // Shapes every cash/bank voucher shares — the backend's vouchers module
@@ -22,6 +23,8 @@ export interface UserRef {
 export interface CashierRef {
   id: string | null;
   name: string | null;
+  /** Type snapshot at posting; null/absent on older vouchers. */
+  staffType?: StaffType | null;
 }
 
 export interface NamedRef {

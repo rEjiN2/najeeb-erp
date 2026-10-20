@@ -13,10 +13,10 @@ import type { CashierInput, RawCashier } from "./types";
 
 const OPTIONS = {
   returnTo: CASHIERS_PATH,
-  forbiddenMessage: "You don't have permission to manage cashiers.",
+  forbiddenMessage: "You don't have permission to manage staff.",
 };
 
-const describe = (saved: RawCashier) => `Cashier ${saved.code} ${saved.name}`;
+const describe = (saved: RawCashier) => `Staff ${saved.code} ${saved.name}`;
 
 /** "" for mobile/email is sent as is: the backend reads blank as "clear". */
 function toBody(input: CashierInput) {
@@ -25,6 +25,8 @@ function toBody(input: CashierInput) {
     mobile: input.mobile.trim(),
     email: input.email.trim(),
     status: input.status,
+    staffType: input.staffType,
+    settlesWithOffice: input.settlesWithOffice,
     linkedUserId: input.linkedUserId,
     locationId: input.locationId,
   };

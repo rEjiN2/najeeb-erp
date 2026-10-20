@@ -49,7 +49,7 @@ export const CASH_RECEIPT_CONFIG: VoucherConfig = {
     headerLabel: "Received Into",
     headerFilterAny: "Received into: any",
     counterpartyLabel: "Received From",
-    cashierLabel: "Cashier",
+    cashierLabel: "Collected By",
     totalLabel: "Total received",
     createButton: "Create Receipt",
     firstCreateButton: "Create your first receipt",
@@ -72,7 +72,7 @@ export const CASH_RECEIPT_CONFIG: VoucherConfig = {
     searchPlaceholder: "Search voucher no, comments or narration...",
     commentsPlaceholder: "Optional notes about this receipt",
     headerRequired: "Select the account the money was received into.",
-    cashierRequired: "Select the cashier who collected the cash.",
+    cashierRequired: "Select who collected the cash.",
     linesRequired: "Add at least one account to receive from.",
     inactivePartyHint: "Reactivate it under Customers to receive from it.",
     cancelledNotEditableHint:

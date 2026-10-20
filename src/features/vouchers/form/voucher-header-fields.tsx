@@ -9,7 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AllocationButton } from "@/components/voucher/allocation-button";
-import type { CashierLookupItem } from "@/features/cashiers/types";
+import {
+  STAFF_TYPE_LABELS,
+  type CashierLookupItem,
+} from "@/features/cashiers/types";
 import { cn } from "@/lib/utils";
 
 import type { VoucherConfig } from "../config";
@@ -62,6 +65,7 @@ export function VoucherHeaderFields({
     value: cashier.id,
     label: cashier.name,
     description: cashier.code,
+    badge: STAFF_TYPE_LABELS[cashier.staffType] ?? "",
   }));
   if (
     currentCashier?.id &&
@@ -70,8 +74,11 @@ export function VoucherHeaderFields({
     // The backend lets a voucher keep its cashier after deactivation.
     cashierOptions.unshift({
       value: currentCashier.id,
-      label: currentCashier.name ?? "Unknown cashier",
+      label: currentCashier.name ?? "Unknown staff",
       description: `Inactive — kept on this ${config.noun}`,
+      badge: currentCashier.staffType
+        ? STAFF_TYPE_LABELS[currentCashier.staffType]
+        : "",
     });
   }
   const lockedCashier = cashierOptions.find(
@@ -174,7 +181,8 @@ export function VoucherHeaderFields({
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2">
             <Label>
-              Cashier <span className="text-destructive">*</span>
+              {config.copy.cashierLabel}{" "}
+              <span className="text-destructive">*</span>
             </Label>
             {onAddCashier ? (
               <button
@@ -183,21 +191,21 @@ export function VoucherHeaderFields({
                 disabled={disabled}
                 className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline disabled:opacity-50"
               >
-                <UserPlus className="size-3.5" /> Add cashier
+                <UserPlus className="size-3.5" /> Add staff
               </button>
             ) : null}
           </div>
           {cashierLocked ? (
             lockedCashier ? (
               <Input
-                aria-label="Cashier"
-                value={`${lockedCashier.label} (${lockedCashier.description})`}
+                aria-label={config.copy.cashierLabel}
+                value={`${lockedCashier.label} (${lockedCashier.description})${lockedCashier.badge ? ` · ${lockedCashier.badge}` : ""}`}
                 readOnly
                 className="bg-muted/50"
               />
             ) : (
               <p className="text-destructive text-sm">
-                Your user isn&apos;t linked to an active cashier. Ask an
+                Your user isn&apos;t linked to an active staff member. Ask an
                 administrator to link you to one.
               </p>
             )
@@ -211,11 +219,11 @@ export function VoucherHeaderFields({
                 value={voucher.cashierId || null}
                 onChange={(value) => onChange({ cashierId: value ?? "" })}
                 options={cashierOptions}
-                placeholder="Select cashier"
+                placeholder="Select staff"
                 emptyText={
                   cashiers.length === 0
-                    ? "No active cashiers. Add one under Masters → Cashiers."
-                    : "No matching cashiers"
+                    ? "No active staff. Add one under Masters → Staff."
+                    : "No matching staff"
                 }
                 allowClear={false}
                 disabled={disabled}
@@ -225,8 +233,8 @@ export function VoucherHeaderFields({
           <FieldError id="cashier-error" message={errors.cashier} />
           {legacyCashierText && !voucher.cashierId ? (
             <p className="text-muted-foreground text-xs">
-              Entered before cashiers were set up as &ldquo;{legacyCashierText}
-              &rdquo; — pick the matching cashier to save.
+              Entered before staff were set up as &ldquo;{legacyCashierText}
+              &rdquo; — pick the matching staff member to save.
             </p>
           ) : null}
         </div>
