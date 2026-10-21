@@ -69,6 +69,22 @@ export async function submitCashHandover(
       voucherDate: input.voucherDate,
       ...(input.userId ? { userId: input.userId } : {}),
       lines: input.lines,
+      ...(input.chequeIds.length > 0 ? { chequeIds: input.chequeIds } : {}),
+      ...(input.bankReceiptIds.length > 0
+        ? { bankReceiptIds: input.bankReceiptIds }
+        : {}),
+      ...(input.expenses.length > 0
+        ? {
+            expenses: input.expenses.map((expense) => ({
+              expenseAccountId: expense.expenseAccountId,
+              sourceAccountId: expense.sourceAccountId,
+              amount: expense.amount,
+              ...(expense.description.trim()
+                ? { description: expense.description.trim() }
+                : {}),
+            })),
+          }
+        : {}),
       ...(notes ? { notes } : {}),
     },
     `${CASH_HANDOVERS_PATH}/new`,

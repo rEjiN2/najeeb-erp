@@ -74,6 +74,20 @@ export function VoucherFilterBar({
 }: VoucherFilterBarProps) {
   return (
     <div className="bg-card space-y-3 rounded-lg border p-3 sm:p-4">
+      {config.methodSelector ? (
+        <Tabs
+          value={filters.method}
+          onValueChange={(value) => onChange({ method: value as MethodFilter })}
+        >
+          <TabsList className="w-full overflow-x-auto sm:w-fit">
+            {METHOD_FILTERS.map((method) => (
+              <TabsTrigger key={method} value={method}>
+                {method === "all" ? "All" : METHOD_FILTER_LABELS[method]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      ) : null}
       {config.statusFilters ? (
         <Tabs
           value={filters.status}

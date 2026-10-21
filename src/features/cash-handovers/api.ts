@@ -11,6 +11,9 @@ import type {
 
 import { HANDOVERS_PAGE_SIZE } from "./constants";
 import type {
+  HandoverBankReceipt,
+  HandoverCheque,
+  HandoverDoc,
   HandoverFilters,
   HandoverItem,
   HandoverPage,
@@ -41,6 +44,15 @@ export async function getHandovers(
 const num = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 const text = (value: unknown) => (typeof value === "string" ? value : null);
+/** Snapshotted { fileRef, title, mimeType } rows → HandoverDoc. */
+const docs = (value: unknown): HandoverDoc[] =>
+  Array.isArray(value)
+    ? value.map((doc: Record<string, unknown>) => ({
+        fileId: String(doc.fileRef),
+        title: text(doc.title) ?? "Attachment",
+        mimeType: text(doc.mimeType) ?? "",
+      }))
+    : [];
 const user = (value: unknown) =>
   value && typeof value === "object" ? (value as UserRef) : null;
 
@@ -74,6 +86,40 @@ export async function getHandover(
       text(raw.userId) ??
       (raw.collectedById ? String(raw.collectedById) : null),
     items,
+    cheques: ((raw.cheques as HandoverCheque[] | undefined) ?? []).map(
+      (cheque) => ({
+        ...cheque,
+        receiptId: String(cheque.receiptId),
+        attachments: docs(cheque.attachments),
+      }),
+    ),
+    bankReceipts: (
+      (raw.bankReceipts as HandoverBankReceipt[] | undefined) ?? []
+    ).map((receipt) => ({
+      ...receipt,
+      receiptId: String(receipt.receiptId),
+      attachments: docs(receipt.attachments),
+    })),
+    expenses: (
+      (raw.expenses as Record<string, unknown>[] | undefined) ?? []
+    ).map((expense) => {
+      const bill = expense.attachment as Record<string, unknown> | null;
+      return {
+        id: String(expense._id),
+        expenseAccountName: text(expense.expenseAccountName) ?? "",
+        sourceAccountName: text(expense.sourceAccountName) ?? "",
+        amount: num(expense.amount) ?? 0,
+        description: text(expense.description),
+        attachment: bill
+          ? {
+              fileId: String(bill.fileRef),
+              title: text(bill.title) ?? "Bill",
+              mimeType: text(bill.mimeType) ?? "",
+            }
+          : null,
+      };
+    }),
+    expensesTotal: num(raw.expensesTotal) ?? 0,
     submittedTotal,
     receivedTotal,
     reason: text(raw.reason),
@@ -102,6 +148,10 @@ export async function getHandover(
         paymentMethod: "cash",
         paymentReference: null,
         chequeDate: null,
+        chequeNumber: null,
+        chequeBankName: null,
+        chequeStatus: null,
+        attachments: [],
         comments: text(raw.comments) ?? "",
         lines: [],
         grossTotal: submittedTotal,
@@ -168,6 +218,10 @@ export async function getPendingCash(
       ...result.data,
       accounts: result.data.accounts ?? [],
       totals: result.data.totals ?? { balance: 0, submitted: 0, available: 0 },
+      cheques: result.data.cheques ?? [],
+      chequesTotal: result.data.chequesTotal ?? 0,
+      bankReceipts: result.data.bankReceipts ?? [],
+      bankReceiptsTotal: result.data.bankReceiptsTotal ?? 0,
     },
   };
 }

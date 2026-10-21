@@ -12,6 +12,11 @@ export const PERMISSIONS = {
   CASH_PAYMENTS_CREATE: "cash-payments:create",
   CASH_PAYMENTS_EDIT: "cash-payments:edit",
   CASH_PAYMENTS_CANCEL: "cash-payments:cancel",
+  /** The cheque register and a cheque's activity. */
+  CHEQUES_READ: "cheques:read",
+  CHEQUES_DEPOSIT: "cheques:deposit",
+  CHEQUES_CLEAR: "cheques:clear",
+  CHEQUES_RETURN: "cheques:return",
   CASH_HANDOVERS_READ: "cash-handovers:read",
   CASH_HANDOVERS_CREATE: "cash-handovers:create",
   CASH_HANDOVERS_APPROVE: "cash-handovers:approve",

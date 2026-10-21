@@ -28,7 +28,7 @@ export async function UnsettledBanner() {
 
   const result = await getPendingCash(null);
   if (!result.ok) return null;
-  const { accounts, totals } = result.data;
+  const { accounts, totals, chequesTotal, bankReceiptsTotal } = result.data;
   const sum = (cheque: boolean) =>
     accounts
       .filter((account) => (account.type === "cheque") === cheque)
@@ -50,7 +50,7 @@ export async function UnsettledBanner() {
             Cheques
           </p>
           <p className="font-mono text-xl font-semibold tabular-nums">
-            {formatAmount(sum(true))}
+            {formatAmount(sum(true) + chequesTotal)}
           </p>
         </div>
         {totals.submitted > 0 ? (
@@ -64,7 +64,7 @@ export async function UnsettledBanner() {
           </div>
         ) : null}
       </div>
-      {totals.available > 0 ? (
+      {totals.available > 0 || chequesTotal > 0 || bankReceiptsTotal > 0 ? (
         <Link
           href={`${CASH_HANDOVERS_PATH}/new`}
           className={buttonVariants({ className: "w-full sm:w-auto" })}

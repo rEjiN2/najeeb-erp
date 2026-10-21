@@ -17,7 +17,7 @@ const HEADERS = [
 ];
 
 /** RFC 4180: quote a field that holds a comma, quote or line break. */
-function field(value: string | number | null | undefined): string {
+export function field(value: string | number | null | undefined): string {
   const text =
     typeof value === "number"
       ? (Number.isFinite(value) ? value : 0).toFixed(2)

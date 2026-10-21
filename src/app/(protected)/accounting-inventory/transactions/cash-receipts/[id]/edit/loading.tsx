@@ -5,7 +5,7 @@ export default function Loading() {
   return (
     <VoucherPageSkeleton
       config={CASH_RECEIPT_CONFIG}
-      title="Edit Cash Receipt"
+      title="Edit Receipt"
     />
   );
 }

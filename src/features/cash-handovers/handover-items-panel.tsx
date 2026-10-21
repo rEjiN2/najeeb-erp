@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Eye, Loader2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -36,13 +36,24 @@ import {
   ACCOUNT_TYPE_BADGES,
   CANCEL_REASON_MIN_LENGTH,
 } from "@/features/vouchers/constants";
+import {
+  AttachmentPreview,
+  attachmentHref,
+} from "@/features/vouchers/attachments";
 import type { AccountLookupItem } from "@/features/vouchers/types";
 import type { MutationResult } from "@/lib/mutation";
+import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 
 import { approveCashHandover, rejectCashHandover } from "./actions";
+import { HandoverSplit } from "./handover-split";
 import { HANDOVER_REASON_MAX_LENGTH } from "./constants";
-import type { HandoverItem, HandoverWorkflow } from "./types";
+import type {
+  HandoverDoc,
+  HandoverExpense,
+  HandoverItem,
+  HandoverWorkflow,
+} from "./types";
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
@@ -73,11 +84,53 @@ export function HandoverItemsPanel({
   approve: ApprovePanelData | null;
 }) {
   const items = workflow.items;
+  const [doc, setDoc] = useState<HandoverDoc | null>(null);
+  const docButtons = (docs: HandoverDoc[]) =>
+    docs.length === 0 ? (
+      <span className="text-destructive text-xs">No document</span>
+    ) : (
+      <span className="flex flex-wrap gap-1">
+        {docs.map((d) => (
+          <Button
+            key={d.fileId}
+            variant="outline"
+            size="sm"
+            onClick={() => setDoc(d)}
+          >
+            <Eye /> {docs.length === 1 ? "View" : d.title}
+          </Button>
+        ))}
+      </span>
+    );
+  const sumItems = (match: (type: string) => boolean) =>
+    items
+      .filter((item) => match(item.sourceAccountType))
+      .reduce((sum, item) => sum + item.submittedAmount, 0);
+  const sumDocs = (docs: { amount: number }[]) =>
+    docs.reduce((sum, doc) => sum + doc.amount, 0);
   return (
     <>
+      <HandoverSplit
+        label="Handed over"
+        cash={sumItems((type) => type !== "cheque" && type !== "bank")}
+        cheque={
+          sumItems((type) => type === "cheque") + sumDocs(workflow.cheques)
+        }
+        bank={
+          sumItems((type) => type === "bank") + sumDocs(workflow.bankReceipts)
+        }
+        expenses={workflow.expensesTotal}
+      />
+
       <Card className="gap-4">
         <CardHeader>
-          <CardTitle>Handed over ({items.length})</CardTitle>
+          <CardTitle>
+            Handed over (
+            {items.length +
+              workflow.cheques.length +
+              workflow.bankReceipts.length}
+            )
+          </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -109,6 +162,71 @@ export function HandoverItemsPanel({
                   <TableCell>{item.receivedIntoAccountName ?? "—"}</TableCell>
                 </TableRow>
               ))}
+              {workflow.cheques.map((cheque) => (
+                <TableRow key={cheque.receiptId}>
+                  <TableCell>
+                    <span className="flex flex-wrap items-center gap-2">
+                      Cheque {cheque.chequeNumber}
+                      <TypeBadge type="cheque" />
+                    </span>
+                    <span className="text-muted-foreground block text-xs">
+                      {[
+                        cheque.voucherNo,
+                        cheque.chequeBankName,
+                        cheque.chequeDate
+                          ? `dated ${formatCalendarDate(cheque.chequeDate)}`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {formatAmount(cheque.amount)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {workflow.receivedTotal === null
+                      ? "—"
+                      : formatAmount(cheque.amount)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground space-y-1 text-sm">
+                    <span className="block">
+                      Cheques in hand (pending until cleared)
+                    </span>
+                    {docButtons(cheque.attachments)}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {workflow.bankReceipts.map((receipt) => (
+                <TableRow key={receipt.receiptId}>
+                  <TableCell>
+                    <span className="flex flex-wrap items-center gap-2">
+                      Bank transfer {receipt.voucherNo}
+                      <TypeBadge type="bank" />
+                    </span>
+                    {receipt.reference ? (
+                      <span className="text-muted-foreground block text-xs">
+                        Ref {receipt.reference}
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {formatAmount(receipt.amount)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums">
+                    {workflow.receivedTotal === null
+                      ? "—"
+                      : formatAmount(receipt.amount)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground space-y-1 text-sm">
+                    <span className="block">
+                      Already in {receipt.bankAccountName ?? "the bank"}: check
+                      the slip
+                    </span>
+                    {docButtons(receipt.attachments)}
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
             <TableFooter>
               <TableRow>
@@ -128,6 +246,23 @@ export function HandoverItemsPanel({
         </CardContent>
       </Card>
 
+      <AttachmentPreview
+        source={
+          doc
+            ? { url: attachmentHref(doc.fileId), mimeType: doc.mimeType }
+            : null
+        }
+        title={doc?.title ?? ""}
+        open={doc !== null}
+        onOpenChange={(open) => {
+          if (!open) setDoc(null);
+        }}
+      />
+
+      {workflow.expenses.length > 0 ? (
+        <ExpensesCard workflow={workflow} />
+      ) : null}
+
       {approve ? (
         <ApproveCard
           id={id}
@@ -137,6 +272,84 @@ export function HandoverItemsPanel({
         />
       ) : null}
     </>
+  );
+}
+
+/** Expenses paid from the collected cash; approval posts them. */
+function ExpensesCard({ workflow }: { workflow: HandoverWorkflow }) {
+  const [bill, setBill] = useState<HandoverExpense | null>(null);
+  return (
+    <Card className="gap-4">
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>Expenses ({workflow.expenses.length})</CardTitle>
+        <span className="font-mono text-sm font-semibold tabular-nums">
+          {formatAmount(workflow.expensesTotal)}
+        </span>
+      </CardHeader>
+      <CardContent className="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Expense</TableHead>
+              <TableHead>Paid from</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+              <TableHead>Bill</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {workflow.expenses.map((expense) => (
+              <TableRow key={expense.id}>
+                <TableCell>
+                  {expense.expenseAccountName}
+                  {expense.description ? (
+                    <span className="text-muted-foreground block text-xs">
+                      {expense.description}
+                    </span>
+                  ) : null}
+                </TableCell>
+                <TableCell>{expense.sourceAccountName}</TableCell>
+                <TableCell className="text-right font-mono tabular-nums">
+                  {formatAmount(expense.amount)}
+                </TableCell>
+                <TableCell>
+                  {expense.attachment ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setBill(expense)}
+                    >
+                      <Eye /> View
+                    </Button>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">None</span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <p className="text-muted-foreground mt-2 text-xs">
+          {workflow.receivedTotal === null
+            ? "Posted to each expense account when the handover is approved."
+            : "Posted to the expense accounts."}
+        </p>
+      </CardContent>
+      <AttachmentPreview
+        source={
+          bill?.attachment
+            ? {
+                url: attachmentHref(bill.attachment.fileId),
+                mimeType: bill.attachment.mimeType,
+              }
+            : null
+        }
+        title={bill?.attachment?.title ?? ""}
+        open={bill !== null}
+        onOpenChange={(open) => {
+          if (!open) setBill(null);
+        }}
+      />
+    </Card>
   );
 }
 
@@ -171,9 +384,12 @@ function ApproveCard({
         item.sourceAccountId,
         {
           received: item.submittedAmount.toFixed(2),
+          // Into the same account is fine: it was pending there, now received.
           intoId: isChequeItem(item)
             ? data.defaultChequesInHandAccountId
-            : data.defaultCashInHandAccountId,
+            : item.sourceAccountType === "bank"
+              ? item.sourceAccountId
+              : data.defaultCashInHandAccountId,
         },
       ]),
     ),
@@ -189,7 +405,9 @@ function ApproveCard({
     data.accounts.filter((account) =>
       isChequeItem(item)
         ? account.type === "cheque"
-        : account.type === "cash" || account.type === "wallet",
+        : item.sourceAccountType === "bank"
+          ? account.type === "bank"
+          : account.type === "cash" || account.type === "wallet",
     );
   const nameOf = (accountId: string | null) =>
     data.accounts.find((account) => account.id === accountId)?.name ?? "—";

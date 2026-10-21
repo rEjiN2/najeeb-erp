@@ -25,6 +25,8 @@ export interface VoucherWriteTarget {
   headerKey: string;
   /** Whether the body carries paymentReference. */
   sendsReference: boolean;
+  /** Receipts: the body carries paymentMethod, and no header for a cheque. */
+  sendsMethod?: boolean;
   /** Whether a 409 with warnings can be acknowledged and resent. */
   acknowledgesWarnings: boolean;
   listPath: string;
@@ -108,11 +110,20 @@ export function createVoucher(
     target.path,
     {
       voucherDate: input.voucherDate,
-      [target.headerKey]: input.headerAccountId,
+      ...(input.headerAccountId
+        ? { [target.headerKey]: input.headerAccountId }
+        : {}),
+      ...(target.sendsMethod ? { paymentMethod: input.paymentMethod } : {}),
       collectedById: input.collectedById,
-      // Receipts carry a reference only as a cheque number.
       ...(reference ? { paymentReference: reference } : {}),
+      // Cheque receipts only; the backend requires all three there.
+      ...(input.chequeNumber.trim()
+        ? { chequeNumber: input.chequeNumber.trim() }
+        : {}),
       ...(input.chequeDate ? { chequeDate: input.chequeDate } : {}),
+      ...(input.chequeBankName.trim()
+        ? { chequeBankName: input.chequeBankName.trim() }
+        : {}),
       ...(comments ? { comments } : {}),
       lines: toLines(input),
       ...(target.acknowledgesWarnings && acknowledgeWarnings
@@ -143,12 +154,17 @@ export function updateVoucher(
     `${target.path}/${encodeURIComponent(id)}`,
     {
       voucherDate: input.voucherDate,
-      [target.headerKey]: input.headerAccountId,
+      ...(input.headerAccountId
+        ? { [target.headerKey]: input.headerAccountId }
+        : {}),
+      ...(target.sendsMethod ? { paymentMethod: input.paymentMethod } : {}),
       collectedById: input.collectedById,
       ...(target.sendsReference || input.paymentReference.trim()
         ? { paymentReference: input.paymentReference.trim() }
         : {}),
+      chequeNumber: input.chequeNumber.trim() || null,
       chequeDate: input.chequeDate || null,
+      chequeBankName: input.chequeBankName.trim() || null,
       comments: input.comments.trim(),
       lines: toLines(input),
       ...(note ? { changeNote: note } : {}),

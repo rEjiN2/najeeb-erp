@@ -17,6 +17,7 @@ import { useState, type ReactNode } from "react";
 
 import { ActivityPanel } from "@/components/activity/activity-panel";
 import { RelativeTime } from "@/components/shared/relative-time";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -32,9 +33,11 @@ import {
 } from "@/components/voucher/voucher-status-badge";
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { VoucherTotalsFooter } from "@/components/voucher/voucher-totals-footer";
-import { formatCalendarDate } from "@/lib/datetime";
+import { ChequeStatusBadge } from "@/features/cheques/cheque-status-badge";
+import { formatCalendarDate, toDateInputValue } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 
+import { ReceiptAttachments } from "../attachments";
 import { CancelVoucherDialog } from "../cancel-voucher-dialog";
 import {
   editVoucherPath,
@@ -338,35 +341,61 @@ export function VoucherView({
                   </Field>
                 ))}
                 {config.showPaymentDetails ||
+                config.methodSelector ||
                 voucher.paymentMethod === "cheque" ? (
                   <>
                     <Field label="Method">
                       <PaymentMethodBadge method={voucher.paymentMethod} />
                     </Field>
                     {voucher.paymentMethod === "cheque" ? (
-                      <Field label="Cheque Date">
-                        {voucher.chequeDate ? (
-                          formatCalendarDate(voucher.chequeDate)
+                      <>
+                        <Field label="Cheque No">
+                          {(voucher.chequeNumber ??
+                          voucher.paymentReference) ? (
+                            <span className="font-mono">
+                              {voucher.chequeNumber ?? voucher.paymentReference}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </Field>
+                        <Field label="Cheque Date">
+                          {voucher.chequeDate ? (
+                            <span className="flex items-center gap-2">
+                              {formatCalendarDate(voucher.chequeDate)}
+                              {toDateInputValue(voucher.chequeDate) >
+                              toDateInputValue(voucher.voucherDate) ? (
+                                <Badge variant="secondary">Post-dated</Badge>
+                              ) : null}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </Field>
+                        <Field label="Drawn On Bank">
+                          {voucher.chequeBankName ?? (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </Field>
+                        <Field label="Cheque Status">
+                          {voucher.chequeStatus ? (
+                            <ChequeStatusBadge status={voucher.chequeStatus} />
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </Field>
+                      </>
+                    ) : config.showPaymentDetails ? (
+                      <Field label="Reference">
+                        {voucher.paymentReference ? (
+                          <span className="font-mono">
+                            {voucher.paymentReference}
+                          </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
                       </Field>
                     ) : null}
-                    <Field
-                      label={
-                        voucher.paymentMethod === "cheque"
-                          ? "Cheque No."
-                          : "Reference"
-                      }
-                    >
-                      {voucher.paymentReference ? (
-                        <span className="font-mono">
-                          {voucher.paymentReference}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </Field>
                   </>
                 ) : null}
                 <div className="sm:col-span-2">
@@ -383,6 +412,17 @@ export function VoucherView({
               </dl>
             </CardContent>
           </Card>
+
+          {config.methodSelector &&
+          (voucher.paymentMethod !== "cash" ||
+            voucher.attachments.length > 0) ? (
+            <ReceiptAttachments
+              receiptId={voucher.id}
+              attachments={voucher.attachments}
+              canAdd={isPosted && access.canCreate}
+              canRemove={isPosted && access.canEdit}
+            />
+          ) : null}
 
           {body ?? (
             <VoucherLineGrid

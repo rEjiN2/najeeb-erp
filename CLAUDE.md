@@ -38,7 +38,17 @@ receipts, cash payments, Users/Roles + scoped UI, change-password.
 Built (untested end to end): Salesman Collections report (user-based),
 Cash Handovers (balance-based: list/hand over/approve, pending badge,
 receipts banner), cheque accounts on receipts, Company default cash/cheque
-in hand accounts.
+in hand accounts, Receipts (renamed; Payment Method selector, cheque
+no/date/bank, method tabs), Cheques register (deposit/clear/return/undo,
+CSV, dueSoon badge), dashboard pending-cheques line. Cheque on a receipt
+needs no account (backend uses Company cheques in hand); salesmen hand
+cheques over as documents (handover chequeIds). Cheque/bank receipts:
+optional photo/slip, previewed before Save, uploaded after it
+(features/vouchers/attachments.tsx); view page lists/adds/removes.
+Handover: expenses paid from collected cash (account, paid from, amount,
+note, bill reviewed before submit, uploaded after); shown on the handover.
+Salesman bank receipts and cheques are ticked on the handover; approver
+views each slip/photo there.
 Removed: Staff/Cashiers master (Collected By is a user).
 In progress: none.
 Planned: products, opening balances, purchase, sales, stock, bundling, reports.

@@ -1,6 +1,15 @@
 "use client";
 
-import { CircleAlert, Info, Loader2, Save, UserPlus } from "lucide-react";
+import {
+  CircleAlert,
+  Eye,
+  Info,
+  Loader2,
+  Paperclip,
+  Save,
+  UserPlus,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -26,12 +35,23 @@ import type { MutationResult } from "@/lib/mutation";
 import { formatAmount } from "@/lib/format";
 
 import { lineAccountSearch, type LineAccountOption } from "../account-search";
+import {
+  ATTACHMENT_ACCEPT,
+  AttachmentPreview,
+  attachmentProblem,
+  uploadReceiptAttachment,
+} from "../attachments";
 import { voucherPath, type VoucherConfig } from "../config";
-import { REASON_MAX_LENGTH } from "../constants";
+import {
+  PAYMENT_METHODS,
+  REASON_MAX_LENGTH,
+  methodForAccountType,
+} from "../constants";
 import { editColumns } from "../voucher-columns";
 import type {
   AccountLookupItem,
   CreateVoucherAction,
+  PaymentMethod,
   UpdateVoucherAction,
   UserRef,
   VoucherDetail,
@@ -158,14 +178,36 @@ export function VoucherForm({
 }: VoucherFormProps) {
   const router = useRouter();
   const partyKind = PARTY_KIND_CONFIG[config.addPartyKind];
-  const [initial] = useState<DraftVoucher>(() =>
-    voucher
-      ? draftFromVoucher(voucher)
-      : blankDraft(
-          me?.id ?? "",
-          headerAccounts.length === 1 ? (headerAccounts[0]?.id ?? "") : "",
-        ),
-  );
+  // Receipts: cash and bank when the user has such an account; a cheque
+  // needs none (the backend keeps it in the company's cheques in hand).
+  const methods = config.methodSelector
+    ? PAYMENT_METHODS.filter(
+        (method) =>
+          method === "cheque" ||
+          // An edited receipt keeps its own method even with no account left.
+          voucher?.paymentMethod === method ||
+          headerAccounts.some((a) => methodForAccountType(a.type) === method),
+      )
+    : [];
+  const accountsFor = (method: PaymentMethod) =>
+    config.methodSelector
+      ? headerAccounts.filter((a) => methodForAccountType(a.type) === method)
+      : headerAccounts;
+  /** The one account that fits; none for a cheque (the server picks it). */
+  const defaultHeaderFor = (method: PaymentMethod) => {
+    if (config.methodSelector && method === "cheque") {
+      return voucher?.paymentMethod === "cheque"
+        ? voucher.headerAccount.id
+        : "";
+    }
+    const fits = accountsFor(method);
+    return fits.length === 1 ? (fits[0]?.id ?? "") : "";
+  };
+  const [initial] = useState<DraftVoucher>(() => {
+    if (voucher) return draftFromVoucher(voucher);
+    const method = methods[0] ?? "cash";
+    return blankDraft(me?.id ?? "", defaultHeaderFor(method), method);
+  });
   const [partyPanelOpen, setPartyPanelOpen] = useState(false);
   // A save the backend sent back for confirmation, with what it warned about.
   const [pendingWarnings, setPendingWarnings] = useState<{
@@ -181,15 +223,24 @@ export function VoucherForm({
   const [leaving, setLeaving] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const errorsRef = useRef<HTMLDivElement>(null);
+  // Receipts by cheque or bank: a photo/slip, reviewed before Save and
+  // uploaded right after the receipt is saved.
+  const [attachment, setAttachment] = useState<File | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // A cheque account as the header needs the cheque number.
+  // A cheque needs its number, date and bank.
   const headerId = draft.voucher.headerAccountId;
-  const isCheque =
-    headerAccounts.find((account) => account.id === headerId)?.type ===
-      "cheque" ||
-    (voucher?.headerAccount.id === headerId &&
-      voucher.paymentMethod === "cheque");
+  const method = draft.voucher.paymentMethod;
+  const isCheque = config.methodSelector
+    ? method === "cheque"
+    : headerAccounts.find((account) => account.id === headerId)?.type ===
+        "cheque" ||
+      (voucher?.headerAccount.id === headerId &&
+        voucher.paymentMethod === "cheque");
   const { errors, valid } = validateDraft(draft.voucher, config.copy, isCheque);
+  const canAttach = Boolean(config.methodSelector) && method !== "cash";
   // Errors only show once the user has tried to save.
   const visibleErrors: DraftErrors = showErrors ? errors : NO_ERRORS;
   const totals = draftTotals(draft.voucher.lines);
@@ -241,6 +292,14 @@ export function VoucherForm({
           setPendingWarnings(null);
           setLeaving(true);
           const id = result.id ?? voucher?.id;
+          if (id && canAttach && attachment) {
+            const failure = await uploadReceiptAttachment(id, attachment);
+            if (failure) {
+              toast.error(`${config.Noun} saved, but the attachment wasn't`, {
+                description: `${failure} Attach it again from the ${config.noun}.`,
+              });
+            }
+          }
           // The view page shows the "saved" banner with print/next actions.
           router.push(
             id ? `${voucherPath(config, id)}?saved=1` : config.basePath,
@@ -405,8 +464,22 @@ export function VoucherForm({
           voucher={draft.voucher}
           onChange={draft.updateVoucher}
           voucherNo={voucher?.voucherNo ?? null}
-          headerAccounts={headerAccounts}
-          currentHeaderAccount={voucher?.headerAccount ?? null}
+          headerAccounts={accountsFor(method)}
+          currentHeaderAccount={
+            voucher && voucher.paymentMethod === method
+              ? voucher.headerAccount
+              : null
+          }
+          methods={methods}
+          onMethodChange={(next) =>
+            draft.updateVoucher({
+              paymentMethod: next,
+              headerAccountId: defaultHeaderFor(next),
+              ...(next === "cheque"
+                ? {}
+                : { chequeNumber: "", chequeDate: "", chequeBankName: "" }),
+            })
+          }
           collectors={collectors}
           currentCollector={voucher?.collectedBy ?? null}
           collectorLocked={!canSelectCollector}
@@ -414,6 +487,80 @@ export function VoucherForm({
           isCheque={isCheque}
           errors={visibleErrors}
           disabled={pending}
+          attachSlot={
+            canAttach ? (
+              <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+                <Label htmlFor="receipt-attachment">
+                  {method === "cheque" ? "Cheque photo" : "Transfer slip"}{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </Label>
+                <input
+                  id="receipt-attachment"
+                  ref={fileRef}
+                  type="file"
+                  accept={ATTACHMENT_ACCEPT}
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = "";
+                    if (!file) return;
+                    const problem = attachmentProblem(file);
+                    setAttachmentError(problem);
+                    if (problem) return;
+                    setAttachment(file);
+                    // Review straight away, before the receipt is saved.
+                    setReviewOpen(true);
+                  }}
+                />
+                {attachment ? (
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <Paperclip className="text-muted-foreground size-4" />
+                    <span className="min-w-0 truncate font-medium">
+                      {attachment.name}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setReviewOpen(true)}
+                      disabled={pending}
+                    >
+                      <Eye /> Review
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setAttachment(null)}
+                      disabled={pending}
+                    >
+                      <X /> Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={pending}
+                  >
+                    <Paperclip /> Attach photo or PDF
+                  </Button>
+                )}
+                {attachmentError ? (
+                  <p role="alert" className="text-destructive text-sm">
+                    {attachmentError}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    Uploaded when you save. PDF or image, up to 10 MB.
+                  </p>
+                )}
+              </div>
+            ) : null
+          }
         />
 
         <div className="space-y-2">
@@ -498,6 +645,30 @@ export function VoucherForm({
           ) : null}
         </MasterFormSheet>
       ) : null}
+
+      <AttachmentPreview
+        source={attachment}
+        title={attachment?.name ?? ""}
+        open={reviewOpen && attachment !== null}
+        onOpenChange={setReviewOpen}
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setReviewOpen(false);
+                fileRef.current?.click();
+              }}
+            >
+              Choose another
+            </Button>
+            <Button type="button" onClick={() => setReviewOpen(false)}>
+              Looks good
+            </Button>
+          </>
+        }
+      />
 
       <VoucherWarningsDialog
         warnings={pendingWarnings?.warnings ?? null}

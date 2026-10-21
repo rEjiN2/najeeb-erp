@@ -39,6 +39,9 @@ export interface VoucherConfig {
   lineAccountTypes: readonly string[];
   /** Payments: show the payment reference field and the Method filter/column. */
   showPaymentDetails: boolean;
+  /** Receipts: a Payment Method selector on the form (it filters the header
+   * accounts) and All / Cash / Cheque / Bank tabs on the list. */
+  methodSelector?: boolean;
   /** Which party master the line picker's "Add …" opens. */
   addPartyKind: PartyKind;
   /** One account and amount per voucher (handovers): the view leaves out

@@ -13,6 +13,7 @@ import {
 } from "./filters";
 import type {
   AccountLookupItem,
+  ChequeStatus,
   NamedRef,
   PaymentMethod,
   UserRef,
@@ -80,6 +81,9 @@ type RawVoucher = Record<string, unknown> & {
   paymentMethod?: PaymentMethod;
   paymentReference?: string | null;
   chequeDate?: string | null;
+  chequeNumber?: string | null;
+  chequeBankName?: string | null;
+  chequeStatus?: ChequeStatus | null;
   comments?: string | null;
   lines: RawLine[];
   grossTotal: number;
@@ -94,6 +98,13 @@ type RawVoucher = Record<string, unknown> & {
   cancelledBy?: UserRef | null;
   cancelledAt?: string | null;
   cancelReason?: string | null;
+  attachments?: {
+    _id: string;
+    fileRef: string;
+    title: string;
+    mimeType: string;
+    uploadedAt: string;
+  }[];
 };
 
 /** Reads for one voucher type: list, counts, detail and its header accounts. */
@@ -238,6 +249,9 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
         paymentMethod: raw.paymentMethod ?? "cash",
         paymentReference: raw.paymentReference ?? null,
         chequeDate: raw.chequeDate ?? null,
+        chequeNumber: raw.chequeNumber ?? null,
+        chequeBankName: raw.chequeBankName ?? null,
+        chequeStatus: raw.chequeStatus ?? null,
         comments: raw.comments ?? "",
         lines: raw.lines.map((line) => ({
           accountId: line.accountId,
@@ -261,6 +275,13 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
         cancelledAt: raw.cancelledAt ?? null,
         cancelReason: raw.cancelReason ?? null,
         extraFields: endpoint.detailExtras?.(raw) ?? [],
+        attachments: (raw.attachments ?? []).map((attachment) => ({
+          id: String(attachment._id),
+          fileId: String(attachment.fileRef),
+          title: attachment.title,
+          mimeType: attachment.mimeType,
+          uploadedAt: attachment.uploadedAt,
+        })),
       },
     };
   }

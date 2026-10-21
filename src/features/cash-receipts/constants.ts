@@ -2,9 +2,9 @@ import type { VoucherConfig } from "@/features/vouchers/config";
 
 export const CASH_RECEIPTS_PATH =
   "/accounting-inventory/transactions/cash-receipts";
-export const CASH_RECEIPTS_TITLE = "Cash Receipts";
+export const CASH_RECEIPTS_TITLE = "Receipts";
 export const CASH_RECEIPTS_DESCRIPTION =
-  "Cash received against one or more party accounts.";
+  "Cash, cheques and transfers received against party accounts.";
 
 /** Entity type under which receipts appear in audit logs and comments. */
 export const CASH_RECEIPT_ENTITY_TYPE = "cash-receipt";
@@ -36,7 +36,7 @@ export const CASH_RECEIPT_CONFIG: VoucherConfig = {
   entityType: CASH_RECEIPT_ENTITY_TYPE,
   title: CASH_RECEIPTS_TITLE,
   description: CASH_RECEIPTS_DESCRIPTION,
-  singular: "Cash Receipt",
+  singular: "Receipt",
   noun: "receipt",
   Noun: "Receipt",
   nounPlural: "receipts",
@@ -45,6 +45,7 @@ export const CASH_RECEIPT_CONFIG: VoucherConfig = {
   collectorFor: "receipt",
   lineAccountTypes: LINE_ACCOUNT_TYPES,
   showPaymentDetails: false,
+  methodSelector: true,
   addPartyKind: "customer",
   copy: {
     headerLabel: "Received Into",

@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   MapPin,
   Receipt,
+  ScrollText,
   Settings,
   ShieldCheck,
   Tags,
@@ -94,7 +95,7 @@ export const NAV_ITEMS: NavEntry[] = [
         icon: Receipt,
         children: [
           {
-            title: "Cash Receipts",
+            title: "Receipts",
             href: "/accounting-inventory/transactions/cash-receipts",
             icon: HandCoins,
             permission: PERMISSIONS.CASH_RECEIPTS_READ,
@@ -110,6 +111,12 @@ export const NAV_ITEMS: NavEntry[] = [
             href: "/accounting-inventory/transactions/cash-handovers",
             icon: ArrowRightLeft,
             permission: PERMISSIONS.CASH_HANDOVERS_READ,
+          },
+          {
+            title: "Cheques",
+            href: "/accounting-inventory/transactions/cheques",
+            icon: ScrollText,
+            permission: PERMISSIONS.CHEQUES_READ,
           },
         ],
       },

@@ -8,7 +8,7 @@ export const cashReceiptsApi = createVoucherApi({
   listHeaderKey: "cashAccount",
   detailHeaderKey: "cashAccountId",
   queryHeaderKey: "cashAccountId",
-  methodFilter: false,
+  methodFilter: true,
   // Explicit money types already keep parties out.
   scopedLookup: false,
   headerAccountTypes: ["cash", "wallet", "cheque", "bank"],

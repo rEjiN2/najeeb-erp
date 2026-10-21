@@ -13,6 +13,15 @@ export type { VoucherStatus };
  * cheque → "cheque", else "cash". */
 export type PaymentMethod = "cash" | "cheque" | "bank";
 
+/** Where a cheque received on a receipt stands (backend ChequeStatus). */
+export type ChequeStatus =
+  | "with_salesman"
+  | "submitted"
+  | "at_office"
+  | "deposited"
+  | "cleared"
+  | "returned";
+
 export interface UserRef {
   id: string;
   name: string;
@@ -40,6 +49,13 @@ export interface VoucherListRow {
   headerAccount: NamedRef;
   collectedBy: CollectorRef;
   paymentMethod: PaymentMethod;
+  /** Cheque receipts only; null otherwise. */
+  cheque: {
+    number: string | null;
+    bankName: string | null;
+    date: string | null;
+    status: ChequeStatus | null;
+  } | null;
   /** First line's account, plus how many other distinct accounts it touches. */
   partiesSummary: { firstAccount: NamedRef | null; othersCount: number };
   grandTotal: number;
@@ -75,6 +91,16 @@ export interface VoucherLine {
   netAmount: number;
 }
 
+/** A file on a receipt (cheque photo, transfer slip). */
+export interface VoucherAttachment {
+  id: string;
+  /** GET /files/:fileId through the proxy. */
+  fileId: string;
+  title: string;
+  mimeType: string;
+  uploadedAt: string;
+}
+
 /** One voucher, normalised, with account names resolved. */
 export interface VoucherDetail {
   id: string;
@@ -87,6 +113,10 @@ export interface VoucherDetail {
   paymentReference: string | null;
   /** Cheque vouchers only. */
   chequeDate: string | null;
+  chequeNumber: string | null;
+  /** The bank the cheque is drawn on. */
+  chequeBankName: string | null;
+  chequeStatus: ChequeStatus | null;
   comments: string;
   lines: VoucherLine[];
   grossTotal: number;
@@ -102,6 +132,8 @@ export interface VoucherDetail {
   cancelReason: string | null;
   /** Fields only one voucher type has (e.g. a handover's Received By). */
   extraFields: VoucherExtraField[];
+  /** Receipts only; [] elsewhere. */
+  attachments: VoucherAttachment[];
 }
 
 export interface VoucherExtraField {
@@ -128,9 +160,13 @@ export interface VoucherInput {
   voucherDate: string;
   headerAccountId: string;
   collectedById: string;
+  /** Receipts send it; "" headerAccountId with cheque lets the server pick. */
+  paymentMethod: PaymentMethod;
   paymentReference: string;
   /** Cheque vouchers only; "" for none. */
   chequeDate: string;
+  chequeNumber: string;
+  chequeBankName: string;
   comments: string;
   lines: {
     accountId: string;

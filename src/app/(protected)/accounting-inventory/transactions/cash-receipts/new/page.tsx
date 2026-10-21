@@ -4,7 +4,7 @@ import { CASH_RECEIPTS_MODULE } from "@/features/cash-receipts/module";
 import { VoucherNewRoute } from "@/features/vouchers/routes";
 
 export const metadata: Metadata = {
-  title: "New Cash Receipt | ALA Dates",
+  title: "New Receipt | ALA Dates",
 };
 
 export default function Page() {

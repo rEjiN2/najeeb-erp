@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Banknote, HandCoins } from "lucide-react";
+import { ArrowRightLeft, Banknote, HandCoins, ScrollText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -18,8 +18,9 @@ export const metadata: Metadata = {
 const TRANSACTION_LINKS = [
   {
     href: "/accounting-inventory/transactions/cash-receipts",
-    title: "Cash Receipts",
-    description: "Record cash received against one or more party accounts.",
+    title: "Receipts",
+    description:
+      "Record cash, cheques and transfers received against party accounts.",
     icon: HandCoins,
     permission: PERMISSIONS.CASH_RECEIPTS_READ,
   },
@@ -37,6 +38,13 @@ const TRANSACTION_LINKS = [
     description: "Salesmen hand cash and cheques to the office for approval.",
     icon: ArrowRightLeft,
     permission: PERMISSIONS.CASH_HANDOVERS_READ,
+  },
+  {
+    href: "/accounting-inventory/transactions/cheques",
+    title: "Cheques",
+    description: "Deposit, clear or return cheques received on receipts.",
+    icon: ScrollText,
+    permission: PERMISSIONS.CHEQUES_READ,
   },
 ];
 

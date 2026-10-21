@@ -54,11 +54,67 @@ export interface PendingAccount {
   available: number;
 }
 
+/** A cheque the user collected and still holds (PendingCheque); handed over
+ * as a document, it already sits in the company's cheques in hand. */
+export interface PendingCheque {
+  /** The receipt's id. */
+  id: string;
+  voucherNo: string;
+  chequeNumber: string;
+  chequeBankName: string | null;
+  chequeDate: string | null;
+  amount: number;
+}
+
+/** A bank-transfer receipt the user collected, for the office to verify. */
+export interface PendingBankReceipt {
+  /** The receipt's id. */
+  id: string;
+  voucherNo: string;
+  bankAccountName: string | null;
+  reference: string | null;
+  amount: number;
+  /** Transfer slips attached to the receipt. */
+  attachmentCount: number;
+}
+
+/** A receipt's file as snapshotted on the handover. */
+export interface HandoverDoc {
+  fileId: string;
+  title: string;
+  mimeType: string;
+}
+
+/** A bank receipt on a handover (HandoverBankReceipt); nothing is posted. */
+export interface HandoverBankReceipt {
+  receiptId: string;
+  voucherNo: string;
+  bankAccountName: string | null;
+  reference: string | null;
+  amount: number;
+  attachments: HandoverDoc[];
+}
+
 /** GET /cash-handovers/pending. */
 export interface PendingCash {
   user: Ref;
   accounts: PendingAccount[];
   totals: { balance: number; submitted: number; available: number };
+  cheques: PendingCheque[];
+  chequesTotal: number;
+  bankReceipts: PendingBankReceipt[];
+  bankReceiptsTotal: number;
+}
+
+/** A cheque on a handover (HandoverCheque); always received in full. */
+export interface HandoverCheque {
+  receiptId: string;
+  voucherNo: string;
+  chequeNumber: string;
+  chequeBankName: string | null;
+  chequeDate: string | null;
+  amount: number;
+  attachments: HandoverDoc[];
 }
 
 /** One source account on a handover (HandoverLine). */
@@ -72,10 +128,25 @@ export interface HandoverItem {
   receivedIntoAccountName: string | null;
 }
 
+/** Spent out of the collected cash (HandoverExpense); posted on approval. */
+export interface HandoverExpense {
+  id: string;
+  expenseAccountName: string;
+  sourceAccountName: string;
+  amount: number;
+  description: string | null;
+  /** The bill; fileId is read through GET /files/:fileId. */
+  attachment: { fileId: string; title: string; mimeType: string } | null;
+}
+
 /** The handover-only fields of GET /cash-handovers/:id. */
 export interface HandoverWorkflow {
   userId: string | null;
   items: HandoverItem[];
+  cheques: HandoverCheque[];
+  bankReceipts: HandoverBankReceipt[];
+  expenses: HandoverExpense[];
+  expensesTotal: number;
   submittedTotal: number;
   receivedTotal: number | null;
   reason: string | null;
@@ -91,6 +162,16 @@ export interface HandoverInput {
   /** null: the signed-in user. */
   userId: string | null;
   lines: { sourceAccountId: string; amount: number }[];
+  /** Receipts whose cheques are handed over. */
+  chequeIds: string[];
+  /** Bank receipts handed over for verification. */
+  bankReceiptIds: string[];
+  expenses: {
+    expenseAccountId: string;
+    sourceAccountId: string;
+    amount: number;
+    description: string;
+  }[];
   notes: string;
 }
 

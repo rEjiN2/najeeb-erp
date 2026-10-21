@@ -18,6 +18,7 @@ const TARGET: VoucherWriteTarget = {
   path: "/cash-receipts",
   headerKey: "cashAccountId",
   sendsReference: false,
+  sendsMethod: true,
   acknowledgesWarnings: false,
   listPath: CASH_RECEIPTS_PATH,
   viewPath: cashReceiptPath,

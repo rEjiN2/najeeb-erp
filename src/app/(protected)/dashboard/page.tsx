@@ -57,7 +57,9 @@ export default async function DashboardPage() {
         </div>
         {canViewBalances ? (
           <Suspense fallback={<CashSummaryCardSkeleton />}>
-            <CashSummaryCard />
+            <CashSummaryCard
+              showCheques={permissions.includes(PERMISSIONS.CHEQUES_READ)}
+            />
           </Suspense>
         ) : null}
       </div>

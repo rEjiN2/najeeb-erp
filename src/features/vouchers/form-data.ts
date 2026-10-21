@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServerSession } from "@/features/auth/session";
+import { apiGet } from "@/lib/api";
 import { PERMISSIONS } from "@/features/auth/permissions";
 import type { AuthUser } from "@/features/auth/types";
 import { canManageParties } from "@/features/parties/api";
@@ -54,20 +55,27 @@ export async function loadVoucherFormData({
   ]);
   const user = session?.user ?? null;
   const scoped = user?.dataScope === "own";
-  const [headerAccounts, collectors] = await Promise.all([
+  const [headerAccounts, collectors, banks] = await Promise.all([
     scoped && user
       ? { ok: true as const, data: allowedAccounts(user) }
       : getHeaderAccounts(),
     getCollectorLookup(config.collectorFor),
+    // A salesman's bank receipts go straight to a company bank account.
+    scoped && config.methodSelector
+      ? apiGet<AccountLookupItem[]>(
+          "/accounts/lookup?scope=company&types=bank&limit=100",
+        )
+      : null,
   ]);
 
   if (!headerAccounts.ok) return headerAccounts;
   if (!collectors.ok) return collectors;
+  if (banks && !banks.ok) return banks;
 
   return {
     ok: true,
     data: {
-      headerAccounts: headerAccounts.data,
+      headerAccounts: [...headerAccounts.data, ...(banks?.data ?? [])],
       collectors: collectors.data,
       me: user ? { id: user.id, name: user.name } : null,
       canSelectCollector:

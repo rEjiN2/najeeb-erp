@@ -1,7 +1,7 @@
 import { uaeToday, toDateInputValue } from "@/lib/datetime";
 
 import type { VoucherConfig } from "../config";
-import type { VoucherDetail, VoucherInput } from "../types";
+import type { PaymentMethod, VoucherDetail, VoucherInput } from "../types";
 
 /** A line as the form edits it — amounts stay text until submit so typing
  * "12." or clearing a field doesn't fight the input. */
@@ -24,10 +24,14 @@ export interface DraftVoucher {
   headerAccountId: string;
   /** Collected By / Paid By user. "" until one is picked — required to save. */
   collectedById: string;
-  /** Cheque number, transfer reference, etc. Payments and cheque receipts. */
+  /** Transfer reference etc. Payments only. */
   paymentReference: string;
-  /** Cheque receipts only; "" for none. */
+  /** Receipts: picks which header accounts are offered. */
+  paymentMethod: PaymentMethod;
+  /** Cheque receipts only (all three required there); "" otherwise. */
+  chequeNumber: string;
   chequeDate: string;
+  chequeBankName: string;
   comments: string;
   lines: DraftLine[];
 }
@@ -37,13 +41,17 @@ export interface DraftVoucher {
 export function blankDraft(
   collectedById = "",
   headerAccountId = "",
+  paymentMethod: PaymentMethod = "cash",
 ): DraftVoucher {
   return {
     voucherDate: uaeToday(),
     headerAccountId,
     collectedById,
     paymentReference: "",
+    paymentMethod,
+    chequeNumber: "",
     chequeDate: "",
+    chequeBankName: "",
     comments: "",
     lines: [],
   };
@@ -56,7 +64,10 @@ export function draftFromVoucher(voucher: VoucherDetail): DraftVoucher {
     // Legacy vouchers have only a name here, and must be given a user.
     collectedById: voucher.collectedBy.id ?? "",
     paymentReference: voucher.paymentReference ?? "",
+    paymentMethod: voucher.paymentMethod,
+    chequeNumber: voucher.chequeNumber ?? "",
     chequeDate: voucher.chequeDate ? toDateInputValue(voucher.chequeDate) : "",
+    chequeBankName: voucher.chequeBankName ?? "",
     comments: voucher.comments,
     lines: voucher.lines.map((line, index) => ({
       // Lines have no id of their own; position is stable for the form's life.
@@ -85,6 +96,9 @@ export interface DraftErrors {
   headerAccount?: string;
   collectedBy?: string;
   paymentReference?: string;
+  chequeNumber?: string;
+  chequeDate?: string;
+  chequeBankName?: string;
   voucherDate?: string;
   lines?: string;
   /** Per line id. */
@@ -99,7 +113,7 @@ export function validateDraft(
     VoucherConfig["copy"],
     "headerRequired" | "collectorRequired" | "linesRequired"
   >,
-  /** The header is a cheque account: the cheque number is required. */
+  /** The header is a cheque account: number, date and bank are required. */
   isCheque = false,
 ): {
   errors: DraftErrors;
@@ -107,10 +121,16 @@ export function validateDraft(
 } {
   const errors: DraftErrors = { lineAmount: {}, lineVat: {} };
   if (!draft.voucherDate) errors.voucherDate = "Pick the voucher date.";
-  if (!draft.headerAccountId) errors.headerAccount = copy.headerRequired;
+  // A cheque receipt needs no account: the server keeps it in cheques in hand.
+  if (!draft.headerAccountId && !isCheque)
+    errors.headerAccount = copy.headerRequired;
   if (!draft.collectedById) errors.collectedBy = copy.collectorRequired;
-  if (isCheque && !draft.paymentReference.trim()) {
-    errors.paymentReference = "Enter the cheque number.";
+  if (isCheque) {
+    if (!draft.chequeNumber.trim())
+      errors.chequeNumber = "Enter the cheque number.";
+    if (!draft.chequeDate) errors.chequeDate = "Pick the date on the cheque.";
+    if (!draft.chequeBankName.trim())
+      errors.chequeBankName = "Enter the bank the cheque is drawn on.";
   }
   if (draft.lines.length === 0) {
     errors.lines = copy.linesRequired;
@@ -129,6 +149,9 @@ export function validateDraft(
     !errors.headerAccount &&
     !errors.collectedBy &&
     !errors.paymentReference &&
+    !errors.chequeNumber &&
+    !errors.chequeDate &&
+    !errors.chequeBankName &&
     !errors.lines &&
     Object.keys(errors.lineAmount).length === 0 &&
     Object.keys(errors.lineVat).length === 0;
@@ -140,8 +163,11 @@ export function toInput(draft: DraftVoucher): VoucherInput {
     voucherDate: draft.voucherDate,
     headerAccountId: draft.headerAccountId,
     collectedById: draft.collectedById,
+    paymentMethod: draft.paymentMethod,
     paymentReference: draft.paymentReference,
+    chequeNumber: draft.chequeNumber,
     chequeDate: draft.chequeDate,
+    chequeBankName: draft.chequeBankName,
     comments: draft.comments,
     lines: draft.lines.map((line) => ({
       accountId: line.accountId,

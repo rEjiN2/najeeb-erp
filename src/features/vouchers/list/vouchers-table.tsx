@@ -37,6 +37,7 @@ import {
   VoucherStatusBadge,
   isVoidStatus,
 } from "@/components/voucher/voucher-status-badge";
+import { ChequeStatusBadge } from "@/features/cheques/cheque-status-badge";
 import { PaymentMethodBadge } from "../payment-method-badge";
 import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
@@ -283,6 +284,9 @@ function VoucherCards(props: VouchersTableProps) {
 export function VouchersTable(props: VouchersTableProps) {
   const { config, rows, filters, onSort, onActivity, busy } = props;
   const router = useRouter();
+  const showMethod = config.showPaymentDetails || config.methodSelector;
+  // Receipts' Cheque tab: the cheque's own details.
+  const chequeColumns = config.methodSelector && filters.method === "cheque";
 
   return (
     <>
@@ -306,6 +310,14 @@ export function VouchersTable(props: VouchersTableProps) {
               <TableHead>{config.copy.headerLabel}</TableHead>
               <TableHead>{config.copy.collectorLabel}</TableHead>
               <TableHead>{config.copy.counterpartyLabel}</TableHead>
+              {chequeColumns ? (
+                <>
+                  <TableHead>Cheque No</TableHead>
+                  <TableHead>Cheque Date</TableHead>
+                  <TableHead>Bank</TableHead>
+                  <TableHead>Cheque Status</TableHead>
+                </>
+              ) : null}
               <SortableHead
                 field="amount"
                 filters={filters}
@@ -354,7 +366,7 @@ export function VouchersTable(props: VouchersTableProps) {
                   <TableCell className="text-sm whitespace-nowrap">
                     {formatCalendarDate(row.date)}
                   </TableCell>
-                  {config.showPaymentDetails ? (
+                  {showMethod ? (
                     <TableCell className="max-w-56 text-sm">
                       <span className="flex items-center gap-1.5">
                         <span className="truncate">{headerName}</span>
@@ -385,6 +397,28 @@ export function VouchersTable(props: VouchersTableProps) {
                   <TableCell className="max-w-56 text-sm">
                     <CounterpartyText row={row} />
                   </TableCell>
+                  {chequeColumns ? (
+                    <>
+                      <TableCell className="font-mono text-sm">
+                        {row.cheque?.number ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {row.cheque?.date
+                          ? formatCalendarDate(row.cheque.date)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="max-w-40 truncate text-sm">
+                        {row.cheque?.bankName ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        {row.cheque?.status ? (
+                          <ChequeStatusBadge status={row.cheque.status} />
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                    </>
+                  ) : null}
                   <TableCell
                     className={cn(
                       "text-right font-mono text-sm font-medium tabular-nums",

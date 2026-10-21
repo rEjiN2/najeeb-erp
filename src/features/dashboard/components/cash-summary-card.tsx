@@ -1,9 +1,11 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   Banknote,
   CircleAlert,
   Landmark,
   LockKeyhole,
+  ScrollText,
   Wallet,
 } from "lucide-react";
 
@@ -18,8 +20,10 @@ import {
   findBalanceGroup,
   getDashboardSummary,
 } from "@/features/dashboard/api";
+import { getChequeSummary } from "@/features/cheques/api";
+import { CHEQUES_PATH } from "@/features/cheques/constants";
 import type { ApiFailureReason } from "@/lib/api";
-import { formatCurrency } from "@/lib/format";
+import { formatAmount, formatCurrency } from "@/lib/format";
 
 // Business runs on UAE time; pin it so the label doesn't follow the server's
 // locale/timezone.
@@ -51,8 +55,16 @@ function CashSummaryShell({
   );
 }
 
-export async function CashSummaryCard() {
-  const result = await getDashboardSummary();
+export async function CashSummaryCard({
+  showCheques = false,
+}: {
+  /** cheques:read — adds the pending-cheques line. */
+  showCheques?: boolean;
+}) {
+  const [result, cheques] = await Promise.all([
+    getDashboardSummary(),
+    showCheques ? getChequeSummary() : null,
+  ]);
 
   if (!result.ok) {
     return <CashSummaryError reason={result.reason} status={result.status} />;
@@ -136,6 +148,21 @@ export async function CashSummaryCard() {
             />
           ) : null}
         </div>
+
+        {/* Not money yet: kept out of the total until each cheque clears. */}
+        {cheques?.ok && cheques.data.pendingCount > 0 ? (
+          <Link
+            href={CHEQUES_PATH}
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 border-t pt-3 text-sm"
+          >
+            <ScrollText className="size-4 shrink-0" />
+            Cheques pending{" "}
+            <span className="text-foreground font-mono font-medium tabular-nums">
+              {formatAmount(cheques.data.pendingTotal)}
+            </span>
+            ({cheques.data.pendingCount})
+          </Link>
+        ) : null}
       </div>
     </CashSummaryShell>
   );
