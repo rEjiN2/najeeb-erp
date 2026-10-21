@@ -185,10 +185,7 @@ export function VoucherFilterBar({
         </div>
 
         {users ? (
-          <div
-            className="lg:w-48"
-            title={users.ok ? undefined : users.message}
-          >
+          <div className="lg:w-48" title={users.ok ? undefined : users.message}>
             <SearchableSelect
               value={filters.collectedBy || null}
               onChange={(value) => onChange({ collectedBy: value ?? "" })}

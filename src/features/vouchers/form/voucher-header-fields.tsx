@@ -251,7 +251,9 @@ export function VoucherHeaderFields({
                 onChange({ paymentReference: event.target.value })
               }
               maxLength={PAYMENT_REFERENCE_MAX_LENGTH}
-              placeholder={isCheque ? "Cheque number" : "Cheque no., transfer ref…"}
+              placeholder={
+                isCheque ? "Cheque number" : "Cheque no., transfer ref…"
+              }
               disabled={disabled}
               aria-invalid={errors.paymentReference ? true : undefined}
               aria-describedby={

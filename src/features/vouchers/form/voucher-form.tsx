@@ -189,11 +189,7 @@ export function VoucherForm({
       "cheque" ||
     (voucher?.headerAccount.id === headerId &&
       voucher.paymentMethod === "cheque");
-  const { errors, valid } = validateDraft(
-    draft.voucher,
-    config.copy,
-    isCheque,
-  );
+  const { errors, valid } = validateDraft(draft.voucher, config.copy, isCheque);
   // Errors only show once the user has tried to save.
   const visibleErrors: DraftErrors = showErrors ? errors : NO_ERRORS;
   const totals = draftTotals(draft.voucher.lines);

@@ -24,11 +24,7 @@ import { groupErrors, type MutationResult } from "@/lib/mutation";
 import type { CashAccountRef, RoleLookupItem, User, UserInput } from "./types";
 
 type UserField =
-  | "name"
-  | "email"
-  | "password"
-  | "roleId"
-  | "allowedCashAccountIds";
+  "name" | "email" | "password" | "roleId" | "allowedCashAccountIds";
 
 // Backend messages → field, first match wins. class-validator text starts
 // with the property name; service errors read "A user with email ... already
