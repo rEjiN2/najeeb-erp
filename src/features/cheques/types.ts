@@ -53,11 +53,7 @@ export interface ChequePage {
 
 /** The register's tabs; each is one backend status. */
 export type ChequeTab =
-  | "with_salesman"
-  | "at_office"
-  | "deposited"
-  | "cleared"
-  | "returned";
+  "with_salesman" | "at_office" | "deposited" | "cleared" | "returned";
 
 export interface ChequeFilters {
   tab: ChequeTab;

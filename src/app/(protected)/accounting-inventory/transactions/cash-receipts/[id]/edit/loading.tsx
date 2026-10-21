@@ -3,9 +3,6 @@ import { VoucherPageSkeleton } from "@/features/vouchers/voucher-states";
 
 export default function Loading() {
   return (
-    <VoucherPageSkeleton
-      config={CASH_RECEIPT_CONFIG}
-      title="Edit Receipt"
-    />
+    <VoucherPageSkeleton config={CASH_RECEIPT_CONFIG} title="Edit Receipt" />
   );
 }
