@@ -1,4 +1,12 @@
-import { Building, MapPin, Tags, Truck, Wallet } from "lucide-react";
+import {
+  Building,
+  MapPin,
+  Package,
+  Ruler,
+  Tags,
+  Truck,
+  Wallet,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -50,6 +58,20 @@ const MASTER_LINKS = [
     description: "How products are grouped and nested.",
     icon: Tags,
     permission: PERMISSIONS.PRODUCT_GROUPS_MANAGE,
+  },
+  {
+    href: "/accounting-inventory/masters/products",
+    title: "Products",
+    description: "What you buy and sell, with prices, VAT and stock levels.",
+    icon: Package,
+    permission: PERMISSIONS.PRODUCTS_MANAGE,
+  },
+  {
+    href: "/accounting-inventory/masters/units",
+    title: "Units",
+    description: "Units of measure: KG, PCS, BOX…",
+    icon: Ruler,
+    permission: PERMISSIONS.UNITS_MANAGE,
   },
 ];
 

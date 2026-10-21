@@ -25,6 +25,10 @@ export const PERMISSIONS = {
   LOCATIONS_MANAGE: "locations:manage",
   PARTIES_MANAGE: "parties:manage",
   PRODUCT_GROUPS_MANAGE: "product-groups:manage",
+  PRODUCTS_MANAGE: "products:manage",
+  /** See purchase prices (cost). Never for van salesmen. */
+  PRODUCTS_VIEW_COST: "products:view-cost",
+  UNITS_MANAGE: "units:manage",
   /** The salesman collections report. */
   REPORTS_SALESMAN: "reports:salesman",
   ROLES_MANAGE: "roles:manage",

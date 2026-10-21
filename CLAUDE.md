@@ -51,7 +51,10 @@ Salesman bank receipts and cheques are ticked on the handover; approver
 views each slip/photo there.
 Removed: Staff/Cashiers master (Collected By is a user).
 In progress: none.
-Planned: products, opening balances, purchase, sales, stock, bundling, reports.
+Built (untested end to end): Products (group path picker, cost only with
+products:view-cost, image via POST /products/:id/image after save) and
+Units masters.
+Planned: opening balances, purchase, sales, stock, bundling, reports.
 
 ## Conventions
 
