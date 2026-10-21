@@ -55,6 +55,7 @@ const TYPE_FILTER_ITEMS: Record<AccountFilters["type"], string> = {
   cash: "Cash",
   bank: "Bank",
   wallet: "Wallet",
+  cheque: "Cheque",
   income: "Income",
   expense: "Expense",
   other: "Other",

@@ -32,6 +32,8 @@ export interface VoucherConfig {
   NounPlural: string;
   /** Backend permission prefix, e.g. "cash-receipts" (→ cash-receipts:create). */
   permissionPrefix: string;
+  /** Collected By / Paid By picker: GET /users/lookup?for=<this>. */
+  collectorFor: "receipt" | "payment";
 
   /** Account types the lines (and the "Account / party" filter) pick from. */
   lineAccountTypes: readonly string[];
@@ -53,8 +55,8 @@ export interface VoucherConfig {
     headerFilterAny: string;
     /** "Received From" / "Paid To". */
     counterpartyLabel: string;
-    /** "Cashier" / "Handed By". */
-    cashierLabel: string;
+    /** "Collected By" / "Paid By". */
+    collectorLabel: string;
     /** List summary label, e.g. "Total received". */
     totalLabel: string;
     createButton: string;
@@ -76,7 +78,7 @@ export interface VoucherConfig {
     searchPlaceholder: string;
     commentsPlaceholder: string;
     headerRequired: string;
-    cashierRequired: string;
+    collectorRequired: string;
     linesRequired: string;
     /** Inactive party saved from the side panel. */
     inactivePartyHint: string;

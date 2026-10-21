@@ -29,12 +29,6 @@ export interface User {
   status: UserStatus;
   mustChangePassword: boolean;
   allowedCashAccounts: CashAccountRef[];
-  linkedCashier: {
-    id: string;
-    code: string;
-    name: string;
-    status: string;
-  } | null;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -61,8 +55,6 @@ export interface UserInput {
   password: string;
   roleId: string;
   allowedCashAccountIds: string[];
-  /** The cashier to link this user to; set through the cashier's own record. */
-  linkedCashierId: string | null;
 }
 
 export interface UserFilters {

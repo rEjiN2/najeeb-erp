@@ -23,7 +23,7 @@ interface SavedHandover {
 
 const TARGET: VoucherWriteTarget = {
   path: "/cash-handovers",
-  headerKey: "sourceAccountId",
+  headerKey: "",
   sendsReference: false,
   acknowledgesWarnings: false,
   listPath: CASH_HANDOVERS_PATH,
@@ -33,7 +33,7 @@ const TARGET: VoucherWriteTarget = {
   cancelledMessage: (voucherNo) => `Cash handover ${voucherNo} cancelled`,
 };
 
-/** 403s from the data scope say what to fix; only the guard's bare one is generic. */
+/** 403s that explain themselves (own handover, scope) are shown as sent. */
 function forbidden(messages: string[]): string {
   return messages.length > 0 && messages[0] !== "Insufficient permissions"
     ? messages.join(" ")
@@ -58,7 +58,7 @@ async function send(
   });
 }
 
-/** Submits the receipts and locks them until approved or rejected. */
+/** Records the amounts; the money moves only on approval. */
 export async function submitCashHandover(
   input: HandoverInput,
 ): Promise<MutationResult> {
@@ -67,10 +67,8 @@ export async function submitCashHandover(
     TARGET.path,
     {
       voucherDate: input.voucherDate,
-      ...(input.staffId ? { staffId: input.staffId } : {}),
-      sourceAccountId: input.sourceAccountId,
-      receiptIds: input.receiptIds,
-      countedCash: input.countedCash,
+      ...(input.userId ? { userId: input.userId } : {}),
+      lines: input.lines,
       ...(notes ? { notes } : {}),
     },
     `${CASH_HANDOVERS_PATH}/new`,
@@ -78,25 +76,20 @@ export async function submitCashHandover(
   );
 }
 
-/** Posts the received cash and settles every receipt. */
+/** Posts each received amount from its source into its receiving account. */
 export async function approveCashHandover(
   id: string,
   input: ApproveInput,
 ): Promise<MutationResult> {
-  const reason = input.varianceReason.trim();
+  const reason = input.reason.trim();
   return send(
     `${TARGET.path}/${encodeURIComponent(id)}/approve`,
-    {
-      receivedCash: input.receivedCash,
-      receivedIntoAccountId: input.receivedIntoAccountId,
-      ...(reason ? { varianceReason: reason } : {}),
-    },
+    { lines: input.lines, ...(reason ? { reason } : {}) },
     cashHandoverPath(id),
     (saved) => `Handover ${saved.voucherNo} approved`,
   );
 }
 
-/** Unlocks the receipts so they can be handed over again. */
 export async function rejectCashHandover(
   id: string,
   reason: string,
@@ -109,7 +102,7 @@ export async function rejectCashHandover(
   );
 }
 
-/** Submitter before approval, or cash-handovers:cancel (reverses an approval). */
+/** Submitter while pending, or cash-handovers:cancel (reverses an approval). */
 export async function cancelCashHandover(
   id: string,
   reason: string,

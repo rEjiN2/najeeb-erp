@@ -19,9 +19,12 @@ import {
 export async function saveCompanyProfile(
   input: CompanyProfileInput,
 ): Promise<MutationResult> {
-  const body: Record<string, string | null> = {};
+  const body: Record<string, string | boolean | null> = {};
   for (const field of COMPANY_TEXT_FIELDS) body[field] = input[field];
   body.logoFileRef = input.logoFileRef;
+  body.allowSelfApproval = input.allowSelfApproval;
+  body.defaultCashInHandAccountId = input.defaultCashInHandAccountId;
+  body.defaultChequesInHandAccountId = input.defaultChequesInHandAccountId;
 
   return runMutation(apiSend<CompanyProfile>("PUT", "/company", body), {
     returnTo: COMPANY_PROFILE_PATH,

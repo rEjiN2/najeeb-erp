@@ -38,7 +38,6 @@ import {
   isVoidStatus,
 } from "@/components/voucher/voucher-status-badge";
 import { PaymentMethodBadge } from "../payment-method-badge";
-import { StaffTypeBadge } from "@/features/cashiers/staff-type-badge";
 import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -246,8 +245,7 @@ function VoucherCards(props: VouchersTableProps) {
                 </Link>
                 <p className="text-muted-foreground text-xs">
                   {formatCalendarDate(row.date)}
-                  {row.cashier.name ? ` · ${row.cashier.name}` : ""}
-                  {row.cashierNote ? ` ${row.cashierNote}` : ""}
+                  {row.collectedBy.name ? ` · ${row.collectedBy.name}` : ""}
                 </p>
               </div>
               <div
@@ -306,7 +304,7 @@ export function VouchersTable(props: VouchersTableProps) {
                 Date
               </SortableHead>
               <TableHead>{config.copy.headerLabel}</TableHead>
-              <TableHead>{config.copy.cashierLabel}</TableHead>
+              <TableHead>{config.copy.collectorLabel}</TableHead>
               <TableHead>{config.copy.counterpartyLabel}</TableHead>
               <SortableHead
                 field="amount"
@@ -369,30 +367,20 @@ export function VouchersTable(props: VouchersTableProps) {
                     </TableCell>
                   )}
                   <TableCell className="max-w-40 truncate text-sm">
-                    {row.cashier.name ? (
+                    {row.collectedBy.name ? (
                       <span
                         title={
-                          row.cashier.id
+                          row.collectedBy.id
                             ? undefined
-                            : "Entered before staff were set up"
+                            : "Legacy cashier with no login"
                         }
-                        className={cn(!row.cashier.id && "italic")}
+                        className={cn(!row.collectedBy.id && "italic")}
                       >
-                        {row.cashier.name}
+                        {row.collectedBy.name}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
-                    {row.cashier.staffType ? (
-                      <div>
-                        <StaffTypeBadge type={row.cashier.staffType} />
-                      </div>
-                    ) : null}
-                    {row.cashierNote ? (
-                      <p className="text-muted-foreground truncate text-xs">
-                        {row.cashierNote}
-                      </p>
-                    ) : null}
                   </TableCell>
                   <TableCell className="max-w-56 text-sm">
                     <CounterpartyText row={row} />

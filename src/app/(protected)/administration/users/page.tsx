@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { MasterPageHeader } from "@/components/master/master-page-header";
 import { MasterLoadError } from "@/components/master/master-states";
 import { StatePanel } from "@/components/master/state-panel";
-import { canManageCashiers, getCashierLookup } from "@/features/cashiers/api";
 import {
   canManageUsers,
   getAssignableCashAccounts,
@@ -74,14 +73,11 @@ export default async function Page({
   }
 
   const filters = parseUserFilters(await searchParams);
-  const [users, roles, cashAccounts, cashiers, canLinkCashier] =
-    await Promise.all([
-      getUserPage(filters),
-      getRoleLookup(),
-      getAssignableCashAccounts(),
-      getCashierLookup(true),
-      canManageCashiers(),
-    ]);
+  const [users, roles, cashAccounts] = await Promise.all([
+    getUserPage(filters),
+    getRoleLookup(),
+    getAssignableCashAccounts(),
+  ]);
 
   if (!users.ok) return <LoadFailure failure={users} />;
 
@@ -91,8 +87,6 @@ export default async function Page({
       filters={filters}
       roles={optional(roles)}
       cashAccounts={optional(cashAccounts)}
-      cashiers={optional(cashiers)}
-      canLinkCashier={canLinkCashier}
     />
   );
 }

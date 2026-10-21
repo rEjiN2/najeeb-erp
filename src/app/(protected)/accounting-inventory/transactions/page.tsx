@@ -34,7 +34,7 @@ const TRANSACTION_LINKS = [
   {
     href: "/accounting-inventory/transactions/cash-handovers",
     title: "Cash Handovers",
-    description: "Staff hand collected cash over to the office for approval.",
+    description: "Salesmen hand cash and cheques to the office for approval.",
     icon: ArrowRightLeft,
     permission: PERMISSIONS.CASH_HANDOVERS_READ,
   },

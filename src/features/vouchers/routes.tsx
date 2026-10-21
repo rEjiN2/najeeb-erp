@@ -6,7 +6,6 @@ import type { ReactNode } from "react";
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { getAccount } from "@/features/accounts/api";
 import { isOwnScope } from "@/features/auth/session";
-import { getCashierLookup } from "@/features/cashiers/api";
 import { getUsers } from "@/features/users/api";
 import { describeFailure, type ApiResult } from "@/lib/api-types";
 import { uaeToday } from "@/lib/datetime";
@@ -84,7 +83,7 @@ export async function VoucherListRoute({
 }) {
   const filters = parseFilters(searchParams, config.statusFilters);
   const returnTo = `${config.basePath}${toSearch(filters)}`;
-  // An "own"-scoped user sees only their own vouchers: no staff or
+  // An "own"-scoped user sees only their own vouchers: no collected-by or
   // created-by filters to pick other people from.
   const scoped = await isOwnScope();
 
@@ -93,7 +92,6 @@ export async function VoucherListRoute({
     cancelled,
     headerAccounts,
     users,
-    cashiers,
     selectedAccount,
     access,
     banner,
@@ -103,7 +101,6 @@ export async function VoucherListRoute({
     filters.status === "all" ? api.countCancelled(filters) : null,
     api.getHeaderAccounts(),
     scoped ? null : getUsers(),
-    scoped ? null : getCashierLookup(false),
     filters.accountId ? getAccount(filters.accountId) : null,
     getVoucherAccess(config),
     listBanner?.() ?? null,
@@ -182,7 +179,6 @@ export async function VoucherListRoute({
       access={access}
       headerAccounts={toLoadable(headerAccounts, returnTo)}
       users={users ? toLoadable(users, returnTo) : null}
-      cashiers={cashiers ? toLoadable(cashiers, returnTo) : null}
       selectedAccountName={selectedAccountName}
       banner={banner}
     />
@@ -199,7 +195,7 @@ export async function VoucherNewRoute({ module }: { module: VoucherModule }) {
   }
 
   const formData = await loadVoucherFormData({
-    preselectMine: true,
+    config,
     getHeaderAccounts: api.getHeaderAccounts,
   });
   if (!formData.ok) {
@@ -293,7 +289,7 @@ export async function VoucherEditRoute({
   const [voucher, formData] = await Promise.all([
     api.getVoucher(id),
     loadVoucherFormData({
-      preselectMine: false,
+      config,
       getHeaderAccounts: api.getHeaderAccounts,
     }),
   ]);

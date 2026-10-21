@@ -4,51 +4,48 @@ import type {
 } from "./types";
 
 const HEADERS = [
-  "Staff Code",
-  "Staff",
+  "Collected By",
   "Location",
-  "Opening Unsettled",
-  "Collected Cash",
-  "Collected Bank",
-  "Pending Approval",
-  "Settled",
-  "Shortage",
-  "Closing Unsettled",
   "Receipts",
-  "Handovers",
+  "Cash",
+  "Cheque",
+  "Bank",
+  "Total",
+  "Handed Over",
+  "Pending Approval",
+  "With Salesman (now)",
 ];
 
 /** RFC 4180: quote a field that holds a comma, quote or line break. */
-function field(value: string | number): string {
-  const text = typeof value === "number" ? value.toFixed(2) : value;
+function field(value: string | number | null | undefined): string {
+  const text =
+    typeof value === "number"
+      ? (Number.isFinite(value) ? value : 0).toFixed(2)
+      : (value ?? "");
   return /[",\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
-const count = (value: number) => String(value);
-
 function figures(f: SalesmanCollectionFigures): string[] {
   return [
-    field(f.unsettledOpening),
+    String(f.receipts ?? 0),
     field(f.collectedCash),
+    field(f.collectedCheque),
     field(f.collectedBank),
+    field(f.total),
+    field(f.handedOver),
     field(f.pendingApproval),
-    field(f.settled),
-    field(f.openShortage),
-    field(f.unsettledClosing),
-    count(f.receiptCount),
-    count(f.handoverCount),
+    field(f.withSalesman),
   ];
 }
 
 /** The report as shown, with a totals row; amounts in AED, 2 decimals. */
 export function toCsv(report: SalesmanCollectionsReport): string {
-  const rows = report.rows.map((row) => [
-    field(row.cashier.code),
-    field(row.cashier.name),
-    field(row.cashier.location?.name ?? ""),
+  const rows = (report.rows ?? []).map((row) => [
+    field(row.staff?.name),
+    field(row.staff?.location?.name),
     ...figures(row),
   ]);
-  rows.push(["", "Total", "", ...figures(report.totals)]);
+  rows.push(["Total", "", ...figures(report.totals)]);
   return [HEADERS, ...rows].map((line) => line.join(",")).join("\r\n");
 }
 

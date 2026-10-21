@@ -1,5 +1,3 @@
-import type { StaffType } from "@/features/cashiers/types";
-
 export interface AuthUser {
   id: string;
   name: string;
@@ -13,14 +11,7 @@ export interface AuthUser {
   dataScope: DataScope;
   /** Set after first login or an admin reset: only /change-password works. */
   mustChangePassword: boolean;
-  linkedCashier: {
-    id: string;
-    code: string;
-    name: string;
-    status: string;
-    staffType: StaffType;
-    settlesWithOffice: boolean;
-  } | null;
+  settlesWithOffice: boolean;
   /** Cash/wallet accounts an "own"-scoped user may receive money into. */
   allowedCashAccounts: {
     id: string;

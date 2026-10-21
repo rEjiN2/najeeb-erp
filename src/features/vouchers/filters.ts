@@ -59,12 +59,13 @@ export const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
   cancelled: "Cancelled",
 };
 
-export const METHOD_FILTERS = ["all", "cash", "bank"] as const;
+export const METHOD_FILTERS = ["all", "cash", "cheque", "bank"] as const;
 export type MethodFilter = (typeof METHOD_FILTERS)[number];
 
 export const METHOD_FILTER_LABELS: Record<MethodFilter, string> = {
   all: "All methods",
   cash: "Cash",
+  cheque: "Cheque",
   bank: "Bank",
 };
 
@@ -85,7 +86,7 @@ export interface VoucherFilters {
   /** The header ("Received Into" / "Paid From") account. */
   headerAccountId: string;
   accountId: string;
-  cashierId: string;
+  collectedBy: string;
   createdBy: string;
   q: string;
   amountMin: number | null;
@@ -104,7 +105,7 @@ export const DEFAULT_FILTERS: VoucherFilters = {
   method: "all",
   headerAccountId: "",
   accountId: "",
-  cashierId: "",
+  collectedBy: "",
   createdBy: "",
   q: "",
   amountMin: null,
@@ -192,7 +193,7 @@ export function parseFilters(
     method: oneOf(first(params.method), METHOD_FILTERS, DEFAULT_FILTERS.method),
     headerAccountId: idParam("cash"),
     accountId: idParam("account"),
-    cashierId: idParam("cashier"),
+    collectedBy: idParam("collector"),
     createdBy: idParam("by"),
     q: first(params.q).trim().slice(0, 100),
     amountMin,
@@ -219,7 +220,7 @@ export function toSearch(filters: VoucherFilters): string {
   if (filters.method !== d.method) params.set("method", filters.method);
   if (filters.headerAccountId) params.set("cash", filters.headerAccountId);
   if (filters.accountId) params.set("account", filters.accountId);
-  if (filters.cashierId) params.set("cashier", filters.cashierId);
+  if (filters.collectedBy) params.set("collector", filters.collectedBy);
   if (filters.createdBy) params.set("by", filters.createdBy);
   if (filters.q) params.set("q", filters.q);
   if (filters.amountMin !== null) params.set("min", String(filters.amountMin));
@@ -266,7 +267,7 @@ export function hasActiveFilters(filters: VoucherFilters): boolean {
     filters.method !== d.method ||
     filters.headerAccountId !== "" ||
     filters.accountId !== "" ||
-    filters.cashierId !== "" ||
+    filters.collectedBy !== "" ||
     filters.createdBy !== "" ||
     filters.q !== "" ||
     filters.amountMin !== null ||

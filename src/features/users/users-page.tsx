@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CashierLookupItem } from "@/features/cashiers/types";
 import { useMasterCrud } from "@/hooks/use-master-crud";
 import type { MutationResult } from "@/lib/mutation";
 
@@ -83,16 +82,12 @@ async function settle(
   }
 }
 
-const muted = <span className="text-muted-foreground">—</span>;
-
 interface UsersPageProps {
   page: UserPage;
   filters: UserFilters;
   /** null when they couldn't be loaded: the pickers say why. */
   roles: RoleLookupItem[] | null;
   cashAccounts: CashAccountRef[] | null;
-  cashiers: CashierLookupItem[] | null;
-  canLinkCashier: boolean;
 }
 
 export function UsersPage({
@@ -100,8 +95,6 @@ export function UsersPage({
   filters,
   roles,
   cashAccounts,
-  cashiers,
-  canLinkCashier,
 }: UsersPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -166,21 +159,6 @@ export function UsersPage({
           </span>
         ) : (
           <span className="text-muted-foreground text-sm italic">No role</span>
-        ),
-    },
-    {
-      key: "cashier",
-      header: "Cashier",
-      render: (user) =>
-        user.linkedCashier ? (
-          <span className="text-sm">
-            {user.linkedCashier.name}{" "}
-            <span className="text-muted-foreground font-mono text-xs">
-              {user.linkedCashier.code}
-            </span>
-          </span>
-        ) : (
-          muted
         ),
     },
     {
@@ -365,8 +343,6 @@ export function UsersPage({
           initialValue={crud.editing}
           roles={roles}
           cashAccounts={cashAccounts}
-          cashiers={cashiers}
-          canLinkCashier={canLinkCashier}
           onSubmit={crud.submit}
           onResetPassword={(password) =>
             crud.editing

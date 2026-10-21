@@ -23,6 +23,14 @@ export function getUsers(): Promise<ApiResult<UserLookupItem[]>> {
   return apiGet<UserLookupItem[]>("/users/lookup");
 }
 
+/** Users who can be Collected By / Paid By; only yourself without
+ * vouchers:select-collector (GET /users/lookup?for=...). */
+export function getCollectorLookup(
+  purpose: "receipt" | "payment",
+): Promise<ApiResult<UserLookupItem[]>> {
+  return apiGet<UserLookupItem[]>(`/users/lookup?for=${purpose}`);
+}
+
 type SearchParams = Record<string, string | string[] | undefined>;
 
 function first(value: string | string[] | undefined): string {

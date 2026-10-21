@@ -34,7 +34,6 @@ import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { VoucherTotalsFooter } from "@/components/voucher/voucher-totals-footer";
 import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
-import { StaffTypeBadge } from "@/features/cashiers/staff-type-badge";
 
 import { CancelVoucherDialog } from "../cancel-voucher-dialog";
 import {
@@ -46,7 +45,7 @@ import {
 import { PaymentMethodBadge } from "../payment-method-badge";
 import type {
   CancelVoucherAction,
-  CashierRef,
+  CollectorRef,
   UserRef,
   VoucherDetail,
 } from "../types";
@@ -139,15 +138,14 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function CashierName({ cashier }: { cashier: CashierRef }) {
-  if (!cashier.name) return <span className="text-muted-foreground">—</span>;
+function CollectorName({ collector }: { collector: CollectorRef }) {
+  if (!collector.name) return <span className="text-muted-foreground">—</span>;
   return (
     <span className="inline-flex flex-wrap items-center gap-1.5">
-      {cashier.name}
-      <StaffTypeBadge type={cashier.staffType} />
-      {cashier.id ? null : (
+      {collector.name}
+      {collector.id ? null : (
         <span className="text-muted-foreground text-xs">
-          (entered before staff were set up)
+          (legacy, no login)
         </span>
       )}
     </span>
@@ -329,8 +327,8 @@ export function VoucherView({
                     </span>
                   )}
                 </Field>
-                <Field label={config.copy.cashierLabel}>
-                  <CashierName cashier={voucher.cashier} />
+                <Field label={config.copy.collectorLabel}>
+                  <CollectorName collector={voucher.collectedBy} />
                 </Field>
                 {voucher.extraFields.map((field) => (
                   <Field key={field.key} label={field.label}>
@@ -339,12 +337,28 @@ export function VoucherView({
                     )}
                   </Field>
                 ))}
-                {config.showPaymentDetails ? (
+                {config.showPaymentDetails ||
+                voucher.paymentMethod === "cheque" ? (
                   <>
                     <Field label="Method">
                       <PaymentMethodBadge method={voucher.paymentMethod} />
                     </Field>
-                    <Field label="Reference">
+                    {voucher.paymentMethod === "cheque" ? (
+                      <Field label="Cheque Date">
+                        {voucher.chequeDate ? (
+                          formatCalendarDate(voucher.chequeDate)
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </Field>
+                    ) : null}
+                    <Field
+                      label={
+                        voucher.paymentMethod === "cheque"
+                          ? "Cheque No."
+                          : "Reference"
+                      }
+                    >
                       {voucher.paymentReference ? (
                         <span className="font-mono">
                           {voucher.paymentReference}

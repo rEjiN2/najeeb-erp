@@ -18,7 +18,6 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
 } from "@/features/auth/constants";
-import type { CashierLookupItem } from "@/features/cashiers/types";
 import { ACCOUNT_TYPE_BADGES } from "@/features/vouchers/constants";
 import { groupErrors, type MutationResult } from "@/lib/mutation";
 
@@ -29,16 +28,13 @@ type UserField =
   | "email"
   | "password"
   | "roleId"
-  | "allowedCashAccountIds"
-  | "linkedCashierId";
+  | "allowedCashAccountIds";
 
 // Backend messages → field, first match wins. class-validator text starts
 // with the property name; service errors read "A user with email ... already
-// exists", "Role ... not found", "Ledger account ... is inactive", and the
-// cashier's "That user is already linked to cashier ...".
+// exists", "Role ... not found", "Ledger account ... is inactive".
 const FIELD_MATCHERS = [
   ["allowedCashAccountIds", /allowedCashAccountIds|^Ledger account/i],
-  ["linkedCashierId", /cashier/i],
   ["roleId", /^roleId|^Role\b|last active admin/i],
   ["password", /^password/i],
   ["email", /^email|user with (this )?email/i],
@@ -50,9 +46,6 @@ interface UserFormProps {
   /** null when they couldn't be loaded — the picker says so. */
   roles: RoleLookupItem[] | null;
   cashAccounts: CashAccountRef[] | null;
-  cashiers: CashierLookupItem[] | null;
-  /** cashiers:manage — the link is saved on the cashier record. */
-  canLinkCashier: boolean;
   onSubmit: (values: UserInput) => Promise<MutationResult>;
   onResetPassword: (password: string) => Promise<MutationResult>;
   onToggleStatus: () => Promise<MutationResult>;
@@ -62,8 +55,6 @@ export function UserForm({
   initialValue,
   roles,
   cashAccounts,
-  cashiers,
-  canLinkCashier,
   onSubmit,
   onResetPassword,
   onToggleStatus,
@@ -77,9 +68,6 @@ export function UserForm({
   );
   const [allowedIds, setAllowedIds] = useState<string[]>(
     initialValue?.allowedCashAccounts.map((account) => account.id) ?? [],
-  );
-  const [linkedCashierId, setLinkedCashierId] = useState<string | null>(
-    initialValue?.linkedCashier?.id ?? null,
   );
 
   const [errors, setErrors] = useState<string[]>([]);
@@ -102,20 +90,6 @@ export function UserForm({
     if (!accountOptions.some((a) => a.id === account.id)) {
       accountOptions.push(account);
     }
-  }
-
-  const cashierOptions = (cashiers ?? []).map((cashier) => ({
-    value: cashier.id,
-    label: cashier.name,
-    description: cashier.code,
-  }));
-  const current = initialValue?.linkedCashier;
-  if (current && !cashierOptions.some((o) => o.value === current.id)) {
-    cashierOptions.unshift({
-      value: current.id,
-      label: current.name,
-      description: `${current.code} · ${current.status}`,
-    });
   }
 
   function toggleAccount(id: string, checked: boolean) {
@@ -146,7 +120,6 @@ export function UserForm({
       password,
       roleId,
       allowedCashAccountIds: allowedIds,
-      linkedCashierId,
     };
     startTransition(async () => {
       const result = await onSubmit(values);
@@ -301,34 +274,6 @@ export function UserForm({
             />
           </div>
         ) : null}
-
-        <div className="space-y-2">
-          <Label>Linked cashier</Label>
-          {cashiers === null ? (
-            <p className="text-destructive text-sm">
-              Couldn&apos;t load cashiers. Close this panel and try again.
-            </p>
-          ) : (
-            <SearchableSelect
-              value={linkedCashierId}
-              onChange={setLinkedCashierId}
-              options={cashierOptions}
-              placeholder="Not linked (optional)"
-              clearLabel="Not linked"
-              emptyText="No matching cashiers"
-              disabled={pending || !canLinkCashier}
-            />
-          )}
-          <p className="text-muted-foreground text-xs">
-            {canLinkCashier
-              ? "Saved on the cashier's record. Their receipts post against this cashier."
-              : "Changing the link needs the Manage cashiers permission."}
-          </p>
-          <FieldError
-            id="user-cashier-error"
-            message={fieldErrors.linkedCashierId}
-          />
-        </div>
 
         {initialValue ? (
           <AccountActions

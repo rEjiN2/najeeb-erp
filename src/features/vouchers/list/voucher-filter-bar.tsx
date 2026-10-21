@@ -24,8 +24,6 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { startOfMonth, uaeToday } from "@/lib/datetime";
 
-import type { CashierLookupItem } from "@/features/cashiers/types";
-
 import { lineAccountSearch } from "../account-search";
 import type { VoucherConfig } from "../config";
 import { ACCOUNT_TYPE_BADGES } from "../constants";
@@ -57,11 +55,9 @@ interface VoucherFilterBarProps {
   onClear: () => void;
   busy: boolean;
   headerAccounts: Loadable<AccountLookupItem[]>;
-  /** null hides the filter ("own"-scoped user). */
+  /** Every user, inactive ones too — for Created By and Collected By.
+   * null hides those filters ("own"-scoped user). */
   users: Loadable<UserRef[]> | null;
-  /** Every cashier, inactive ones too — old vouchers may name them.
-   * null hides the filter ("own"-scoped user). */
-  cashiers: Loadable<CashierLookupItem[]> | null;
   /** Name of the account in the "Account / party" filter, resolved server-side. */
   selectedAccountName: string | null;
 }
@@ -74,7 +70,6 @@ export function VoucherFilterBar({
   busy,
   headerAccounts,
   users,
-  cashiers,
   selectedAccountName,
 }: VoucherFilterBarProps) {
   return (
@@ -189,27 +184,30 @@ export function VoucherFilterBar({
           />
         </div>
 
-        {cashiers ? (
+        {users ? (
           <div
             className="lg:w-48"
-            title={cashiers.ok ? undefined : cashiers.message}
+            title={users.ok ? undefined : users.message}
           >
             <SearchableSelect
-              value={filters.cashierId || null}
-              onChange={(value) => onChange({ cashierId: value ?? "" })}
+              value={filters.collectedBy || null}
+              onChange={(value) => onChange({ collectedBy: value ?? "" })}
               options={
-                cashiers.ok
-                  ? cashiers.data.map((cashier) => ({
-                      value: cashier.id,
-                      label: cashier.name,
-                      description: cashier.code,
+                users.ok
+                  ? users.data.map((user) => ({
+                      value: user.id,
+                      label: user.name,
                     }))
                   : []
               }
-              placeholder={cashiers.ok ? "All staff" : "Staff unavailable"}
-              emptyText="No matching staff"
-              clearLabel="All staff"
-              disabled={!cashiers.ok}
+              placeholder={
+                users.ok
+                  ? `${config.copy.collectorLabel}: any`
+                  : "Users unavailable"
+              }
+              emptyText="No matching users"
+              clearLabel={`${config.copy.collectorLabel}: any`}
+              disabled={!users.ok}
             />
           </div>
         ) : null}
@@ -244,16 +242,13 @@ export function VoucherFilterBar({
         ) : null}
       </div>
 
-      {!headerAccounts.ok || users?.ok === false || cashiers?.ok === false ? (
+      {!headerAccounts.ok || users?.ok === false ? (
         <p className="text-muted-foreground text-xs">
           {[
             !headerAccounts.ok
               ? `${config.copy.headerLabel} filter: ${headerAccounts.message}`
               : null,
-            users && !users.ok ? `Created-by filter: ${users.message}` : null,
-            cashiers && !cashiers.ok
-              ? `${config.copy.cashierLabel} filter: ${cashiers.message}`
-              : null,
+            users && !users.ok ? `User filters: ${users.message}` : null,
           ]
             .filter(Boolean)
             .join(" ")}

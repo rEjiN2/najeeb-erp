@@ -16,7 +16,6 @@ export const PERMISSIONS = {
   CASH_HANDOVERS_CREATE: "cash-handovers:create",
   CASH_HANDOVERS_APPROVE: "cash-handovers:approve",
   CASH_HANDOVERS_CANCEL: "cash-handovers:cancel",
-  CASHIERS_MANAGE: "cashiers:manage",
   COMPANY_MANAGE: "company:manage",
   LOCATIONS_MANAGE: "locations:manage",
   PARTIES_MANAGE: "parties:manage",
@@ -25,6 +24,8 @@ export const PERMISSIONS = {
   REPORTS_SALESMAN: "reports:salesman",
   ROLES_MANAGE: "roles:manage",
   USERS_MANAGE: "users:manage",
+  /** Pick someone else as Collected By / Paid By. */
+  VOUCHERS_SELECT_COLLECTOR: "vouchers:select-collector",
   DASHBOARD_VIEW: "dashboard:view",
 } as const;
 

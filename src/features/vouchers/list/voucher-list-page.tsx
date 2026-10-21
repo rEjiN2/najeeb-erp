@@ -16,7 +16,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { CashierLookupItem } from "@/features/cashiers/types";
 import { formatCalendarDate } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 
@@ -63,7 +62,6 @@ interface VoucherListPageProps {
   headerAccounts: Loadable<AccountLookupItem[]>;
   /** null for an "own"-scoped user: those filters are hidden. */
   users: Loadable<UserRef[]> | null;
-  cashiers: Loadable<CashierLookupItem[]> | null;
   selectedAccountName: string | null;
   /** Under the heading, e.g. a salesman's unsettled cash. */
   banner?: ReactNode;
@@ -150,7 +148,6 @@ export function VoucherListPage({
   access,
   headerAccounts,
   users,
-  cashiers,
   selectedAccountName,
   banner,
 }: VoucherListPageProps) {
@@ -242,7 +239,6 @@ export function VoucherListPage({
         busy={isNavigating}
         headerAccounts={headerAccounts}
         users={users}
-        cashiers={cashiers}
         selectedAccountName={selectedAccountName}
       />
 

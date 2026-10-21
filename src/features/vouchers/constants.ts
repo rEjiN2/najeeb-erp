@@ -7,6 +7,7 @@ export const ACCOUNT_TYPE_BADGES: Record<string, string> = {
   cash: "Cash",
   wallet: "Wallet",
   bank: "Bank",
+  cheque: "Cheque",
   party: "Customer",
   supplier: "Supplier",
   income: "Income",

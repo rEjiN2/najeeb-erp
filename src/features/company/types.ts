@@ -27,6 +27,10 @@ export interface CompanyProfile extends Record<
   currencyCode: string;
   /** Fetch the image through GET /files/:id. */
   logo: { id: string; url: string } | null;
+  allowSelfApproval: boolean;
+  /** Handover defaults: where cash (cash/wallet) and cheques are received. */
+  defaultCashInHandAccountId: string | null;
+  defaultChequesInHandAccountId: string | null;
   updatedBy: { id: string; name: string } | null;
   updatedAt: string | null;
 }
@@ -34,6 +38,10 @@ export interface CompanyProfile extends Record<
 /** PUT body: the whole profile. Blank optional fields are cleared. */
 export type CompanyProfileInput = Record<CompanyTextField, string> & {
   logoFileRef: string | null;
+  /** Sent back unchanged: the PUT turns an omitted one off. */
+  allowSelfApproval: boolean;
+  defaultCashInHandAccountId: string | null;
+  defaultChequesInHandAccountId: string | null;
 };
 
 /** POST /files/upload response. */

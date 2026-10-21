@@ -22,22 +22,28 @@ export interface DraftVoucher {
   voucherDate: string;
   /** "Received Into" / "Paid From". */
   headerAccountId: string;
-  /** "" until one is picked — required to save. */
-  cashierId: string;
-  /** Cheque number, transfer reference, etc. Payments only. */
+  /** Collected By / Paid By user. "" until one is picked — required to save. */
+  collectedById: string;
+  /** Cheque number, transfer reference, etc. Payments and cheque receipts. */
   paymentReference: string;
+  /** Cheque receipts only; "" for none. */
+  chequeDate: string;
   comments: string;
   lines: DraftLine[];
 }
 
-/** `cashierId`: the signed-in user's own cashier, when they have an active
- * one; `headerAccountId`: pre-picked when only one account is allowed. */
-export function blankDraft(cashierId = "", headerAccountId = ""): DraftVoucher {
+/** `collectedById`: the signed-in user; `headerAccountId`: pre-picked when
+ * only one account is allowed. */
+export function blankDraft(
+  collectedById = "",
+  headerAccountId = "",
+): DraftVoucher {
   return {
     voucherDate: uaeToday(),
     headerAccountId,
-    cashierId,
+    collectedById,
     paymentReference: "",
+    chequeDate: "",
     comments: "",
     lines: [],
   };
@@ -47,9 +53,10 @@ export function draftFromVoucher(voucher: VoucherDetail): DraftVoucher {
   return {
     voucherDate: toDateInputValue(voucher.voucherDate),
     headerAccountId: voucher.headerAccount.id,
-    // Legacy vouchers have only free text here, and must be given a cashier.
-    cashierId: voucher.cashier.id ?? "",
+    // Legacy vouchers have only a name here, and must be given a user.
+    collectedById: voucher.collectedBy.id ?? "",
     paymentReference: voucher.paymentReference ?? "",
+    chequeDate: voucher.chequeDate ? toDateInputValue(voucher.chequeDate) : "",
     comments: voucher.comments,
     lines: voucher.lines.map((line, index) => ({
       // Lines have no id of their own; position is stable for the form's life.
@@ -76,7 +83,8 @@ export function parseMoney(raw: string, blankIsZero = false): number {
 
 export interface DraftErrors {
   headerAccount?: string;
-  cashier?: string;
+  collectedBy?: string;
+  paymentReference?: string;
   voucherDate?: string;
   lines?: string;
   /** Per line id. */
@@ -89,8 +97,10 @@ export function validateDraft(
   draft: DraftVoucher,
   copy: Pick<
     VoucherConfig["copy"],
-    "headerRequired" | "cashierRequired" | "linesRequired"
+    "headerRequired" | "collectorRequired" | "linesRequired"
   >,
+  /** The header is a cheque account: the cheque number is required. */
+  isCheque = false,
 ): {
   errors: DraftErrors;
   valid: boolean;
@@ -98,7 +108,10 @@ export function validateDraft(
   const errors: DraftErrors = { lineAmount: {}, lineVat: {} };
   if (!draft.voucherDate) errors.voucherDate = "Pick the voucher date.";
   if (!draft.headerAccountId) errors.headerAccount = copy.headerRequired;
-  if (!draft.cashierId) errors.cashier = copy.cashierRequired;
+  if (!draft.collectedById) errors.collectedBy = copy.collectorRequired;
+  if (isCheque && !draft.paymentReference.trim()) {
+    errors.paymentReference = "Enter the cheque number.";
+  }
   if (draft.lines.length === 0) {
     errors.lines = copy.linesRequired;
   }
@@ -114,7 +127,8 @@ export function validateDraft(
   const valid =
     !errors.voucherDate &&
     !errors.headerAccount &&
-    !errors.cashier &&
+    !errors.collectedBy &&
+    !errors.paymentReference &&
     !errors.lines &&
     Object.keys(errors.lineAmount).length === 0 &&
     Object.keys(errors.lineVat).length === 0;
@@ -125,8 +139,9 @@ export function toInput(draft: DraftVoucher): VoucherInput {
   return {
     voucherDate: draft.voucherDate,
     headerAccountId: draft.headerAccountId,
-    cashierId: draft.cashierId,
+    collectedById: draft.collectedById,
     paymentReference: draft.paymentReference,
+    chequeDate: draft.chequeDate,
     comments: draft.comments,
     lines: draft.lines.map((line) => ({
       accountId: line.accountId,

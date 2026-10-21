@@ -5,9 +5,6 @@ import { redirect } from "next/navigation";
 import { MasterLoadError } from "@/components/master/master-states";
 import { StatePanel } from "@/components/master/state-panel";
 import { isOwnScope } from "@/features/auth/session";
-import { getCashierLookup } from "@/features/cashiers/api";
-import { getLocations } from "@/features/locations/api";
-import { getLocationPaths } from "@/features/locations/paths";
 import {
   canViewSalesmanCollections,
   getSalesmanCollections,
@@ -22,6 +19,7 @@ import {
   toReportSearch,
 } from "@/features/reports/salesman-collections/filters";
 import { SalesmanCollectionsPage } from "@/features/reports/salesman-collections/report-page";
+import { getUsers } from "@/features/users/api";
 import type { ApiResult } from "@/lib/api";
 
 export const metadata: Metadata = {
@@ -64,11 +62,10 @@ export default async function Page({
   }
 
   const scoped = await isOwnScope();
-  const [report, cashiers, locations] = await Promise.all([
+  const [report, users] = await Promise.all([
     getSalesmanCollections(filters),
     // A scoped user sees only their own row: no filters to fill.
-    scoped ? null : getCashierLookup(false),
-    scoped ? null : getLocations(),
+    scoped ? null : getUsers(),
   ]);
 
   if (!report.ok) {
@@ -93,23 +90,13 @@ export default async function Page({
     if (result.reason === "unauthorized") toLogin();
     return null;
   }
-  const locationList = optional(locations);
-  const paths = getLocationPaths(locationList ?? []);
 
   return (
     <SalesmanCollectionsPage
       report={report.data}
       filters={filters}
       scoped={scoped}
-      cashiers={optional(cashiers)}
-      locations={
-        locationList
-          ? locationList.map((location) => ({
-              id: location.id,
-              label: paths.get(location.id) ?? location.name,
-            }))
-          : null
-      }
+      users={optional(users)}
     />
   );
 }

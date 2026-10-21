@@ -1,25 +1,47 @@
 import type { VoucherConfig } from "@/features/vouchers/config";
-import { MONEY_ACCOUNT_TYPES } from "@/features/vouchers/constants";
+
+import type { HandoverStatus } from "./types";
 
 export const CASH_HANDOVERS_PATH =
   "/accounting-inventory/transactions/cash-handovers";
 export const CASH_HANDOVERS_TITLE = "Cash Handovers";
 export const CASH_HANDOVERS_DESCRIPTION =
-  "Staff hand the cash they collected over to the office, which approves it.";
+  "Salesmen hand the cash and cheques they hold to the office, which approves them.";
 
 /** Entity type under which handovers appear in audit logs and comments. */
 export const CASH_HANDOVER_ENTITY_TYPE = "cash-handover";
 
 /** Backend limits (cash-handovers/dto/cash-handover.dto.ts). */
 export const HANDOVER_NOTES_MAX_LENGTH = 1000;
-/** Accounts the van's cash can come from (HANDOVER_SOURCE_ACCOUNT_TYPES). */
-export const HANDOVER_SOURCE_ACCOUNT_TYPES = ["cash", "wallet"];
+export const HANDOVER_REASON_MAX_LENGTH = 500;
+export const HANDOVERS_PAGE_SIZE = 20;
+
+/** Status tabs; "all" sends no status. */
+export const HANDOVER_STATUS_TABS = [
+  "submitted",
+  "approved",
+  "rejected",
+  "cancelled",
+  "all",
+] as const satisfies readonly (HandoverStatus | "all")[];
+
+export const HANDOVER_STATUS_LABELS: Record<
+  (typeof HANDOVER_STATUS_TABS)[number],
+  string
+> = {
+  submitted: "Submitted",
+  approved: "Approved",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
+  all: "All",
+};
 
 export function cashHandoverPath(id: string): string {
   return `${CASH_HANDOVERS_PATH}/${encodeURIComponent(id)}`;
 }
 
-/** What makes the shared voucher list and view screens a Cash Handover. */
+/** What makes the shared voucher view (meta strip, PDF, activity, cancel) a
+ * Cash Handover. The list and forms are the handover's own. */
 export const CASH_HANDOVER_CONFIG: VoucherConfig = {
   basePath: CASH_HANDOVERS_PATH,
   pdfApiBase: "/api/cash-handovers",
@@ -33,44 +55,38 @@ export const CASH_HANDOVER_CONFIG: VoucherConfig = {
   nounPlural: "handovers",
   NounPlural: "Handovers",
   permissionPrefix: "cash-handovers",
-  // The receiving side is one of the company's money accounts.
-  lineAccountTypes: MONEY_ACCOUNT_TYPES,
+  // Whoever may collect receipts may hand the money over.
+  collectorFor: "receipt",
+  lineAccountTypes: [],
   showPaymentDetails: false,
   addPartyKind: "customer",
-  simpleLines: true,
-  statusFilters: ["all", "submitted", "approved", "rejected", "cancelled"],
   copy: {
-    headerLabel: "Source Account",
-    headerFilterAny: "Source account: any",
+    headerLabel: "Submitted",
+    headerFilterAny: "",
     counterpartyLabel: "Received Into",
-    cashierLabel: "Handed By",
-    totalLabel: "Total expected cash",
-    createButton: "Submit Handover",
-    firstCreateButton: "Submit your first handover",
-    firstRunText:
-      "Staff who settle with the office hand over the receipts they collected. The office checks the cash and approves it.",
-    emptyMonthText:
-      "Nothing has been handed over since the 1st. Earlier handovers are still there.",
-    newDescription:
-      "Pick the receipts you're settling and count the cash you're handing over.",
+    collectorLabel: "Handed By",
+    totalLabel: "Total received",
+    createButton: "Hand over",
+    firstCreateButton: "Hand over",
+    firstRunText: "",
+    emptyMonthText: "",
+    newDescription: "",
     editDescription: "",
-    // Line picker copy: unused, handovers have their own form.
     addLinePlaceholder: "",
     addLineSearchPlaceholder: "",
     addLineEmpty: "",
     addLineEmptyNoAdd: "",
     linesEmpty: "",
-    accountFilterPlaceholder: "Received into: any",
-    accountFilterSearchPlaceholder: "Search accounts...",
-    accountFilterEmpty: "No matching accounts",
-    searchPlaceholder: "Search voucher no or notes...",
-    commentsPlaceholder: "Optional notes about this handover",
-    headerRequired: "Select the account the cash was received into.",
-    cashierRequired: "Select who is handing over.",
-    linesRequired: "Select at least one receipt.",
+    accountFilterPlaceholder: "",
+    accountFilterSearchPlaceholder: "",
+    accountFilterEmpty: "",
+    searchPlaceholder: "",
+    commentsPlaceholder: "",
+    headerRequired: "",
+    collectorRequired: "",
+    linesRequired: "",
     inactivePartyHint: "",
-    cancelledNotEditableHint:
-      "Submit a new handover if the cash still needs settling.",
-    cancelReasonPlaceholder: "e.g. Submitted twice, see CH-0012",
+    cancelledNotEditableHint: "",
+    cancelReasonPlaceholder: "e.g. Submitted twice, see HO-0012",
   },
 };

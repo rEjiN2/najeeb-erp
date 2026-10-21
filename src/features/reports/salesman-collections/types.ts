@@ -1,5 +1,4 @@
 import type { VoucherFilters } from "@/features/vouchers/filters";
-import type { StaffType } from "@/features/cashiers/types";
 import type { PaymentMethod, VoucherStatus } from "@/features/vouchers/types";
 
 // Mirrors the backend's reports module (salesman-collections.service.ts).
@@ -8,35 +7,27 @@ import type { PaymentMethod, VoucherStatus } from "@/features/vouchers/types";
 type Ref = { id: string; name: string | null };
 
 export interface SalesmanCollectionFigures {
-  /** Cash receipts dated before the range and not settled by then. */
-  unsettledOpening: number;
-  /** Receipts into cash or wallet accounts in the range. */
+  /** Receipts in the range (cancelled excluded). */
+  receipts: number;
+  /** Into cash or wallet accounts. */
   collectedCash: number;
-  /** Receipts into bank accounts in the range: verified on handover, never unsettled. */
+  /** Into cheque accounts. */
+  collectedCheque: number;
+  /** Into bank accounts. */
   collectedBank: number;
-  /** Expected cash on submitted handovers awaiting approval. */
+  /** Cash + cheque + bank: matches the receipts list total for the same dates and collector. */
+  total: number;
+  /** Received on handovers approved in the range. */
+  handedOver: number;
+  /** Submitted on handovers awaiting approval now. */
   pendingApproval: number;
-  /** Cash received on handovers approved in the range. */
-  settled: number;
-  /** Expected minus received on approved handovers: still in the van account. */
-  openShortage: number;
-  /** Cash receipts not settled by the end of the range (pending approval included). */
-  unsettledClosing: number;
-  /** Receipts in the range, cash and bank. */
-  receiptCount: number;
-  /** Submitted or approved handovers in the range. */
-  handoverCount: number;
+  /** Current balance of the user's own cash, wallet and cheque accounts. */
+  withSalesman: number;
 }
 
 export interface SalesmanCollectionRow extends SalesmanCollectionFigures {
-  cashier: {
-    id: string;
-    code: string;
-    name: string;
-    status: string;
-    staffType: StaffType;
-    location: Ref | null;
-  };
+  /** The Collected By user. */
+  staff: { id: string; name: string; status: string; location: Ref | null };
 }
 
 /** GET /reports/salesman-collections. */
@@ -47,7 +38,7 @@ export interface SalesmanCollectionsReport {
   totals: SalesmanCollectionFigures;
 }
 
-/** GET /reports/salesman-collections/:cashierId. */
+/** GET /reports/salesman-collections/:userId. */
 export interface SalesmanCollectionDetails {
   row: SalesmanCollectionRow;
   receipts: {
@@ -56,22 +47,16 @@ export interface SalesmanCollectionDetails {
     date: string;
     account: Ref;
     paymentMethod: PaymentMethod;
+    paymentReference: string | null;
     amount: number;
-    /** null on receipts of staff who don't settle with the office. */
-    settlementStatus: "unsettled" | "submitted" | "settled" | null;
-    handover: { id: string; voucherNo: string | null } | null;
   }[];
   handovers: {
     id: string;
     voucherNo: string;
     date: string;
     status: VoucherStatus;
-    sourceAccount: Ref;
-    receivedInto: Ref | null;
-    expectedCash: number;
-    bankTotal: number;
-    receivedCash: number | null;
-    shortage: number;
+    submittedTotal: number;
+    receivedTotal: number | null;
     approvedAt: string | null;
   }[];
 }
@@ -80,6 +65,5 @@ export interface SalesmanCollectionsFilters extends Pick<
   VoucherFilters,
   "range" | "from" | "to"
 > {
-  cashierId: string;
-  locationId: string;
+  userId: string;
 }

@@ -4,7 +4,6 @@ import { apiGet, type ApiResult } from "@/lib/api";
 import { uaeToday } from "@/lib/datetime";
 
 import { getAccount } from "@/features/accounts/api";
-import type { StaffType } from "@/features/cashiers/types";
 
 import { MONEY_ACCOUNT_TYPES } from "./constants";
 import {
@@ -38,8 +37,8 @@ export interface VoucherEndpoint {
   methodFilter: boolean;
   /** Whether the account lookup is narrowed with scope=company. */
   scopedLookup: boolean;
-  /** List rows not shaped like the shared VoucherListRow (handovers). */
-  mapListRow?: (raw: Record<string, unknown>) => VoucherListRow;
+  /** Header account types; default cash, wallet, bank. */
+  headerAccountTypes?: readonly string[];
   /** Fields only this voucher type has, for the view page. */
   detailExtras?: (raw: Record<string, unknown>) => VoucherExtraField[];
   /** How a status filter goes on the query; default `status=<filter>`. */
@@ -75,12 +74,12 @@ type RawVoucher = Record<string, unknown> & {
   _id: string;
   voucherNo: string;
   voucherDate: string;
-  cashierId?: string | null;
-  cashierName?: string | null;
-  cashierStaffType?: StaffType | null;
+  collectedById?: string | null;
+  collectedByName?: string | null;
   /** Absent on vouchers from before bank support: they're cash. */
   paymentMethod?: PaymentMethod;
   paymentReference?: string | null;
+  chequeDate?: string | null;
   comments?: string | null;
   lines: RawLine[];
   grossTotal: number;
@@ -120,7 +119,7 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
       query.set("paymentMethod", filters.method);
     if (filters.accountId) query.set("accountId", filters.accountId);
     if (filters.createdBy) query.set("createdBy", filters.createdBy);
-    if (filters.cashierId) query.set("cashierId", filters.cashierId);
+    if (filters.collectedBy) query.set("collectedBy", filters.collectedBy);
     if (filters.q) query.set("q", filters.q);
     if (filters.amountMin !== null)
       query.set("amountMin", String(filters.amountMin));
@@ -140,9 +139,6 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
       data: {
         ...result.data,
         items: result.data.items.map((item): VoucherListRow => {
-          if (endpoint.mapListRow) {
-            return endpoint.mapListRow(item as Record<string, unknown>);
-          }
           const {
             [endpoint.listHeaderKey]: header,
             paymentMethod,
@@ -187,11 +183,11 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
       : result;
   }
 
-  /** Active cash, wallet and bank accounts for the header picker and filter. */
+  /** Active header accounts (cash, wallet, bank; cheque on receipts). */
   function getHeaderAccounts(): Promise<ApiResult<AccountLookupItem[]>> {
     const query = new URLSearchParams({
       ...(endpoint.scopedLookup ? { scope: "company" } : {}),
-      types: MONEY_ACCOUNT_TYPES.join(","),
+      types: (endpoint.headerAccountTypes ?? MONEY_ACCOUNT_TYPES).join(","),
       limit: "100",
     });
     // Commas stay literal, as the backend's examples spell them.
@@ -235,13 +231,13 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
         voucherNo: raw.voucherNo,
         voucherDate: raw.voucherDate,
         headerAccount: { id: headerId, name: names.get(headerId) ?? null },
-        cashier: {
-          id: raw.cashierId ?? null,
-          name: raw.cashierName ?? null,
-          staffType: raw.cashierStaffType ?? null,
+        collectedBy: {
+          id: raw.collectedById ?? null,
+          name: raw.collectedByName ?? null,
         },
         paymentMethod: raw.paymentMethod ?? "cash",
         paymentReference: raw.paymentReference ?? null,
+        chequeDate: raw.chequeDate ?? null,
         comments: raw.comments ?? "",
         lines: raw.lines.map((line) => ({
           accountId: line.accountId,

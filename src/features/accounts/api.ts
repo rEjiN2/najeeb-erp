@@ -58,6 +58,16 @@ export function getExpenseAccounts(): Promise<ApiResult<AccountLookupItem[]>> {
   );
 }
 
+/** Active company cash, wallet and cheque accounts: where handed-over money
+ * is received (Company defaults, handover approval). */
+export function getCashInHandAccounts(): Promise<
+  ApiResult<AccountLookupItem[]>
+> {
+  return apiGet<AccountLookupItem[]>(
+    "/accounts/lookup?scope=company&types=cash,wallet,cheque&limit=100",
+  );
+}
+
 interface RawLedgerAccount {
   _id: string;
   code: string;

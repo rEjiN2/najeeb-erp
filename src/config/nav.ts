@@ -8,7 +8,6 @@ import {
   Building2,
   Database,
   HandCoins,
-  IdCard,
   LayoutDashboard,
   MapPin,
   Receipt,
@@ -75,12 +74,6 @@ export const NAV_ITEMS: NavEntry[] = [
             href: "/accounting-inventory/masters/suppliers",
             icon: Truck,
             permission: PERMISSIONS.PARTIES_MANAGE,
-          },
-          {
-            title: "Staff",
-            href: "/accounting-inventory/masters/cashiers",
-            icon: IdCard,
-            permission: PERMISSIONS.CASHIERS_MANAGE,
           },
           {
             title: "Locations",

@@ -23,6 +23,6 @@ export const CASH_RECEIPTS_MODULE: VoucherModule &
   createAction: createCashReceipt,
   updateAction: updateCashReceipt,
   cancelAction: cancelCashReceipt,
-  // A salesman's unsettled cash and the way to hand it over.
+  // A salesman's pending cash and cheques, and the way to hand them over.
   listBanner: async () => createElement(UnsettledBanner),
 };

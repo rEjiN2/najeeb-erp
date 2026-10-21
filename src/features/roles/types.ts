@@ -12,7 +12,7 @@ export const DATA_SCOPE_LABELS: Record<DataScope, string> = {
 
 export const DATA_SCOPE_HINTS: Record<DataScope, string> = {
   all: "Sees every voucher, whoever entered it.",
-  own: "Sees only vouchers they entered or that are on their cashier, and posts only for their cashier into their allowed cash accounts.",
+  own: "Sees only vouchers they entered or collected, and posts only as themselves into their allowed cash accounts.",
 };
 
 /** GET /roles item and GET /roles/:id. */

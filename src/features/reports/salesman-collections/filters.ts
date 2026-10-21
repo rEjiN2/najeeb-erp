@@ -18,8 +18,7 @@ export function parseReportFilters(
 ): SalesmanCollectionsFilters {
   return {
     ...parseDateRange(params, DEFAULT_RANGE),
-    cashierId: idParam(first(params.cashier)),
-    locationId: idParam(first(params.location)),
+    userId: idParam(first(params.user)),
   };
 }
 
@@ -31,8 +30,7 @@ export function toReportSearch(filters: SalesmanCollectionsFilters): string {
     if (filters.from) params.set("from", filters.from);
     if (filters.to) params.set("to", filters.to);
   }
-  if (filters.cashierId) params.set("cashier", filters.cashierId);
-  if (filters.locationId) params.set("location", filters.locationId);
+  if (filters.userId) params.set("user", filters.userId);
   const search = params.toString();
   return search ? `?${search}` : "";
 }

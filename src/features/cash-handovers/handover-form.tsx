@@ -1,408 +1,290 @@
 "use client";
 
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send, Wallet } from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import {
-  FieldError,
-  FormErrorSummary,
-} from "@/components/master/form-error-summary";
+import { FormErrorSummary } from "@/components/master/form-error-summary";
+import { StatePanel } from "@/components/master/state-panel";
 import { SearchableSelect } from "@/components/shared/searchable-select";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
-import {
-  STAFF_TYPE_LABELS,
-  type CashierLookupItem,
-} from "@/features/cashiers/types";
 import { ACCOUNT_TYPE_BADGES } from "@/features/vouchers/constants";
-import { PaymentMethodBadge } from "@/features/vouchers/payment-method-badge";
-import type { AccountLookupItem } from "@/features/vouchers/types";
-import { formatCalendarDate } from "@/lib/datetime";
-import { formatCurrency } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import type { UserRef } from "@/features/vouchers/types";
+import { formatAmount } from "@/lib/format";
 
 import { submitCashHandover } from "./actions";
 import {
-  CASH_HANDOVER_CONFIG as config,
+  CASH_HANDOVERS_PATH,
+  CASH_HANDOVERS_TITLE,
   HANDOVER_NOTES_MAX_LENGTH,
   cashHandoverPath,
 } from "./constants";
-import type { UnsettledReceipt, UnsettledReceipts } from "./types";
+import type { PendingAccount, PendingCash } from "./types";
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
-const sum = (rows: UnsettledReceipt[]) =>
-  round2(rows.reduce((total, row) => total + row.amount, 0));
-const isBank = (row: UnsettledReceipt) => row.paymentMethod === "bank";
 
-/** The account most of the cash receipts sit in: the likely source. */
-function likelySource(
-  receipts: UnsettledReceipt[],
-  accounts: AccountLookupItem[],
-): string {
-  const counts = new Map<string, number>();
-  for (const row of receipts) {
-    if (!isBank(row)) {
-      counts.set(row.account.id, (counts.get(row.account.id) ?? 0) + 1);
-    }
-  }
-  const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-  return best ?? accounts[0]?.id ?? "";
-}
+const GROUPS = [
+  {
+    key: "cash",
+    title: "Cash",
+    match: (a: PendingAccount) => a.type !== "cheque",
+  },
+  {
+    key: "cheque",
+    title: "Cheques",
+    match: (a: PendingAccount) => a.type === "cheque",
+  },
+] as const;
 
 interface HandoverFormProps {
-  /** Staff who settle with the office; null when locked to the user's own. */
-  staff: CashierLookupItem[] | null;
-  staffId: string | null;
-  /** Shown read-only for an "own"-scoped user. */
-  lockedStaffLabel: string | null;
-  /** Active cash and wallet accounts. */
-  sourceAccounts: AccountLookupItem[];
-  /** null until a staff member is picked. */
-  unsettled: UnsettledReceipts | null;
+  /** null when no user is picked yet. */
+  pending: PendingCash | null;
+  /** Users who can hand over; null: only yourself (no vouchers:select-collector). */
+  users: UserRef[] | null;
+  userId: string | null;
   today: string;
 }
 
+/** Pick amounts from the user's cash, wallet and cheque accounts and submit
+ * them for approval. Nothing moves until the office approves. */
 export function HandoverForm({
-  staff,
-  staffId,
-  lockedStaffLabel,
-  sourceAccounts,
-  unsettled,
+  pending,
+  users,
+  userId,
   today,
 }: HandoverFormProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [isNavigating, startNavigation] = useTransition();
-  const [pending, startTransition] = useTransition();
-  const receipts = unsettled?.receipts ?? [];
-
+  const accounts = (pending?.accounts ?? []).filter((a) => a.available > 0);
+  const [amounts, setAmounts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      accounts.map((a) => [a.accountId, a.available.toFixed(2)]),
+    ),
+  );
   const [voucherDate, setVoucherDate] = useState(today);
-  const [sourceAccountId, setSourceAccountId] = useState(() =>
-    likelySource(receipts, sourceAccounts),
-  );
-  const eligible = (row: UnsettledReceipt) =>
-    isBank(row) || row.account.id === sourceAccountId;
-  const [selected, setSelected] = useState<Set<string>>(
-    () =>
-      new Set(
-        receipts
-          .filter((row) => isBank(row) || row.account.id === sourceAccountId)
-          .map((row) => row.id),
-      ),
-  );
-  // Follows the expected cash until the user types their own count.
-  const [countedText, setCountedText] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
+  const [saving, startTransition] = useTransition();
 
-  const picked = receipts.filter(
-    (row) => selected.has(row.id) && eligible(row),
-  );
-  const expectedCash = sum(picked.filter((row) => !isBank(row)));
-  const bankTotal = sum(picked.filter(isBank));
-  const counted = countedText === null ? expectedCash : Number(countedText);
-  const countedValid =
-    countedText === null ||
-    (countedText.trim() !== "" && Number.isFinite(counted) && counted >= 0);
-  const difference = countedValid ? round2(counted - expectedCash) : 0;
+  const rows = accounts.map((account) => {
+    const text = amounts[account.accountId] ?? "";
+    const value = Number(text);
+    const blank = text.trim() === "";
+    const valid =
+      blank ||
+      (Number.isFinite(value) &&
+        value >= 0 &&
+        round2(value) <= account.available);
+    return { account, text, value: valid && !blank ? round2(value) : 0, valid };
+  });
+  const total = round2(rows.reduce((sum, row) => sum + row.value, 0));
+  const canSubmit = rows.every((row) => row.valid) && total > 0;
 
-  function pickStaff(id: string | null) {
-    const query = id ? `?${new URLSearchParams({ staff: id })}` : "";
-    startNavigation(() => router.replace(`${pathname}${query}`));
-  }
-
-  function pickSource(id: string) {
-    setSourceAccountId(id);
-    // Cash receipts in another account can't go on this handover.
-    setSelected(
-      new Set(
-        receipts
-          .filter((row) => isBank(row) || row.account.id === id)
-          .map((row) => row.id),
-      ),
-    );
-  }
-
-  function toggle(id: string, on: boolean) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (on) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  }
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (pending) return;
-    const problems = [
-      staff && !staffId ? config.copy.cashierRequired : null,
-      !sourceAccountId ? config.copy.headerRequired : null,
-      picked.length === 0 ? config.copy.linesRequired : null,
-      !countedValid ? "Enter the cash you're handing over." : null,
-    ].filter((problem): problem is string => problem !== null);
-    if (problems.length > 0) {
-      setErrors(problems);
-      return;
-    }
+  function submit() {
+    if (!canSubmit) return;
     startTransition(async () => {
-      const result = await submitCashHandover({
-        voucherDate,
-        staffId: staff ? staffId : null,
-        sourceAccountId,
-        receiptIds: picked.map((row) => row.id),
-        countedCash: round2(counted),
-        notes,
-      });
-      if (!result) return; // redirected to /login
-      if (!result.ok) {
-        setErrors(result.messages);
-        return;
+      try {
+        const result = await submitCashHandover({
+          voucherDate,
+          userId: users ? userId : null,
+          lines: rows
+            .filter((row) => row.value > 0)
+            .map((row) => ({
+              sourceAccountId: row.account.accountId,
+              amount: row.value,
+            })),
+          notes,
+        });
+        if (!result) return; // Redirected to sign in.
+        if (!result.ok) {
+          setErrors(result.messages);
+          return;
+        }
+        if (result.message) toast.success(result.message);
+        router.push(
+          result.id ? cashHandoverPath(result.id) : CASH_HANDOVERS_PATH,
+        );
+      } catch {
+        setErrors([
+          "Couldn't reach the app. Check your connection and try again.",
+        ]);
       }
-      if (result.message) toast.success(result.message);
-      router.push(result.id ? cashHandoverPath(result.id) : config.basePath);
     });
   }
-
-  const staffOptions = (staff ?? []).map((member) => ({
-    value: member.id,
-    label: member.name,
-    description: member.code,
-    badge: STAFF_TYPE_LABELS[member.staffType] ?? "",
-  }));
-  const accountOptions = sourceAccounts.map((account) => ({
-    value: account.id,
-    label: account.name,
-    description: account.code,
-    badge: ACCOUNT_TYPE_BADGES[account.type] ?? account.type,
-  }));
-  const accountName = (id: string) =>
-    sourceAccounts.find((account) => account.id === id)?.name ?? null;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+    <div className="space-y-6">
       <VoucherToolbar
-        title={`New ${config.singular}`}
-        description={config.copy.newDescription}
-        back={{ href: config.basePath, label: config.title }}
+        title="Hand Over"
+        description="Hand the cash and cheques you hold to the office. Nothing moves until it is approved."
+        back={{ href: CASH_HANDOVERS_PATH, label: CASH_HANDOVERS_TITLE }}
+        actions={
+          <>
+            <Link
+              href={CASH_HANDOVERS_PATH}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Cancel
+            </Link>
+            <Button onClick={submit} disabled={saving || !canSubmit}>
+              {saving ? <Loader2 className="animate-spin" /> : <Send />}
+              {saving ? "Submitting…" : "Submit"}
+            </Button>
+          </>
+        }
       />
 
       <FormErrorSummary messages={errors} />
 
       <Card className="gap-4">
-        <CardHeader>
-          <CardTitle>Handover Details</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="space-y-2">
-            <Label>
-              {config.copy.cashierLabel}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            {staff ? (
+        <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2">
+          {users ? (
+            <div className="space-y-2">
+              <Label>Handed By</Label>
               <SearchableSelect
-                value={staffId}
-                onChange={pickStaff}
-                options={staffOptions}
-                placeholder="Select staff"
-                emptyText={
-                  staffOptions.length === 0
-                    ? "No active staff settle cash with the office."
-                    : "No matching staff"
+                value={userId}
+                onChange={(value) =>
+                  router.replace(value ? `${pathname}?user=${value}` : pathname)
                 }
+                options={users.map((user) => ({
+                  value: user.id,
+                  label: user.name,
+                }))}
+                placeholder="Select user"
+                emptyText="No matching users"
                 allowClear={false}
-                disabled={pending || isNavigating}
+                disabled={saving}
               />
-            ) : lockedStaffLabel ? (
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="handed-by">Handed By</Label>
               <Input
-                aria-label={config.copy.cashierLabel}
-                value={lockedStaffLabel}
+                id="handed-by"
+                value={pending?.user.name ?? ""}
                 readOnly
                 className="bg-muted/50"
               />
-            ) : (
-              <p className="text-destructive text-sm">
-                Your user isn&apos;t linked to staff who settle cash with the
-                office. Ask an administrator.
-              </p>
-            )}
-          </div>
-
+            </div>
+          )}
           <div className="space-y-2">
-            <Label htmlFor="handover-date">
-              Date <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="handover-date">Date</Label>
             <Input
               id="handover-date"
               type="date"
               value={voucherDate}
               onChange={(event) => setVoucherDate(event.target.value)}
-              disabled={pending}
+              disabled={saving}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              {config.copy.headerLabel}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            <SearchableSelect
-              value={sourceAccountId || null}
-              onChange={(value) => pickSource(value ?? "")}
-              options={accountOptions}
-              placeholder="Select account"
-              emptyText="No active cash or wallet accounts."
-              allowClear={false}
-              disabled={pending}
-            />
-            <p className="text-muted-foreground text-xs">
-              Where the cash receipts were received into
-            </p>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="gap-4">
-        <CardHeader>
-          <CardTitle>Unsettled Receipts</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isNavigating ? (
-            <p className="text-muted-foreground flex items-center gap-2 text-sm">
-              <Loader2 className="size-4 animate-spin" /> Loading receipts...
-            </p>
-          ) : !unsettled ? (
-            <p className="text-muted-foreground text-sm">
-              Pick who is handing over to see their unsettled receipts.
-            </p>
-          ) : receipts.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No unsettled receipts. Everything collected has been handed over.
-            </p>
-          ) : (
-            <ul className="divide-y rounded-lg border">
-              {receipts.map((row) => {
-                const ok = eligible(row);
-                return (
-                  <li key={row.id}>
-                    <label
-                      className={cn(
-                        "flex cursor-pointer items-start gap-3 p-3",
-                        !ok && "cursor-not-allowed opacity-60",
-                      )}
+      {!pending ? null : accounts.length === 0 ? (
+        <StatePanel icon={Wallet} title="Nothing to hand over">
+          {pending.totals.submitted > 0
+            ? `${formatAmount(pending.totals.submitted)} is already on handovers awaiting approval.`
+            : "There is no cash or cheque in these accounts."}
+        </StatePanel>
+      ) : (
+        GROUPS.map((group) => {
+          const groupRows = rows.filter((row) => group.match(row.account));
+          if (groupRows.length === 0) return null;
+          const groupTotal = round2(
+            groupRows.reduce((sum, row) => sum + row.value, 0),
+          );
+          return (
+            <Card key={group.key} className="gap-4">
+              <CardHeader className="flex-row items-center justify-between">
+                <CardTitle>{group.title}</CardTitle>
+                <span className="font-mono text-sm font-semibold tabular-nums">
+                  {formatAmount(groupTotal)}
+                </span>
+              </CardHeader>
+              <CardContent>
+                <ul className="divide-y rounded-lg border">
+                  {groupRows.map(({ account, text, valid }) => (
+                    <li
+                      key={account.accountId}
+                      className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-[minmax(0,1fr)_11rem] sm:items-center"
                     >
-                      <Checkbox
-                        className="mt-0.5"
-                        checked={ok && selected.has(row.id)}
-                        disabled={!ok || pending}
-                        onCheckedChange={(checked) =>
-                          toggle(row.id, checked === true)
-                        }
-                      />
-                      <span className="min-w-0 flex-1 space-y-0.5">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-sm font-medium">
-                            {row.voucherNo}
-                          </span>
-                          <PaymentMethodBadge method={row.paymentMethod} />
+                      <div className="min-w-0 space-y-0.5 text-sm">
+                        <span className="flex flex-wrap items-center gap-2 font-medium">
+                          {account.name}
+                          <Badge variant="secondary" className="font-normal">
+                            {ACCOUNT_TYPE_BADGES[account.type] ?? account.type}
+                          </Badge>
                         </span>
                         <span className="text-muted-foreground block text-xs">
-                          {formatCalendarDate(row.date)} ·{" "}
-                          {row.account.name ?? "Unknown account"}
-                          {ok
-                            ? ""
-                            : ` — not in ${accountName(sourceAccountId) ?? "the source account"}`}
+                          {account.code} · holds {formatAmount(account.balance)}
+                          {account.submitted > 0
+                            ? ` · ${formatAmount(account.submitted)} pending approval`
+                            : ""}
                         </span>
-                      </span>
-                      <span className="font-mono text-sm tabular-nums">
-                        {formatCurrency(row.amount)}
-                      </span>
-                    </label>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                      </div>
+                      <div className="space-y-1">
+                        <Input
+                          aria-label={`Amount from ${account.name}`}
+                          type="number"
+                          inputMode="decimal"
+                          min={0}
+                          max={account.available}
+                          step="0.01"
+                          value={text}
+                          onChange={(event) =>
+                            setAmounts((prev) => ({
+                              ...prev,
+                              [account.accountId]: event.target.value,
+                            }))
+                          }
+                          disabled={saving}
+                          aria-invalid={valid ? undefined : true}
+                          className="text-right font-mono"
+                        />
+                        {!valid ? (
+                          <p className="text-destructive text-xs">
+                            Up to {formatAmount(account.available)}
+                          </p>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          );
+        })
+      )}
 
-          <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-muted-foreground text-xs uppercase">
-                Expected cash
-              </dt>
-              <dd className="font-mono text-lg font-semibold tabular-nums">
-                {formatCurrency(expectedCash)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-xs uppercase">
-                Bank (to verify)
-              </dt>
-              <dd className="font-mono text-lg font-semibold tabular-nums">
-                {formatCurrency(bankTotal)}
-              </dd>
-            </div>
-            <div className="col-span-2 space-y-1 sm:col-span-1">
-              <Label htmlFor="handover-counted">Cash handed over</Label>
-              <Input
-                id="handover-counted"
-                type="number"
-                inputMode="decimal"
-                min={0}
-                step="0.01"
-                value={countedText ?? expectedCash.toFixed(2)}
-                onChange={(event) => setCountedText(event.target.value)}
-                disabled={pending}
-                className="font-mono"
-              />
-              {countedValid && difference !== 0 ? (
-                <p
-                  className={cn(
-                    "text-xs",
-                    difference < 0 ? "text-destructive" : "text-primary",
-                  )}
-                >
-                  {formatCurrency(Math.abs(difference))}{" "}
-                  {difference < 0 ? "short" : "over"} of the expected cash
-                </p>
-              ) : null}
-              <FieldError
-                id="handover-counted-error"
-                message={countedValid ? undefined : "Enter a valid amount."}
-              />
-            </div>
-          </dl>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-2">
-        <Label htmlFor="handover-notes">Notes</Label>
-        <Textarea
-          id="handover-notes"
-          value={notes}
-          onChange={(event) => setNotes(event.target.value)}
-          placeholder={config.copy.commentsPlaceholder}
-          maxLength={HANDOVER_NOTES_MAX_LENGTH}
-          disabled={pending}
-        />
-      </div>
-
-      <div className="flex justify-end">
-        <Button
-          type="submit"
-          className="w-full sm:w-auto"
-          disabled={pending || picked.length === 0}
-        >
-          {pending ? <Loader2 className="animate-spin" /> : <Send />}
-          Submit handover
-        </Button>
-      </div>
-    </form>
+      {pending && accounts.length > 0 ? (
+        <Card className="gap-4">
+          <CardContent className="space-y-2 pt-6">
+            <Label htmlFor="handover-notes">Notes</Label>
+            <Textarea
+              id="handover-notes"
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              maxLength={HANDOVER_NOTES_MAX_LENGTH}
+              placeholder="Optional notes for the office"
+              disabled={saving}
+            />
+            <p className="text-right text-sm">
+              Handing over{" "}
+              <span className="font-mono font-semibold tabular-nums">
+                {formatAmount(total)}
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
   );
 }

@@ -1,161 +1,181 @@
 import "server-only";
 
 import { apiGet, type ApiResult } from "@/lib/api";
+import { formatExactUae } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
-import { createVoucherApi } from "@/features/vouchers/api";
 import type {
-  CashierRef,
-  NamedRef,
   UserRef,
-  VoucherListRow,
+  VoucherDetail,
   VoucherStatus,
 } from "@/features/vouchers/types";
 
+import { HANDOVERS_PAGE_SIZE } from "./constants";
 import type {
-  HandoverDetail,
-  HandoverReceipt,
-  UnsettledReceipts,
+  HandoverFilters,
+  HandoverItem,
+  HandoverPage,
+  HandoverWorkflow,
+  PendingCash,
 } from "./types";
 
-/** One GET /cash-handovers item (cash-handover.service.ts CashHandoverListRow). */
-interface RawHandoverRow {
-  id: string;
-  voucherNo: string;
-  date: string;
-  staff: CashierRef;
-  sourceAccount: NamedRef;
-  receivedInto: NamedRef | null;
-  receiptCount: number;
-  expectedCash: number;
-  bankTotal: number;
-  countedCash: number | null;
-  receivedCash: number | null;
-  status: VoucherStatus;
-  createdBy: UserRef | null;
-  createdAt: string | null;
-  commentCount: number;
-}
-
-/** Into the shared list shape: source → header, received into → counterparty,
- * expected cash → amount. */
-function toListRow(raw: Record<string, unknown>): VoucherListRow {
-  const row = raw as unknown as RawHandoverRow;
-  const notes = [
-    `${row.receiptCount} receipt${row.receiptCount === 1 ? "" : "s"}`,
-    row.bankTotal > 0 ? `+ ${formatAmount(row.bankTotal)} bank` : null,
-    row.receivedCash !== null && row.receivedCash !== row.expectedCash
-      ? `received ${formatAmount(row.receivedCash)}`
-      : null,
-  ];
+/** GET /cash-handovers — only the query keys its DTO declares. */
+export async function getHandovers(
+  filters: HandoverFilters,
+): Promise<ApiResult<HandoverPage>> {
+  const query = new URLSearchParams({
+    page: String(filters.page),
+    pageSize: String(HANDOVERS_PAGE_SIZE),
+  });
+  if (filters.status !== "all") query.set("status", filters.status);
+  if (filters.userId) query.set("userId", filters.userId);
+  if (filters.dateFrom) query.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) query.set("dateTo", filters.dateTo);
+  const result = await apiGet<HandoverPage>(`/cash-handovers?${query}`);
+  if (!result.ok) return result;
   return {
-    id: row.id,
-    voucherNo: row.voucherNo,
-    date: row.date,
-    headerAccount: row.sourceAccount,
-    cashier: row.staff,
-    cashierNote: notes.filter(Boolean).join(" · "),
-    paymentMethod: "cash",
-    partiesSummary: { firstAccount: row.receivedInto, othersCount: 0 },
-    grandTotal: row.expectedCash,
-    status: row.status,
-    createdBy: row.createdBy,
-    createdAt: row.createdAt,
-    updatedBy: null,
-    updatedAt: null,
-    commentCount: row.commentCount,
+    ok: true,
+    data: { ...result.data, items: result.data.items ?? [] },
   };
 }
 
-const money = (value: unknown) =>
-  typeof value === "number" ? formatAmount(value) : null;
+const num = (value: unknown) =>
+  typeof value === "number" && Number.isFinite(value) ? value : null;
 const text = (value: unknown) => (typeof value === "string" ? value : null);
+const user = (value: unknown) =>
+  value && typeof value === "object" ? (value as UserRef) : null;
 
-/** GET /cash-handovers, /cash-handovers/:id and the source accounts. */
-export const cashHandoversApi = createVoucherApi({
-  path: "/cash-handovers",
-  listHeaderKey: "sourceAccount",
-  detailHeaderKey: "fromAccountId",
-  queryHeaderKey: "sourceAccountId",
-  methodFilter: false,
-  scopedLookup: true,
-  mapListRow: toListRow,
-  // posted/cancelled/all go in `status`; the workflow ones in handoverStatus.
-  statusQuery: (status): Record<string, string> =>
-    status === "submitted" || status === "approved" || status === "rejected"
-      ? { status: "all", handoverStatus: status }
-      : { status },
-  detailExtras: (raw) => [
-    { key: "expected", label: "Expected Cash", value: money(raw.expectedCash) },
-    { key: "bank", label: "Bank Receipts", value: money(raw.bankTotal) },
-    { key: "counted", label: "Counted Cash", value: money(raw.countedCash) },
-    { key: "received", label: "Received Cash", value: money(raw.receivedCash) },
-    {
-      key: "receivedInto",
-      label: "Received Into",
-      value: text(raw.receivedIntoAccountName),
-    },
-    ...(raw.varianceReason
-      ? [
-          {
-            key: "variance",
-            label: "Shortage Reason",
-            value: text(raw.varianceReason),
-          },
-        ]
-      : []),
-    ...(raw.rejectReason
-      ? [
-          {
-            key: "rejected",
-            label: "Reject Reason",
-            value: text(raw.rejectReason),
-          },
-        ]
-      : []),
-  ],
-});
-
-/** GET /cash-handovers/:id, the workflow part. */
-export async function getHandoverDetail(
+/**
+ * GET /cash-handovers/:id: the serialized document, as the shared voucher
+ * view's shape (submitted total in the header slot) plus its own fields.
+ */
+export async function getHandover(
   id: string,
-): Promise<ApiResult<HandoverDetail>> {
+): Promise<ApiResult<{ voucher: VoucherDetail; workflow: HandoverWorkflow }>> {
   const result = await apiGet<Record<string, unknown>>(
     `/cash-handovers/${encodeURIComponent(id)}`,
   );
   if (!result.ok) return result;
   const raw = result.data;
-  const num = (value: unknown) => (typeof value === "number" ? value : null);
+  const items = ((raw.items as HandoverItem[] | undefined) ?? []).map(
+    (item) => ({
+      ...item,
+      sourceAccountId: String(item.sourceAccountId),
+      submittedAmount: num(item.submittedAmount) ?? 0,
+      receivedAmount: num(item.receivedAmount),
+      receivedIntoAccountId: item.receivedIntoAccountId
+        ? String(item.receivedIntoAccountId)
+        : null,
+    }),
+  );
+  const submittedTotal = num(raw.submittedTotal) ?? 0;
+  const receivedTotal = num(raw.receivedTotal);
+  const workflow: HandoverWorkflow = {
+    userId:
+      text(raw.userId) ??
+      (raw.collectedById ? String(raw.collectedById) : null),
+    items,
+    submittedTotal,
+    receivedTotal,
+    reason: text(raw.reason),
+    approvedBy: user(raw.approvedBy),
+    approvedAt: text(raw.approvedAt),
+    rejectedBy: user(raw.rejectedBy),
+    rejectedAt: text(raw.rejectedAt),
+  };
+  const status = (raw.status as VoucherStatus | undefined) ?? "submitted";
+  const stamp = (by: UserRef | null, at: string | null) =>
+    by ? `${by.name}${at ? ` · ${formatExactUae(at)}` : ""}` : null;
+
   return {
     ok: true,
     data: {
-      id: String(raw._id),
-      status: (raw.status as VoucherStatus | undefined) ?? "approved",
-      sourceAccountId: String(raw.fromAccountId),
-      receipts: ((raw.receipts as HandoverReceipt[] | undefined) ?? []).map(
-        (receipt) => ({ ...receipt, receiptId: String(receipt.receiptId) }),
-      ),
-      expectedCash: num(raw.expectedCash) ?? 0,
-      bankTotal: num(raw.bankTotal) ?? 0,
-      countedCash: num(raw.countedCash),
-      receivedCash: num(raw.receivedCash),
-      varianceReason: text(raw.varianceReason),
+      workflow,
+      voucher: {
+        id: String(raw._id),
+        voucherNo: String(raw.voucherNo),
+        voucherDate: String(raw.voucherDate),
+        headerAccount: { id: "", name: formatAmount(submittedTotal) },
+        collectedBy: {
+          id: workflow.userId,
+          name: text(raw.userName) ?? text(raw.collectedByName),
+        },
+        paymentMethod: "cash",
+        paymentReference: null,
+        chequeDate: null,
+        comments: text(raw.comments) ?? "",
+        lines: [],
+        grossTotal: submittedTotal,
+        totalTax: 0,
+        grandTotal: receivedTotal ?? submittedTotal,
+        status,
+        createdBy: user(raw.createdBy),
+        createdAt: text(raw.createdAt),
+        updatedBy: user(raw.updatedBy),
+        updatedAt: text(raw.updatedAt),
+        cancelledBy: user(raw.cancelledBy),
+        cancelledAt: text(raw.cancelledAt),
+        cancelReason: text(raw.cancelReason),
+        extraFields: [
+          {
+            key: "received",
+            label: "Received",
+            value: receivedTotal === null ? null : formatAmount(receivedTotal),
+          },
+          ...(workflow.reason
+            ? [
+                {
+                  key: "reason",
+                  label:
+                    status === "rejected" ? "Reject Reason" : "Short Reason",
+                  value: workflow.reason,
+                },
+              ]
+            : []),
+          ...(workflow.approvedBy
+            ? [
+                {
+                  key: "approvedBy",
+                  label: "Approved By",
+                  value: stamp(workflow.approvedBy, workflow.approvedAt),
+                },
+              ]
+            : []),
+          ...(workflow.rejectedBy
+            ? [
+                {
+                  key: "rejectedBy",
+                  label: "Rejected By",
+                  value: stamp(workflow.rejectedBy, workflow.rejectedAt),
+                },
+              ]
+            : []),
+        ],
+      },
     },
   };
 }
 
-/** A staff member's receipts not yet on a handover. Without staffId the
- * backend uses the signed-in "own"-scoped user's linked staff. */
-export function getUnsettledReceipts(
-  staffId: string | null,
-): Promise<ApiResult<UnsettledReceipts>> {
-  const query = staffId ? `?${new URLSearchParams({ staffId })}` : "";
-  return apiGet<UnsettledReceipts>(`/cash-handovers/unsettled${query}`);
+/** A user's cash, wallet and cheque holdings; without userId, the caller's. */
+export async function getPendingCash(
+  userId: string | null,
+): Promise<ApiResult<PendingCash>> {
+  const query = userId ? `?${new URLSearchParams({ userId })}` : "";
+  const result = await apiGet<PendingCash>(`/cash-handovers/pending${query}`);
+  if (!result.ok) return result;
+  return {
+    ok: true,
+    data: {
+      ...result.data,
+      accounts: result.data.accounts ?? [],
+      totals: result.data.totals ?? { balance: 0, submitted: 0, available: 0 },
+    },
+  };
 }
 
 /** Handovers waiting for approval, for the sidebar badge. */
 export async function countPendingApprovals(): Promise<number | null> {
   const result = await apiGet<{ summary: { count: number } }>(
-    "/cash-handovers?status=all&handoverStatus=submitted&page=1&pageSize=1",
+    "/cash-handovers?status=submitted&page=1&pageSize=1",
   );
-  return result.ok ? result.data.summary.count : null;
+  return result.ok ? (result.data.summary?.count ?? null) : null;
 }

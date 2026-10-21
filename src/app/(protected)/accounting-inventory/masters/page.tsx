@@ -1,4 +1,4 @@
-import { Building, IdCard, MapPin, Tags, Truck, Wallet } from "lucide-react";
+import { Building, MapPin, Tags, Truck, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -36,14 +36,6 @@ const MASTER_LINKS = [
     description: "Who you buy from, with credit terms and documents.",
     icon: Truck,
     permission: PERMISSIONS.PARTIES_MANAGE,
-  },
-  {
-    href: "/accounting-inventory/masters/cashiers",
-    title: "Staff",
-    description:
-      "People who collect or pay out money, linked to logins and locations.",
-    icon: IdCard,
-    permission: PERMISSIONS.CASHIERS_MANAGE,
   },
   {
     href: "/accounting-inventory/masters/locations",

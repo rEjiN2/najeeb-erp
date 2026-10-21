@@ -1,5 +1,4 @@
 import type { VoucherStatus } from "@/components/voucher/voucher-status-badge";
-import type { StaffType } from "@/features/cashiers/types";
 import type { MutationResult } from "@/lib/mutation";
 
 // Shapes every cash/bank voucher shares — the backend's vouchers module
@@ -10,21 +9,20 @@ import type { MutationResult } from "@/lib/mutation";
 
 export type { VoucherStatus };
 
-/** Derived by the backend from the header account: bank → "bank", else "cash". */
-export type PaymentMethod = "cash" | "bank";
+/** Derived by the backend from the header account: bank → "bank",
+ * cheque → "cheque", else "cash". */
+export type PaymentMethod = "cash" | "cheque" | "bank";
 
 export interface UserRef {
   id: string;
   name: string;
 }
 
-/** id is null on vouchers entered before the cashier master existed; their
- * free-text cashier survives as the name. */
-export interface CashierRef {
+/** Collected By / Paid By user. id is null on legacy vouchers whose old
+ * cashier had no login; their name survives as collectedByName. */
+export interface CollectorRef {
   id: string | null;
   name: string | null;
-  /** Type snapshot at posting; null/absent on older vouchers. */
-  staffType?: StaffType | null;
 }
 
 export interface NamedRef {
@@ -40,10 +38,7 @@ export interface VoucherListRow {
   date: string;
   /** The cash, wallet or bank account ("Received Into" / "Paid From"). */
   headerAccount: NamedRef;
-  /** id null on vouchers from before the cashier master; name is their old text. */
-  cashier: CashierRef;
-  /** A second line under the cashier, e.g. "to Ali" on a handover. */
-  cashierNote?: string | null;
+  collectedBy: CollectorRef;
   paymentMethod: PaymentMethod;
   /** First line's account, plus how many other distinct accounts it touches. */
   partiesSummary: { firstAccount: NamedRef | null; othersCount: number };
@@ -86,10 +81,12 @@ export interface VoucherDetail {
   voucherNo: string;
   voucherDate: string;
   headerAccount: NamedRef;
-  cashier: CashierRef;
+  collectedBy: CollectorRef;
   paymentMethod: PaymentMethod;
   /** Cheque number, transfer reference, etc. */
   paymentReference: string | null;
+  /** Cheque vouchers only. */
+  chequeDate: string | null;
   comments: string;
   lines: VoucherLine[];
   grossTotal: number;
@@ -130,8 +127,10 @@ export interface AccountLookupItem {
 export interface VoucherInput {
   voucherDate: string;
   headerAccountId: string;
-  cashierId: string;
+  collectedById: string;
   paymentReference: string;
+  /** Cheque vouchers only; "" for none. */
+  chequeDate: string;
   comments: string;
   lines: {
     accountId: string;

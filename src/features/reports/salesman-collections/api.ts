@@ -15,8 +15,7 @@ export function getSalesmanCollections(
   filters: SalesmanCollectionsFilters,
 ): Promise<ApiResult<SalesmanCollectionsReport>> {
   const query = reportDateQuery(filters, uaeToday());
-  if (filters.cashierId) query.set("cashierId", filters.cashierId);
-  if (filters.locationId) query.set("locationId", filters.locationId);
+  if (filters.userId) query.set("userId", filters.userId);
   return apiGet<SalesmanCollectionsReport>(
     `/reports/salesman-collections?${query}`,
   );

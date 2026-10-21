@@ -28,8 +28,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchableSelect } from "@/components/shared/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { BACKEND_PROXY_PATH } from "@/features/auth/constants";
+import { ACCOUNT_TYPE_BADGES } from "@/features/vouchers/constants";
+import type { AccountLookupItem } from "@/features/vouchers/types";
 import { describeFailure } from "@/lib/api-types";
 import { browserUpload } from "@/lib/browser-api";
 import { groupErrors } from "@/lib/mutation";
@@ -48,12 +51,18 @@ type LogoState =
   | { kind: "new"; file: File; previewUrl: string }
   | { kind: "none" };
 
-type Field = CompanyTextField | "logo";
+type Field =
+  | CompanyTextField
+  | "logo"
+  | "defaultCashInHandAccountId"
+  | "defaultChequesInHandAccountId";
 
 // class-validator text starts with the property name ("trn must be exactly
 // 15 digits"); the logo check reads "The logo must be a PNG or JPEG image".
 const FIELD_MATCHERS: ReadonlyArray<readonly [Field, RegExp]> = [
   ["logo", /logo/i],
+  ["defaultCashInHandAccountId", /defaultCashInHand|cash in hand/i],
+  ["defaultChequesInHandAccountId", /defaultChequesInHand|cheques in hand/i],
   ...COMPANY_TEXT_FIELDS.map(
     (field) => [field, new RegExp(`^${field}\\b`, "i")] as const,
   ),
@@ -71,9 +80,22 @@ function fileUrl(id: string): string {
   return `${BACKEND_PROXY_PATH}/files/${encodeURIComponent(id)}`;
 }
 
-export function CompanyProfileForm({ profile }: { profile: CompanyProfile }) {
+export function CompanyProfileForm({
+  profile,
+  accounts,
+}: {
+  profile: CompanyProfile;
+  /** Active company cash, wallet and cheque accounts; null if unavailable. */
+  accounts: AccountLookupItem[] | null;
+}) {
   const [baseline] = useState(() => initialValues(profile));
   const [values, setValues] = useState(baseline);
+  const [cashInHandId, setCashInHandId] = useState(
+    profile.defaultCashInHandAccountId ?? null,
+  );
+  const [chequesInHandId, setChequesInHandId] = useState(
+    profile.defaultChequesInHandAccountId ?? null,
+  );
   const [logo, setLogo] = useState<LogoState>(
     profile.logo ? { kind: "saved", id: profile.logo.id } : { kind: "none" },
   );
@@ -101,6 +123,8 @@ export function CompanyProfileForm({ profile }: { profile: CompanyProfile }) {
       : logo.id !== profile.logo?.id);
   const isDirty =
     logoChanged ||
+    cashInHandId !== (profile.defaultCashInHandAccountId ?? null) ||
+    chequesInHandId !== (profile.defaultChequesInHandAccountId ?? null) ||
     COMPANY_TEXT_FIELDS.some((field) => values[field] !== baseline[field]);
 
   function set(field: CompanyTextField, value: string) {
@@ -149,7 +173,13 @@ export function CompanyProfileForm({ profile }: { profile: CompanyProfile }) {
       }
 
       try {
-        const result = await saveCompanyProfile({ ...values, logoFileRef });
+        const result = await saveCompanyProfile({
+          ...values,
+          logoFileRef,
+          allowSelfApproval: profile.allowSelfApproval ?? false,
+          defaultCashInHandAccountId: cashInHandId,
+          defaultChequesInHandAccountId: chequesInHandId,
+        });
         if (!result) return; // Redirected to sign in.
         if (result.ok) {
           if (result.message) toast.success(result.message);
@@ -180,6 +210,35 @@ export function CompanyProfileForm({ profile }: { profile: CompanyProfile }) {
           fieldErrors[field] ? `company-${field}-error` : undefined
         }
         {...props}
+      />
+      <FieldError id={`company-${field}-error`} message={fieldErrors[field]} />
+    </div>
+  );
+
+  const accountPicker = (
+    field: "defaultCashInHandAccountId" | "defaultChequesInHandAccountId",
+    label: string,
+    types: readonly string[],
+    value: string | null,
+    onChange: (value: string | null) => void,
+  ) => (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <SearchableSelect
+        value={value}
+        onChange={onChange}
+        options={(accounts ?? [])
+          .filter((account) => types.includes(account.type))
+          .map((account) => ({
+            value: account.id,
+            label: account.name,
+            description: account.code,
+            badge: ACCOUNT_TYPE_BADGES[account.type] ?? account.type,
+          }))}
+        placeholder={accounts ? "Not set" : "Accounts unavailable"}
+        clearLabel="Not set"
+        emptyText="No matching active accounts"
+        disabled={pending || accounts === null}
       />
       <FieldError id={`company-${field}-error`} message={fieldErrors[field]} />
     </div>
@@ -340,6 +399,32 @@ export function CompanyProfileForm({ profile }: { profile: CompanyProfile }) {
               id="company-receiptFooterText-error"
               message={fieldErrors.receiptFooterText}
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Cash handovers</CardTitle>
+            <CardDescription>
+              Where handed-over money is received by default. The approver can
+              change it per handover.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 sm:grid-cols-2">
+            {accountPicker(
+              "defaultCashInHandAccountId",
+              "Default Cash in Hand",
+              ["cash", "wallet"],
+              cashInHandId,
+              setCashInHandId,
+            )}
+            {accountPicker(
+              "defaultChequesInHandAccountId",
+              "Default Cheques in Hand",
+              ["cheque"],
+              chequesInHandId,
+              setChequesInHandId,
+            )}
           </CardContent>
         </Card>
       </fieldset>

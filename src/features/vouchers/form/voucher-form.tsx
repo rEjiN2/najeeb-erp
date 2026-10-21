@@ -17,13 +17,6 @@ import { Label } from "@/components/ui/label";
 import { VoucherLineGrid } from "@/components/voucher/voucher-line-grid";
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { VoucherTotalsFooter } from "@/components/voucher/voucher-totals-footer";
-import { createCashier } from "@/features/cashiers/actions";
-import { CashierForm, type UserOption } from "@/features/cashiers/cashier-form";
-import type {
-  CashierInput,
-  CashierLookupItem,
-} from "@/features/cashiers/types";
-import type { Location } from "@/features/locations/types";
 import { createParty } from "@/features/parties/actions";
 import { PARTY_KIND_CONFIG } from "@/features/parties/constants";
 import { PartyForm } from "@/features/parties/party-form";
@@ -40,6 +33,7 @@ import type {
   AccountLookupItem,
   CreateVoucherAction,
   UpdateVoucherAction,
+  UserRef,
   VoucherDetail,
   VoucherInput,
   VoucherWarning,
@@ -125,29 +119,21 @@ function AddLineControl({
   );
 }
 
-/** What the "Add cashier" panel needs; null without cashiers:manage. */
-export interface CashierPanelData {
-  /** null when they couldn't be loaded — the panel's pickers say so. */
-  users: UserOption[] | null;
-  locations: Location[] | null;
-}
-
 type VoucherFormProps = {
   config: VoucherConfig;
   createAction: CreateVoucherAction;
   updateAction: UpdateVoucherAction;
   /** Active cash, wallet and bank accounts for the header picker. */
   headerAccounts: AccountLookupItem[];
-  /** Active cashiers for the dropdown. */
-  cashiers: CashierLookupItem[];
-  /** The signed-in user's own active cashier, pre-selected on a new voucher. */
-  myCashierId?: string | null;
-  /** /cashiers/me failed, so nothing could be pre-selected. */
-  myCashierFailed?: boolean;
-  cashierPanel: CashierPanelData | null;
+  /** Users who can be Collected By / Paid By. */
+  collectors: UserRef[];
+  /** The signed-in user, pre-selected on a new voucher. */
+  me: UserRef | null;
+  /** vouchers:select-collector — without it Collected By is read-only. */
+  canSelectCollector: boolean;
   /** parties:manage — offers "Add customer" / "Add supplier" in the line picker. */
   canAddParty: boolean;
-  /** "Own"-scoped user: cashier locked to theirs, header to their accounts. */
+  /** "Own"-scoped user: header limited to their allowed accounts. */
   scoped: boolean;
   /** balances:view — without it the Old Balance column is left out. */
   showBalances: boolean;
@@ -163,10 +149,9 @@ export function VoucherForm({
   mode,
   voucher,
   headerAccounts,
-  cashiers,
-  myCashierId,
-  myCashierFailed = false,
-  cashierPanel,
+  collectors,
+  me,
+  canSelectCollector,
   canAddParty,
   scoped,
   showBalances,
@@ -177,25 +162,16 @@ export function VoucherForm({
     voucher
       ? draftFromVoucher(voucher)
       : blankDraft(
-          myCashierId ?? "",
+          me?.id ?? "",
           headerAccounts.length === 1 ? (headerAccounts[0]?.id ?? "") : "",
         ),
   );
-  const [cashierPanelOpen, setCashierPanelOpen] = useState(false);
   const [partyPanelOpen, setPartyPanelOpen] = useState(false);
   // A save the backend sent back for confirmation, with what it warned about.
   const [pendingWarnings, setPendingWarnings] = useState<{
     input: VoucherInput;
     warnings: VoucherWarning[];
   } | null>(null);
-  // Cashiers added from the side panel, until the refreshed lookup lists them.
-  const [addedCashiers, setAddedCashiers] = useState<CashierLookupItem[]>([]);
-  const cashierOptions = [
-    ...cashiers,
-    ...addedCashiers.filter(
-      (added) => !cashiers.some((c) => c.id === added.id),
-    ),
-  ];
   const draft = useVoucherDraft<DraftVoucher, DraftLine>(initial);
   const [changeNote, setChangeNote] = useState("");
   const [showErrors, setShowErrors] = useState(false);
@@ -206,7 +182,18 @@ export function VoucherForm({
   const formRef = useRef<HTMLFormElement>(null);
   const errorsRef = useRef<HTMLDivElement>(null);
 
-  const { errors, valid } = validateDraft(draft.voucher, config.copy);
+  // A cheque account as the header needs the cheque number.
+  const headerId = draft.voucher.headerAccountId;
+  const isCheque =
+    headerAccounts.find((account) => account.id === headerId)?.type ===
+      "cheque" ||
+    (voucher?.headerAccount.id === headerId &&
+      voucher.paymentMethod === "cheque");
+  const { errors, valid } = validateDraft(
+    draft.voucher,
+    config.copy,
+    isCheque,
+  );
   // Errors only show once the user has tried to save.
   const visibleErrors: DraftErrors = showErrors ? errors : NO_ERRORS;
   const totals = draftTotals(draft.voucher.lines);
@@ -281,38 +268,6 @@ export function VoucherForm({
         ]);
       }
     });
-  }
-
-  async function addCashier(values: CashierInput): Promise<MutationResult> {
-    let result: MutationResult;
-    try {
-      result = (await createCashier(values)) ?? { ok: true };
-    } catch {
-      return {
-        ok: false,
-        messages: [
-          "Couldn't reach the app. Check your connection and try again.",
-        ],
-      };
-    }
-    if (result.ok && result.id) {
-      const id = result.id;
-      setAddedCashiers((prev) => [
-        ...prev,
-        {
-          id,
-          code: "New",
-          name: values.name.trim(),
-          staffType: values.staffType,
-          settlesWithOffice: values.settlesWithOffice,
-        },
-      ]);
-      // Only an active cashier can be posted against.
-      if (values.status === "active") draft.updateVoucher({ cashierId: id });
-      setCashierPanelOpen(false);
-      if (result.message) toast.success(result.message);
-    }
-    return result;
   }
 
   /** Saves the party, then adds its ledger account as a line. */
@@ -449,16 +404,6 @@ export function VoucherForm({
           ) : null}
         </div>
 
-        {myCashierFailed ? (
-          <p
-            role="status"
-            className="bg-muted/60 text-muted-foreground rounded-lg border px-3 py-2 text-sm"
-          >
-            Couldn&apos;t look up the cashier linked to your login, so none is
-            pre-selected. Pick the cashier below.
-          </p>
-        ) : null}
-
         <VoucherHeaderFields
           config={config}
           voucher={draft.voucher}
@@ -466,12 +411,11 @@ export function VoucherForm({
           voucherNo={voucher?.voucherNo ?? null}
           headerAccounts={headerAccounts}
           currentHeaderAccount={voucher?.headerAccount ?? null}
-          cashiers={cashierOptions}
-          currentCashier={voucher?.cashier ?? null}
-          onAddCashier={
-            cashierPanel ? () => setCashierPanelOpen(true) : undefined
-          }
-          cashierLocked={scoped}
+          collectors={collectors}
+          currentCollector={voucher?.collectedBy ?? null}
+          collectorLocked={!canSelectCollector}
+          scoped={scoped}
+          isCheque={isCheque}
           errors={visibleErrors}
           disabled={pending}
         />
@@ -541,24 +485,6 @@ export function VoucherForm({
 
       {/* Outside the voucher <form>: React events bubble through portals, so a
         nested form's submit would also submit the voucher. */}
-      {cashierPanel ? (
-        <MasterFormSheet
-          open={cashierPanelOpen}
-          onOpenChange={setCashierPanelOpen}
-          title="Add Staff"
-          description={`Saved to the Staff master and picked on this ${config.noun}.`}
-        >
-          {cashierPanelOpen ? (
-            <CashierForm
-              initialValue={null}
-              users={cashierPanel.users}
-              locations={cashierPanel.locations}
-              onSubmit={addCashier}
-            />
-          ) : null}
-        </MasterFormSheet>
-      ) : null}
-
       {canAddParty ? (
         <MasterFormSheet
           open={partyPanelOpen}

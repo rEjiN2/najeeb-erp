@@ -8,7 +8,7 @@ import { USERS_PATH } from "./constants";
 import type { User, UserInput } from "./types";
 
 // Server Actions are public endpoints: the backend authenticates the forwarded
-// cookie, checks users:manage (cashiers:manage for the cashier link) and
+// cookie, checks users:manage and
 // validates every field. Bodies are rebuilt field by field because the
 // backend rejects unknown properties.
 
@@ -17,46 +17,10 @@ const OPTIONS = {
   forbiddenMessage: "You don't have permission to manage users.",
 };
 
-const CASHIER_OPTIONS = {
-  returnTo: USERS_PATH,
-  forbiddenMessage:
-    "You don't have permission to manage cashiers, so the cashier link wasn't changed.",
-};
-
 const describe = (saved: User) => `User ${saved.name}`;
 
-/**
- * The cashier link lives on the cashier (linkedUserId, one cashier per user):
- * unlink the old one first, then link the new one.
- */
-async function relinkCashier(
-  userId: string,
-  from: string | null,
-  to: string | null,
-): Promise<MutationResult> {
-  if (from === to) return { ok: true };
-  if (from) {
-    const unlinked = await runMutation(
-      apiSend("PATCH", `/cashiers/${encodeURIComponent(from)}`, {
-        linkedUserId: null,
-      }),
-      CASHIER_OPTIONS,
-    );
-    if (!unlinked.ok) return unlinked;
-  }
-  if (to) {
-    return runMutation(
-      apiSend("PATCH", `/cashiers/${encodeURIComponent(to)}`, {
-        linkedUserId: userId,
-      }),
-      CASHIER_OPTIONS,
-    );
-  }
-  return { ok: true };
-}
-
 export async function createUser(input: UserInput): Promise<MutationResult> {
-  const saved = await runMutation(
+  return runMutation(
     apiSend<User>("POST", "/users", {
       name: input.name.trim(),
       email: input.email.trim(),
@@ -64,25 +28,19 @@ export async function createUser(input: UserInput): Promise<MutationResult> {
       roleId: input.roleId,
       allowedCashAccountIds: input.allowedCashAccountIds,
     }),
-    { ...OPTIONS, successMessage: describe, getId: (user) => user.id },
+    {
+      ...OPTIONS,
+      successMessage: (u) => `${describe(u)} added`,
+      getId: (user) => user.id,
+    },
   );
-  if (!saved.ok || !saved.id) return saved;
-
-  const linked = await relinkCashier(saved.id, null, input.linkedCashierId);
-  // The user exists now, so the form must not offer to create it again.
-  return linked.ok
-    ? { ...saved, message: `${saved.message} added` }
-    : {
-        ...saved,
-        message: `${saved.message} added, but the cashier wasn't linked: ${linked.messages.join(" ")}`,
-      };
 }
 
 export async function updateUser(
   user: User,
   input: UserInput,
 ): Promise<MutationResult> {
-  const saved = await runMutation(
+  return runMutation(
     apiSend<User>("PATCH", `/users/${encodeURIComponent(user.id)}`, {
       name: input.name.trim(),
       email: input.email.trim(),
@@ -91,24 +49,6 @@ export async function updateUser(
     }),
     { ...OPTIONS, successMessage: (u) => `${describe(u)} updated` },
   );
-  const linkChanged =
-    (user.linkedCashier?.id ?? null) !== input.linkedCashierId;
-  // Only the cashier link changed: the backend answers "No changes to save".
-  const nothingElse =
-    !saved.ok &&
-    saved.messages.length === 1 &&
-    saved.messages[0] === "No changes to save";
-  if (!saved.ok && !(nothingElse && linkChanged)) return saved;
-
-  const linked = await relinkCashier(
-    user.id,
-    user.linkedCashier?.id ?? null,
-    input.linkedCashierId,
-  );
-  if (!linked.ok) return linked;
-  return saved.ok
-    ? saved
-    : { ok: true, message: `${user.name}'s cashier link updated` };
 }
 
 export async function deactivateUser(id: string): Promise<MutationResult> {

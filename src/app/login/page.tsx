@@ -23,7 +23,7 @@ function resolveRedirectTo(from: string | undefined) {
 }
 
 const HIGHLIGHTS = [
-  { icon: HandCoins, text: "Cash receipts, payments and handovers" },
+  { icon: HandCoins, text: "Cash receipts and payments" },
   { icon: UsersRound, text: "Customers, suppliers and accounts in one place" },
   { icon: Warehouse, text: "Branches, warehouses, stores and vans" },
 ];

@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { getCashInHandAccounts } from "@/features/accounts/api";
 import { canManageCompany, getCompanyProfile } from "@/features/company/api";
 import { CompanyProfileForm } from "@/features/company/company-profile-form";
 import {
@@ -50,7 +51,10 @@ export default async function Page() {
     );
   }
 
-  const profile = await getCompanyProfile();
+  const [profile, accounts] = await Promise.all([
+    getCompanyProfile(),
+    getCashInHandAccounts(),
+  ]);
   if (!profile.ok) {
     if (profile.reason === "unauthorized") {
       redirect(`/login?${new URLSearchParams({ from: COMPANY_PROFILE_PATH })}`);
@@ -76,6 +80,8 @@ export default async function Page() {
           // Fresh form state once a save lands new values.
           key={profile.data.updatedAt ?? "initial"}
           profile={profile.data}
+          // null: the default-account pickers say they couldn't load.
+          accounts={accounts.ok ? accounts.data : null}
         />
         <Card className="h-fit">
           <CardHeader>

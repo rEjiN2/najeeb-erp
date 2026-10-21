@@ -76,7 +76,7 @@ export async function sendVoucher(
     }
   }
 
-  // Data-scope refusals (no linked cashier, an account not assigned to the
+  // Data-scope refusals (another collector, an account not assigned to the
   // user) are 403s that say what to fix; only the guard's bare one is generic.
   const scopeMessage =
     !result.ok &&
@@ -109,10 +109,10 @@ export function createVoucher(
     {
       voucherDate: input.voucherDate,
       [target.headerKey]: input.headerAccountId,
-      cashierId: input.cashierId,
-      ...(target.sendsReference && reference
-        ? { paymentReference: reference }
-        : {}),
+      collectedById: input.collectedById,
+      // Receipts carry a reference only as a cheque number.
+      ...(reference ? { paymentReference: reference } : {}),
+      ...(input.chequeDate ? { chequeDate: input.chequeDate } : {}),
       ...(comments ? { comments } : {}),
       lines: toLines(input),
       ...(target.acknowledgesWarnings && acknowledgeWarnings
@@ -144,10 +144,11 @@ export function updateVoucher(
     {
       voucherDate: input.voucherDate,
       [target.headerKey]: input.headerAccountId,
-      cashierId: input.cashierId,
-      ...(target.sendsReference
+      collectedById: input.collectedById,
+      ...(target.sendsReference || input.paymentReference.trim()
         ? { paymentReference: input.paymentReference.trim() }
         : {}),
+      chequeDate: input.chequeDate || null,
       comments: input.comments.trim(),
       lines: toLines(input),
       ...(note ? { changeNote: note } : {}),

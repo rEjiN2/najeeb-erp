@@ -11,8 +11,6 @@ export default async function Page({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { staff } = await searchParams;
-  return (
-    <HandoverNewRoute staffParam={typeof staff === "string" ? staff : ""} />
-  );
+  const { user } = await searchParams;
+  return <HandoverNewRoute userParam={typeof user === "string" ? user : ""} />;
 }

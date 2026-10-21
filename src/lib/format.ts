@@ -11,7 +11,9 @@ const amountFormatter = new Intl.NumberFormat("en-US", {
 });
 
 /** Exact ledger figure, to the fils — "AED 1,234.50". */
-export function formatAmount(value: number): string {
+/** null, undefined or NaN show as 0.00, never "NaN". */
+export function formatAmount(raw: number | null | undefined): string {
+  const value = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
   const sign = value < 0 ? "-" : "";
   return `${sign}AED ${amountFormatter.format(Math.abs(value))}`;
 }

@@ -1,7 +1,5 @@
 "use client";
 
-import { UserPlus } from "lucide-react";
-
 import { FieldError } from "@/components/master/form-error-summary";
 import { SearchableSelect } from "@/components/shared/searchable-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,10 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AllocationButton } from "@/components/voucher/allocation-button";
-import {
-  STAFF_TYPE_LABELS,
-  type CashierLookupItem,
-} from "@/features/cashiers/types";
 import { cn } from "@/lib/utils";
 
 import type { VoucherConfig } from "../config";
@@ -20,7 +14,7 @@ import {
   ACCOUNT_TYPE_BADGES,
   PAYMENT_REFERENCE_MAX_LENGTH,
 } from "../constants";
-import type { AccountLookupItem, CashierRef } from "../types";
+import type { AccountLookupItem, CollectorRef, UserRef } from "../types";
 import type { DraftErrors, DraftVoucher } from "./draft";
 
 interface VoucherHeaderFieldsProps {
@@ -30,20 +24,25 @@ interface VoucherHeaderFieldsProps {
   /** null on create: the backend issues the number on save, so the field is
    * left out entirely rather than shown empty. */
   voucherNo: string | null;
-  /** Active cashiers (GET /cashiers/lookup?activeOnly=true). */
-  cashiers: CashierLookupItem[];
-  /** The voucher's saved cashier — kept pickable if since deactivated, and
-   * shown as text on legacy vouchers that never had a cashier record. */
-  currentCashier?: CashierRef | null;
-  /** Opens the Cashiers master in a side panel; only with cashiers:manage. */
-  onAddCashier?: () => void;
-  /** "Own"-scoped user: the cashier is theirs and shown read-only. */
-  cashierLocked?: boolean;
+  /** Users who can be Collected By / Paid By (GET /users/lookup?for=...). */
+  collectors: UserRef[];
+  /** The voucher's saved collector — kept pickable if no longer eligible,
+   * and shown as text on legacy vouchers whose old cashier had no login. */
+  currentCollector?: CollectorRef | null;
+  /** No vouchers:select-collector: Collected By is read-only text. */
+  collectorLocked?: boolean;
+  /** "Own"-scoped user: the header lists only their allowed accounts. */
+  scoped?: boolean;
+  /** The header is a cheque account: cheque number required, date optional. */
+  isCheque?: boolean;
   headerAccounts: AccountLookupItem[];
   /** The voucher's current header account, when it's no longer in the active
    * lookup (deactivated since) — kept selectable so the form shows it. */
   currentHeaderAccount?: { id: string; name: string | null } | null;
-  errors: Pick<DraftErrors, "headerAccount" | "cashier" | "voucherDate">;
+  errors: Pick<
+    DraftErrors,
+    "headerAccount" | "collectedBy" | "paymentReference" | "voucherDate"
+  >;
   disabled: boolean;
 }
 
@@ -54,38 +53,35 @@ export function VoucherHeaderFields({
   voucherNo,
   headerAccounts,
   currentHeaderAccount,
-  cashiers,
-  currentCashier,
-  onAddCashier,
-  cashierLocked = false,
+  collectors,
+  currentCollector,
+  collectorLocked = false,
+  scoped = false,
+  isCheque = false,
   errors,
   disabled,
 }: VoucherHeaderFieldsProps) {
-  const cashierOptions = cashiers.map((cashier) => ({
-    value: cashier.id,
-    label: cashier.name,
-    description: cashier.code,
-    badge: STAFF_TYPE_LABELS[cashier.staffType] ?? "",
-  }));
+  const collectorOptions: {
+    value: string;
+    label: string;
+    description?: string;
+  }[] = collectors.map((user) => ({ value: user.id, label: user.name }));
   if (
-    currentCashier?.id &&
-    !cashierOptions.some((option) => option.value === currentCashier.id)
+    currentCollector?.id &&
+    !collectorOptions.some((option) => option.value === currentCollector.id)
   ) {
-    // The backend lets a voucher keep its cashier after deactivation.
-    cashierOptions.unshift({
-      value: currentCashier.id,
-      label: currentCashier.name ?? "Unknown staff",
+    // The backend lets a voucher keep its collector after deactivation.
+    collectorOptions.unshift({
+      value: currentCollector.id,
+      label: currentCollector.name ?? "Unknown user",
       description: `Inactive — kept on this ${config.noun}`,
-      badge: currentCashier.staffType
-        ? STAFF_TYPE_LABELS[currentCashier.staffType]
-        : "",
     });
   }
-  const lockedCashier = cashierOptions.find(
-    (option) => option.value === voucher.cashierId,
+  const lockedCollector = collectorOptions.find(
+    (option) => option.value === voucher.collectedById,
   );
-  const legacyCashierText =
-    currentCashier && !currentCashier.id ? currentCashier.name : null;
+  const legacyCollectorText =
+    currentCollector && !currentCollector.id ? currentCollector.name : null;
 
   const options = headerAccounts.map((account) => ({
     value: account.id,
@@ -156,13 +152,27 @@ export function VoucherHeaderFields({
           >
             <SearchableSelect
               value={voucher.headerAccountId || null}
-              onChange={(value) => onChange({ headerAccountId: value ?? "" })}
+              onChange={(value) => {
+                const next = headerAccounts.find((a) => a.id === value);
+                onChange({
+                  headerAccountId: value ?? "",
+                  // Only payments keep a reference off a cheque account.
+                  ...(next?.type !== "cheque"
+                    ? {
+                        chequeDate: "",
+                        ...(config.showPaymentDetails
+                          ? {}
+                          : { paymentReference: "" }),
+                      }
+                    : {}),
+                });
+              }}
               options={options}
               placeholder="Select account"
               emptyText={
                 headerAccounts.length > 0
                   ? "No matching accounts"
-                  : cashierLocked
+                  : scoped
                     ? "No cash accounts are assigned to your user. Ask an administrator to assign one."
                     : "No active cash, wallet or bank accounts. Add one under Masters → Accounts."
               }
@@ -172,80 +182,67 @@ export function VoucherHeaderFields({
           </div>
           <FieldError id="cash-account-error" message={errors.headerAccount} />
           <p className="text-muted-foreground text-xs">
-            {cashierLocked
+            {scoped
               ? "The cash accounts assigned to you"
-              : "Cash, wallet or bank account"}
+              : config.collectorFor === "receipt"
+                ? "Cash, wallet, cheque or bank account"
+                : "Cash, wallet or bank account"}
           </p>
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2">
-            <Label>
-              {config.copy.cashierLabel}{" "}
-              <span className="text-destructive">*</span>
-            </Label>
-            {onAddCashier ? (
-              <button
-                type="button"
-                onClick={onAddCashier}
-                disabled={disabled}
-                className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline disabled:opacity-50"
-              >
-                <UserPlus className="size-3.5" /> Add staff
-              </button>
-            ) : null}
-          </div>
-          {cashierLocked ? (
-            lockedCashier ? (
-              <Input
-                aria-label={config.copy.cashierLabel}
-                value={`${lockedCashier.label} (${lockedCashier.description})${lockedCashier.badge ? ` · ${lockedCashier.badge}` : ""}`}
-                readOnly
-                className="bg-muted/50"
-              />
-            ) : (
-              <p className="text-destructive text-sm">
-                Your user isn&apos;t linked to an active staff member. Ask an
-                administrator to link you to one.
-              </p>
-            )
+          <Label>
+            {config.copy.collectorLabel}{" "}
+            <span className="text-destructive">*</span>
+          </Label>
+          {collectorLocked ? (
+            <Input
+              aria-label={config.copy.collectorLabel}
+              value={lockedCollector?.label ?? legacyCollectorText ?? "—"}
+              readOnly
+              className="bg-muted/50"
+            />
           ) : (
             <div
               className={cn(
-                errors.cashier && "ring-destructive/40 rounded-lg ring-2",
+                errors.collectedBy && "ring-destructive/40 rounded-lg ring-2",
               )}
             >
               <SearchableSelect
-                value={voucher.cashierId || null}
-                onChange={(value) => onChange({ cashierId: value ?? "" })}
-                options={cashierOptions}
-                placeholder="Select staff"
-                emptyText={
-                  cashiers.length === 0
-                    ? "No active staff. Add one under Masters → Staff."
-                    : "No matching staff"
-                }
+                value={voucher.collectedById || null}
+                onChange={(value) => onChange({ collectedById: value ?? "" })}
+                options={collectorOptions}
+                placeholder="Select user"
+                emptyText="No matching users"
                 allowClear={false}
                 disabled={disabled}
               />
             </div>
           )}
-          <FieldError id="cashier-error" message={errors.cashier} />
-          {legacyCashierText && !voucher.cashierId ? (
+          <FieldError id="collected-by-error" message={errors.collectedBy} />
+          {legacyCollectorText && !voucher.collectedById ? (
             <p className="text-muted-foreground text-xs">
-              Entered before staff were set up as &ldquo;{legacyCashierText}
-              &rdquo; — pick the matching staff member to save.
+              Entered as &ldquo;{legacyCollectorText}&rdquo; before logins were
+              used — pick the matching user to save.
             </p>
           ) : null}
         </div>
 
-        {config.showPaymentDetails ? (
+        {config.showPaymentDetails || isCheque ? (
           <div className="space-y-2">
             <Label htmlFor="payment-reference">
-              Reference{" "}
-              <span className="text-muted-foreground font-normal">
-                (optional)
-              </span>
+              {isCheque ? (
+                <>
+                  Cheque No. <span className="text-destructive">*</span>
+                </>
+              ) : (
+                <>
+                  Reference{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (optional)
+                  </span>
+                </>
+              )}
             </Label>
             <Input
               id="payment-reference"
@@ -254,7 +251,33 @@ export function VoucherHeaderFields({
                 onChange({ paymentReference: event.target.value })
               }
               maxLength={PAYMENT_REFERENCE_MAX_LENGTH}
-              placeholder="Cheque no., transfer ref…"
+              placeholder={isCheque ? "Cheque number" : "Cheque no., transfer ref…"}
+              disabled={disabled}
+              aria-invalid={errors.paymentReference ? true : undefined}
+              aria-describedby={
+                errors.paymentReference ? "payment-reference-error" : undefined
+              }
+            />
+            <FieldError
+              id="payment-reference-error"
+              message={errors.paymentReference}
+            />
+          </div>
+        ) : null}
+
+        {isCheque ? (
+          <div className="space-y-2">
+            <Label htmlFor="cheque-date">
+              Cheque Date{" "}
+              <span className="text-muted-foreground font-normal">
+                (optional)
+              </span>
+            </Label>
+            <Input
+              id="cheque-date"
+              type="date"
+              value={voucher.chequeDate}
+              onChange={(event) => onChange({ chequeDate: event.target.value })}
               disabled={disabled}
             />
           </div>
