@@ -193,7 +193,8 @@ export function HandoverForm({
           expenses: expenses.map((e) => ({
             expenseAccountId: e.expenseAccountId,
             paidFrom: e.sourceAccountId === PETTY_CASH ? "petty_cash" : "own",
-            sourceAccountId: e.sourceAccountId === PETTY_CASH ? "" : e.sourceAccountId,
+            sourceAccountId:
+              e.sourceAccountId === PETTY_CASH ? "" : e.sourceAccountId,
             amount: expenseAmount(e),
             description: e.description,
           })),
