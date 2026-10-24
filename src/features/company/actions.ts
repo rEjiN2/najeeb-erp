@@ -23,8 +23,10 @@ export async function saveCompanyProfile(
   for (const field of COMPANY_TEXT_FIELDS) body[field] = input[field];
   body.logoFileRef = input.logoFileRef;
   body.allowSelfApproval = input.allowSelfApproval;
+  body.allowNegativeStock = input.allowNegativeStock;
   body.defaultCashInHandAccountId = input.defaultCashInHandAccountId;
   body.defaultChequesInHandAccountId = input.defaultChequesInHandAccountId;
+  body.defaultPettyCashAccountId = input.defaultPettyCashAccountId;
 
   return runMutation(apiSend<CompanyProfile>("PUT", "/company", body), {
     returnTo: COMPANY_PROFILE_PATH,

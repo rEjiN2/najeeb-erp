@@ -54,7 +54,15 @@ In progress: none.
 Built (untested end to end): Products (group path picker, cost only with
 products:view-cost, image via POST /products/:id/image after save) and
 Units masters.
-Planned: opening balances, purchase, sales, stock, bundling, reports.
+Built (untested end to end): Opening Balances (list/new/view/edit/cancel,
+Dr/Cr grid, equity auto line, CSV import via /opening-balances/validate;
+shared VoucherView with config.printable false).
+Built (untested end to end): Stock Summary (expandable per-location rows,
+value with products:view-cost) and Stock History (running balance, CSV)
+in features/stock; Opening Stock (features/opening-stock, list/new/view/
+edit/cancel, CSV import via /opening-stock/validate); Users "Assigned
+locations" (allowedLocationIds, scoped roles); Company "Allow negative stock".
+Planned: purchase, sales, bundling, reports.
 
 ## Conventions
 

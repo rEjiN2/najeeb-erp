@@ -1,6 +1,13 @@
 "use client";
 
-import { ImageOff, ImageUp, Loader2, Save, Trash2 } from "lucide-react";
+import {
+  ImageOff,
+  ImageUp,
+  Loader2,
+  Save,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import Image from "next/image";
 import {
   useEffect,
@@ -28,6 +35,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { SearchableSelect } from "@/components/shared/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { BACKEND_PROXY_PATH } from "@/features/auth/constants";
@@ -55,7 +63,8 @@ type Field =
   | CompanyTextField
   | "logo"
   | "defaultCashInHandAccountId"
-  | "defaultChequesInHandAccountId";
+  | "defaultChequesInHandAccountId"
+  | "defaultPettyCashAccountId";
 
 // class-validator text starts with the property name ("trn must be exactly
 // 15 digits"); the logo check reads "The logo must be a PNG or JPEG image".
@@ -63,6 +72,7 @@ const FIELD_MATCHERS: ReadonlyArray<readonly [Field, RegExp]> = [
   ["logo", /logo/i],
   ["defaultCashInHandAccountId", /defaultCashInHand|cash in hand/i],
   ["defaultChequesInHandAccountId", /defaultChequesInHand|cheques in hand/i],
+  ["defaultPettyCashAccountId", /defaultPettyCash|petty cash/i],
   ...COMPANY_TEXT_FIELDS.map(
     (field) => [field, new RegExp(`^${field}\\b`, "i")] as const,
   ),
@@ -96,6 +106,12 @@ export function CompanyProfileForm({
   const [chequesInHandId, setChequesInHandId] = useState(
     profile.defaultChequesInHandAccountId ?? null,
   );
+  const [pettyCashId, setPettyCashId] = useState(
+    profile.defaultPettyCashAccountId ?? null,
+  );
+  const [allowNegativeStock, setAllowNegativeStock] = useState(
+    profile.allowNegativeStock ?? false,
+  );
   const [logo, setLogo] = useState<LogoState>(
     profile.logo ? { kind: "saved", id: profile.logo.id } : { kind: "none" },
   );
@@ -125,6 +141,8 @@ export function CompanyProfileForm({
     logoChanged ||
     cashInHandId !== (profile.defaultCashInHandAccountId ?? null) ||
     chequesInHandId !== (profile.defaultChequesInHandAccountId ?? null) ||
+    pettyCashId !== (profile.defaultPettyCashAccountId ?? null) ||
+    allowNegativeStock !== (profile.allowNegativeStock ?? false) ||
     COMPANY_TEXT_FIELDS.some((field) => values[field] !== baseline[field]);
 
   function set(field: CompanyTextField, value: string) {
@@ -177,8 +195,10 @@ export function CompanyProfileForm({
           ...values,
           logoFileRef,
           allowSelfApproval: profile.allowSelfApproval ?? false,
+          allowNegativeStock,
           defaultCashInHandAccountId: cashInHandId,
           defaultChequesInHandAccountId: chequesInHandId,
+          defaultPettyCashAccountId: pettyCashId,
         });
         if (!result) return; // Redirected to sign in.
         if (result.ok) {
@@ -216,7 +236,10 @@ export function CompanyProfileForm({
   );
 
   const accountPicker = (
-    field: "defaultCashInHandAccountId" | "defaultChequesInHandAccountId",
+    field:
+      | "defaultCashInHandAccountId"
+      | "defaultChequesInHandAccountId"
+      | "defaultPettyCashAccountId",
     label: string,
     types: readonly string[],
     value: string | null,
@@ -424,6 +447,45 @@ export function CompanyProfileForm({
               ["cheque"],
               chequesInHandId,
               setChequesInHandId,
+            )}
+            {accountPicker(
+              "defaultPettyCashAccountId",
+              "Default Petty Cash (expense claims)",
+              ["cash", "wallet"],
+              pettyCashId,
+              setPettyCashId,
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Stock</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="company-allowNegativeStock"
+                checked={allowNegativeStock}
+                onCheckedChange={setAllowNegativeStock}
+              />
+              <Label htmlFor="company-allowNegativeStock">
+                Allow negative stock
+              </Label>
+            </div>
+            {allowNegativeStock ? (
+              <p className="text-primary flex items-start gap-1.5 text-sm">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                Sales and transfers can then take a product below zero at a
+                location, so the stock on screen may not match what is on the
+                shelf. Cancelling opening stock is still refused when it would
+                go below zero.
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Off: anything that would take a product below zero at a location
+                is refused.
+              </p>
             )}
           </CardContent>
         </Card>

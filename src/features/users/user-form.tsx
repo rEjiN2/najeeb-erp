@@ -18,19 +18,29 @@ import {
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
 } from "@/features/auth/constants";
+import {
+  LOCATION_TYPE_LABELS,
+  type StockLocation,
+} from "@/features/locations/types";
 import { ACCOUNT_TYPE_BADGES } from "@/features/vouchers/constants";
 import { groupErrors, type MutationResult } from "@/lib/mutation";
 
 import type { CashAccountRef, RoleLookupItem, User, UserInput } from "./types";
 
 type UserField =
-  "name" | "email" | "password" | "roleId" | "allowedCashAccountIds";
+  | "name"
+  | "email"
+  | "password"
+  | "roleId"
+  | "allowedCashAccountIds"
+  | "allowedLocationIds";
 
 // Backend messages → field, first match wins. class-validator text starts
 // with the property name; service errors read "A user with email ... already
 // exists", "Role ... not found", "Ledger account ... is inactive".
 const FIELD_MATCHERS = [
   ["allowedCashAccountIds", /allowedCashAccountIds|^Ledger account/i],
+  ["allowedLocationIds", /allowedLocationIds|^Location\b/i],
   ["roleId", /^roleId|^Role\b|last active admin/i],
   ["password", /^password/i],
   ["email", /^email|user with (this )?email/i],
@@ -42,6 +52,8 @@ interface UserFormProps {
   /** null when they couldn't be loaded — the picker says so. */
   roles: RoleLookupItem[] | null;
   cashAccounts: CashAccountRef[] | null;
+  /** Active warehouses, stores and vans. */
+  stockLocations: StockLocation[] | null;
   onSubmit: (values: UserInput) => Promise<MutationResult>;
   onResetPassword: (password: string) => Promise<MutationResult>;
   onToggleStatus: () => Promise<MutationResult>;
@@ -51,6 +63,7 @@ export function UserForm({
   initialValue,
   roles,
   cashAccounts,
+  stockLocations,
   onSubmit,
   onResetPassword,
   onToggleStatus,
@@ -64,6 +77,9 @@ export function UserForm({
   );
   const [allowedIds, setAllowedIds] = useState<string[]>(
     initialValue?.allowedCashAccounts.map((account) => account.id) ?? [],
+  );
+  const [locationIds, setLocationIds] = useState<string[]>(
+    initialValue?.allowedLocationIds ?? [],
   );
 
   const [errors, setErrors] = useState<string[]>([]);
@@ -116,6 +132,7 @@ export function UserForm({
       password,
       roleId,
       allowedCashAccountIds: allowedIds,
+      allowedLocationIds: locationIds,
     };
     startTransition(async () => {
       const result = await onSubmit(values);
@@ -267,6 +284,62 @@ export function UserForm({
             <FieldError
               id="user-accounts-error"
               message={fieldErrors.allowedCashAccountIds}
+            />
+          </div>
+        ) : null}
+
+        {isScoped ? (
+          <div className="space-y-2">
+            <Label>Assigned locations</Label>
+            <p className="text-muted-foreground text-xs">
+              This role sees stock only at these locations (e.g. their van).
+            </p>
+            {stockLocations === null ? (
+              <p className="text-destructive text-sm">
+                Couldn&apos;t load locations. Close this panel and try again.
+              </p>
+            ) : stockLocations.length === 0 ? (
+              <p className="text-muted-foreground text-sm">
+                No active warehouses, stores or vans. Add one under Masters →
+                Locations.
+              </p>
+            ) : (
+              <div
+                role="group"
+                aria-label="Assigned locations"
+                className="max-h-48 space-y-1 overflow-y-auto rounded-[5px] border p-2"
+              >
+                {stockLocations.map((location) => (
+                  <label
+                    key={location.id}
+                    className="hover:bg-muted/60 flex items-center gap-2 rounded px-1.5 py-1 text-sm"
+                  >
+                    <Checkbox
+                      checked={locationIds.includes(location.id)}
+                      onCheckedChange={(checked) =>
+                        setLocationIds((prev) =>
+                          checked === true
+                            ? [...prev, location.id]
+                            : prev.filter((value) => value !== location.id),
+                        )
+                      }
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {location.name}
+                    </span>
+                    <span className="text-muted-foreground font-mono text-xs">
+                      {location.code}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {LOCATION_TYPE_LABELS[location.type]}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <FieldError
+              id="user-locations-error"
+              message={fieldErrors.allowedLocationIds}
             />
           </div>
         ) : null}

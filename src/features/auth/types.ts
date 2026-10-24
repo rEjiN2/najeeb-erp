@@ -19,6 +19,8 @@ export interface AuthUser {
     name: string;
     type: string;
   }[];
+  /** Stock locations an "own"-scoped user sees stock for. */
+  allowedLocationIds?: string[];
 }
 
 export type DataScope = "own" | "all";

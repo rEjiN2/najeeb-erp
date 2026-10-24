@@ -17,6 +17,7 @@ import {
   USERS_PATH,
   USERS_TITLE,
 } from "@/features/users/constants";
+import { getStockLocations } from "@/features/locations/api";
 import { UsersPage } from "@/features/users/users-page";
 import type { ApiFailure, ApiResult } from "@/lib/api";
 
@@ -73,10 +74,11 @@ export default async function Page({
   }
 
   const filters = parseUserFilters(await searchParams);
-  const [users, roles, cashAccounts] = await Promise.all([
+  const [users, roles, cashAccounts, stockLocations] = await Promise.all([
     getUserPage(filters),
     getRoleLookup(),
     getAssignableCashAccounts(),
+    getStockLocations(),
   ]);
 
   if (!users.ok) return <LoadFailure failure={users} />;
@@ -87,6 +89,7 @@ export default async function Page({
       filters={filters}
       roles={optional(roles)}
       cashAccounts={optional(cashAccounts)}
+      stockLocations={optional(stockLocations)}
     />
   );
 }

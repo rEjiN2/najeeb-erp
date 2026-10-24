@@ -29,6 +29,8 @@ export interface User {
   status: UserStatus;
   mustChangePassword: boolean;
   allowedCashAccounts: CashAccountRef[];
+  /** Stock locations an "own"-scoped user sees stock for. */
+  allowedLocationIds?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -55,6 +57,7 @@ export interface UserInput {
   password: string;
   roleId: string;
   allowedCashAccountIds: string[];
+  allowedLocationIds: string[];
 }
 
 export interface UserFilters {

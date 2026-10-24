@@ -47,6 +47,8 @@ export interface VoucherConfig {
   /** One account and amount per voucher (handovers): the view leaves out
    * narration, remarks, VAT and the gross/tax totals. */
   simpleLines?: boolean;
+  /** false: no PDF (opening balances), so no Print / Download buttons. */
+  printable?: boolean;
   /** Status filter choices; receipts and payments: all / posted / cancelled.
    * When set, the list shows them as tabs. */
   statusFilters?: readonly StatusFilter[];
@@ -88,6 +90,8 @@ export interface VoucherConfig {
     /** "...Create a new receipt if the cash still needs recording." */
     cancelledNotEditableHint: string;
     cancelReasonPlaceholder: string;
+    /** Cancel dialog: what is reversed. Default: the amount on both accounts. */
+    cancelEffect?: string;
   };
 }
 

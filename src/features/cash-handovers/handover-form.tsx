@@ -28,6 +28,7 @@ import { submitCashHandover } from "./actions";
 import { HandoverSplit } from "./handover-split";
 import {
   HandoverExpenses,
+  PETTY_CASH,
   expenseAmount,
   expenseProblem,
   type DraftExpense,
@@ -191,7 +192,8 @@ export function HandoverForm({
             .map((receipt) => receipt.id),
           expenses: expenses.map((e) => ({
             expenseAccountId: e.expenseAccountId,
-            sourceAccountId: e.sourceAccountId,
+            paidFrom: e.sourceAccountId === PETTY_CASH ? "petty_cash" : "own",
+            sourceAccountId: e.sourceAccountId === PETTY_CASH ? "" : e.sourceAccountId,
             amount: expenseAmount(e),
             description: e.description,
           })),
@@ -407,7 +409,7 @@ export function HandoverForm({
         })
       )}
 
-      {pending && accounts.some((a) => a.type !== "cheque") ? (
+      {pending ? (
         <HandoverExpenses
           expenses={expenses}
           onChange={changeExpenses}

@@ -28,9 +28,13 @@ export interface CompanyProfile extends Record<
   /** Fetch the image through GET /files/:id. */
   logo: { id: string; url: string } | null;
   allowSelfApproval: boolean;
+  /** Stock postings may take a product+location below zero. Off by default. */
+  allowNegativeStock?: boolean;
   /** Handover defaults: where cash (cash/wallet) and cheques are received. */
   defaultCashInHandAccountId: string | null;
   defaultChequesInHandAccountId: string | null;
+  /** Pays handover expense claims when the salesman has no cash in hand. */
+  defaultPettyCashAccountId: string | null;
   updatedBy: { id: string; name: string } | null;
   updatedAt: string | null;
 }
@@ -40,8 +44,10 @@ export type CompanyProfileInput = Record<CompanyTextField, string> & {
   logoFileRef: string | null;
   /** Sent back unchanged: the PUT turns an omitted one off. */
   allowSelfApproval: boolean;
+  allowNegativeStock: boolean;
   defaultCashInHandAccountId: string | null;
   defaultChequesInHandAccountId: string | null;
+  defaultPettyCashAccountId: string | null;
 };
 
 /** POST /files/upload response. */

@@ -8,9 +8,13 @@ import {
   Building2,
   Database,
   HandCoins,
+  History,
+  Landmark,
   LayoutDashboard,
   MapPin,
   Package,
+  PackagePlus,
+  PackageSearch,
   Ruler,
   Receipt,
   ScrollText,
@@ -20,6 +24,7 @@ import {
   Truck,
   Users,
   Wallet,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 
@@ -127,10 +132,40 @@ export const NAV_ITEMS: NavEntry[] = [
             permission: PERMISSIONS.CASH_HANDOVERS_READ,
           },
           {
+            title: "Opening Balances",
+            href: "/accounting-inventory/transactions/opening-balances",
+            icon: Landmark,
+            permission: PERMISSIONS.OPENING_BALANCES_READ,
+          },
+          {
+            title: "Opening Stock",
+            href: "/accounting-inventory/transactions/opening-stock",
+            icon: PackagePlus,
+            permission: PERMISSIONS.OPENING_STOCK_READ,
+          },
+          {
             title: "Cheques",
             href: "/accounting-inventory/transactions/cheques",
             icon: ScrollText,
             permission: PERMISSIONS.CHEQUES_READ,
+          },
+        ],
+      },
+      {
+        title: "Inventory",
+        icon: Warehouse,
+        children: [
+          {
+            title: "Stock Summary",
+            href: "/accounting-inventory/inventory/stock-summary",
+            icon: PackageSearch,
+            permission: PERMISSIONS.STOCK_READ,
+          },
+          {
+            title: "Stock History",
+            href: "/accounting-inventory/inventory/stock-history",
+            icon: History,
+            permission: PERMISSIONS.STOCK_READ,
           },
         ],
       },

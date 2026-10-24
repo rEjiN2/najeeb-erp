@@ -22,6 +22,10 @@ export const PERMISSIONS = {
   CASH_HANDOVERS_APPROVE: "cash-handovers:approve",
   CASH_HANDOVERS_CANCEL: "cash-handovers:cancel",
   COMPANY_MANAGE: "company:manage",
+  OPENING_BALANCES_READ: "opening-balances:read",
+  /** Stock summary and history; scoped users see only their locations. */
+  STOCK_READ: "stock:read",
+  OPENING_STOCK_READ: "opening-stock:read",
   LOCATIONS_MANAGE: "locations:manage",
   PARTIES_MANAGE: "parties:manage",
   PRODUCT_GROUPS_MANAGE: "product-groups:manage",

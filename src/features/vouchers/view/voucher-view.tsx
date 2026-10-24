@@ -227,8 +227,12 @@ export function VoucherView({
         back={{ href: config.basePath, label: config.title }}
         actions={
           <>
-            {printButton}
-            {downloadButton}
+            {config.printable === false ? null : (
+              <>
+                {printButton}
+                {downloadButton}
+              </>
+            )}
             {isPosted && access.canCancel ? (
               <Button
                 variant="outline"
@@ -260,8 +264,12 @@ export function VoucherView({
             {config.Noun} {voucher.voucherNo} saved
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            {printButton}
-            {downloadButton}
+            {config.printable === false ? null : (
+              <>
+                {printButton}
+                {downloadButton}
+              </>
+            )}
             {access.canCreate ? (
               <Link
                 href={newVoucherPath(config)}

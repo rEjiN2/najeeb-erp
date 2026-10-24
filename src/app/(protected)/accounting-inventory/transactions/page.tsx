@@ -1,4 +1,11 @@
-import { ArrowRightLeft, Banknote, HandCoins, ScrollText } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Banknote,
+  HandCoins,
+  Landmark,
+  PackagePlus,
+  ScrollText,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -38,6 +45,20 @@ const TRANSACTION_LINKS = [
     description: "Salesmen hand cash and cheques to the office for approval.",
     icon: ArrowRightLeft,
     permission: PERMISSIONS.CASH_HANDOVERS_READ,
+  },
+  {
+    href: "/accounting-inventory/transactions/opening-balances",
+    title: "Opening Balances",
+    description: "Balances brought over from the old system, by hand or CSV.",
+    icon: Landmark,
+    permission: PERMISSIONS.OPENING_BALANCES_READ,
+  },
+  {
+    href: "/accounting-inventory/transactions/opening-stock",
+    title: "Opening Stock",
+    description: "Stock on hand per location, brought over by hand or CSV.",
+    icon: PackagePlus,
+    permission: PERMISSIONS.OPENING_STOCK_READ,
   },
   {
     href: "/accounting-inventory/transactions/cheques",

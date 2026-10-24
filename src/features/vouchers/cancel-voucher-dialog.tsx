@@ -123,9 +123,10 @@ function CancelForm({
           Cancel {config.noun} {target.voucherNo}?
         </AlertDialogTitle>
         <AlertDialogDescription>
-          The {formatAmount(target.grandTotal)} posting is reversed on both
-          accounts. The voucher is kept, marked cancelled, and can&apos;t be
-          edited afterwards.
+          {config.copy.cancelEffect ??
+            `The ${formatAmount(target.grandTotal)} posting is reversed on both accounts.`}{" "}
+          The voucher is kept, marked cancelled, and can&apos;t be edited
+          afterwards.
         </AlertDialogDescription>
       </AlertDialogHeader>
 

@@ -307,7 +307,14 @@ function ExpensesCard({ workflow }: { workflow: HandoverWorkflow }) {
                     </span>
                   ) : null}
                 </TableCell>
-                <TableCell>{expense.sourceAccountName}</TableCell>
+                <TableCell>
+                  {expense.sourceAccountName}
+                  {expense.paidFrom === "petty_cash" ? (
+                    <span className="text-muted-foreground block text-xs">
+                      Petty cash claim
+                    </span>
+                  ) : null}
+                </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
                   {formatAmount(expense.amount)}
                 </TableCell>

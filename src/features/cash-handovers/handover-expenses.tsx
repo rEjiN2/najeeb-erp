@@ -31,6 +31,9 @@ export interface DraftExpense {
 
 const MONEY = /^\d+(\.\d{1,2})?$/;
 
+/** "Paid from" value for a claim on the company petty cash (no cash in hand). */
+export const PETTY_CASH = "petty_cash";
+
 /** 0 for blank or invalid text. */
 export function expenseAmount(expense: DraftExpense): number {
   return MONEY.test(expense.amount.trim()) ? Number(expense.amount) : 0;
@@ -38,12 +41,54 @@ export function expenseAmount(expense: DraftExpense): number {
 
 export function expenseProblem(expense: DraftExpense): string | null {
   if (!expense.expenseAccountId) return "Pick the expense account.";
-  if (!expense.sourceAccountId) return "Pick the account it was paid from.";
+  if (!expense.sourceAccountId)
+    return "Pick the account it was paid from, or petty cash.";
   if (!(expenseAmount(expense) > 0)) return "Enter an amount above 0.";
   return null;
 }
 
 let seq = 0;
+
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+/**
+ * An expense paid from cash beyond what that account still has (after its
+ * other expenses): keep what fits on the cash and move the rest to a petty
+ * cash claim right below it. Both lines stay editable.
+ */
+function splitOverCash(
+  list: DraftExpense[],
+  key: string,
+  accounts: PendingAccount[],
+): DraftExpense[] {
+  const expense = list.find((e) => e.key === key);
+  const account = accounts.find(
+    (a) => a.accountId === expense?.sourceAccountId,
+  );
+  if (!expense || !account) return list;
+  const amount = expenseAmount(expense);
+  const others = list
+    .filter((e) => e.key !== key && e.sourceAccountId === account.accountId)
+    .reduce((sum, e) => sum + expenseAmount(e), 0);
+  const room = Math.max(round2(account.available - others), 0);
+  if (amount <= room) return list;
+  if (room === 0) {
+    return list.map((e) =>
+      e.key === key ? { ...e, sourceAccountId: PETTY_CASH } : e,
+    );
+  }
+  seq += 1;
+  const rest: DraftExpense = {
+    ...expense,
+    key: `expense-${seq}`,
+    sourceAccountId: PETTY_CASH,
+    amount: round2(amount - room).toFixed(2),
+    file: null,
+  };
+  return list.flatMap((e) =>
+    e.key === key ? [{ ...e, amount: room.toFixed(2) }, rest] : [e],
+  );
+}
 
 /**
  * Money spent out of the collected cash (fuel, parking, ...), each with an
@@ -74,7 +119,7 @@ export function HandoverExpenses({
   return (
     <Card className="gap-4">
       <CardHeader className="flex-row items-center justify-between">
-        <CardTitle>Expenses paid from this cash</CardTitle>
+        <CardTitle>Expenses</CardTitle>
         <span className="font-mono text-sm font-semibold tabular-nums">
           {formatAmount(total)}
         </span>
@@ -123,13 +168,30 @@ export function HandoverExpenses({
                 <SearchableSelect
                   value={expense.sourceAccountId || null}
                   onChange={(value) =>
-                    update(expense.key, { sourceAccountId: value ?? "" })
+                    onChange(
+                      splitOverCash(
+                        expenses.map((e) =>
+                          e.key === expense.key
+                            ? { ...e, sourceAccountId: value ?? "" }
+                            : e,
+                        ),
+                        expense.key,
+                        accounts,
+                      ),
+                    )
                   }
-                  options={accounts.map((account) => ({
-                    value: account.accountId,
-                    label: account.name,
-                    description: `Paid from · ${formatAmount(account.available)} available`,
-                  }))}
+                  options={[
+                    ...accounts.map((account) => ({
+                      value: account.accountId,
+                      label: account.name,
+                      description: `Paid from · ${formatAmount(account.available)} available`,
+                    })),
+                    {
+                      value: PETTY_CASH,
+                      label: "Petty cash (claim)",
+                      description: "I paid it myself; claim it from petty cash",
+                    },
+                  ]}
                   placeholder="Paid from"
                   emptyText="No cash accounts"
                   allowClear={false}
@@ -144,6 +206,10 @@ export function HandoverExpenses({
                   value={expense.amount}
                   onChange={(event) =>
                     update(expense.key, { amount: event.target.value })
+                  }
+                  // More than the cash holds: the rest becomes a petty cash claim.
+                  onBlur={() =>
+                    onChange(splitOverCash(expenses, expense.key, accounts))
                   }
                   placeholder="0.00"
                   className="text-right font-mono"
@@ -202,8 +268,9 @@ export function HandoverExpenses({
           </ul>
         ) : (
           <p className="text-muted-foreground text-sm">
-            Spent some of the cash on fuel, parking or similar? Add it here with
-            its bill; it is taken off what you hand over.
+            Spent money on fuel, parking or similar? Add it here with its bill.
+            Paid from your cash, it is taken off what you hand over; whatever
+            your cash cannot cover is claimed from petty cash automatically.
           </p>
         )}
         <Button
@@ -218,14 +285,18 @@ export function HandoverExpenses({
                 expenseAccountId: "",
                 expenseAccountName: null,
                 sourceAccountId:
-                  accounts.length === 1 ? (accounts[0]?.accountId ?? "") : "",
+                  accounts.length === 1
+                    ? (accounts[0]?.accountId ?? "")
+                    : accounts.length === 0
+                      ? PETTY_CASH
+                      : "",
                 amount: "",
                 description: "",
                 file: null,
               },
             ]);
           }}
-          disabled={disabled || accounts.length === 0}
+          disabled={disabled}
         >
           <Plus /> Add expense
         </Button>

@@ -27,6 +27,7 @@ export async function createUser(input: UserInput): Promise<MutationResult> {
       password: input.password,
       roleId: input.roleId,
       allowedCashAccountIds: input.allowedCashAccountIds,
+      allowedLocationIds: input.allowedLocationIds,
     }),
     {
       ...OPTIONS,
@@ -46,6 +47,7 @@ export async function updateUser(
       email: input.email.trim(),
       roleId: input.roleId,
       allowedCashAccountIds: input.allowedCashAccountIds,
+      allowedLocationIds: input.allowedLocationIds,
     }),
     { ...OPTIONS, successMessage: (u) => `${describe(u)} updated` },
   );

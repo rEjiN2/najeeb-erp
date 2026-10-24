@@ -44,6 +44,16 @@ export interface Location {
   // before it existed omit it — depth is derived from parentId instead.
 }
 
+/** Branches are organisational; only these hold stock (backend STOCK_LOCATION_TYPES). */
+export const STOCK_LOCATION_TYPES: readonly LocationType[] = [
+  "warehouse",
+  "store",
+  "van",
+];
+
+/** An active warehouse, store or van: a stock picker option. */
+export type StockLocation = Pick<Location, "id" | "code" | "name" | "type">;
+
 /** GET /locations/tree node. */
 export type LocationTreeNode = Location & { children: LocationTreeNode[] };
 

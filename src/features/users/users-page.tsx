@@ -46,6 +46,8 @@ import {
   type UserInput,
   type UserPage,
 } from "./types";
+import type { StockLocation } from "@/features/locations/types";
+
 import { UserForm } from "./user-form";
 
 const STATUS_FILTER_ITEMS: Record<UserFilters["status"], string> = {
@@ -88,6 +90,7 @@ interface UsersPageProps {
   /** null when they couldn't be loaded: the pickers say why. */
   roles: RoleLookupItem[] | null;
   cashAccounts: CashAccountRef[] | null;
+  stockLocations: StockLocation[] | null;
 }
 
 export function UsersPage({
@@ -95,6 +98,7 @@ export function UsersPage({
   filters,
   roles,
   cashAccounts,
+  stockLocations,
 }: UsersPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -343,6 +347,7 @@ export function UsersPage({
           initialValue={crud.editing}
           roles={roles}
           cashAccounts={cashAccounts}
+          stockLocations={stockLocations}
           onSubmit={crud.submit}
           onResetPassword={(password) =>
             crud.editing

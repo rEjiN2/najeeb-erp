@@ -107,6 +107,10 @@ export async function getHandover(
       return {
         id: String(expense._id),
         expenseAccountName: text(expense.expenseAccountName) ?? "",
+        paidFrom:
+          expense.paidFrom === "petty_cash"
+            ? ("petty_cash" as const)
+            : ("own" as const),
         sourceAccountName: text(expense.sourceAccountName) ?? "",
         amount: num(expense.amount) ?? 0,
         description: text(expense.description),

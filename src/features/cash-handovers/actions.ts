@@ -77,7 +77,10 @@ export async function submitCashHandover(
         ? {
             expenses: input.expenses.map((expense) => ({
               expenseAccountId: expense.expenseAccountId,
-              sourceAccountId: expense.sourceAccountId,
+              paidFrom: expense.paidFrom,
+              ...(expense.paidFrom === "own"
+                ? { sourceAccountId: expense.sourceAccountId }
+                : {}),
               amount: expense.amount,
               ...(expense.description.trim()
                 ? { description: expense.description.trim() }

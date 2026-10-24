@@ -132,6 +132,8 @@ export interface HandoverItem {
 export interface HandoverExpense {
   id: string;
   expenseAccountName: string;
+  /** "petty_cash": claimed from the company petty cash, not paid from collected cash. */
+  paidFrom: "own" | "petty_cash";
   sourceAccountName: string;
   amount: number;
   description: string | null;
@@ -168,6 +170,8 @@ export interface HandoverInput {
   bankReceiptIds: string[];
   expenses: {
     expenseAccountId: string;
+    paidFrom: "own" | "petty_cash";
+    /** Empty for a petty cash claim. */
     sourceAccountId: string;
     amount: number;
     description: string;
