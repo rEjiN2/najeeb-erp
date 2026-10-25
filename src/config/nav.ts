@@ -7,6 +7,7 @@ import {
   Building,
   Building2,
   Database,
+  FileText,
   HandCoins,
   History,
   Landmark,
@@ -136,6 +137,18 @@ export const NAV_ITEMS: NavEntry[] = [
             href: "/accounting-inventory/transactions/opening-balances",
             icon: Landmark,
             permission: PERMISSIONS.OPENING_BALANCES_READ,
+          },
+          {
+            title: "Purchase Invoices",
+            href: "/accounting-inventory/transactions/purchase-invoices",
+            icon: FileText,
+            permission: PERMISSIONS.PURCHASE_INVOICES_READ,
+          },
+          {
+            title: "Sales Invoices",
+            href: "/accounting-inventory/transactions/sales-invoices",
+            icon: Receipt,
+            permission: PERMISSIONS.SALES_INVOICES_READ,
           },
           {
             title: "Opening Stock",

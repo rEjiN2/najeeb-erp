@@ -44,6 +44,17 @@ function toLines(input: VoucherInput) {
     vat: line.vat,
     ...(line.narration.trim() ? { narration: line.narration.trim() } : {}),
     ...(line.remarks.trim() ? { remarks: line.remarks.trim() } : {}),
+    ...(line.allocations?.length
+      ? {
+          allocations: line.allocations.map(
+            ({ targetType, targetId, amount }) => ({
+              targetType,
+              targetId,
+              amount,
+            }),
+          ),
+        }
+      : {}),
   }));
 }
 

@@ -14,6 +14,7 @@ import {
 import type {
   AccountLookupItem,
   ChequeStatus,
+  LineAllocation,
   NamedRef,
   PaymentMethod,
   UserRef,
@@ -86,6 +87,14 @@ type RawVoucher = Record<string, unknown> & {
   chequeStatus?: ChequeStatus | null;
   comments?: string | null;
   lines: RawLine[];
+  /** Cash payments: active allocations, by line position. */
+  allocations?: {
+    paymentLineIndex: number;
+    targetType: LineAllocation["targetType"];
+    targetId: string;
+    targetNo: string;
+    amount: number;
+  }[];
   grossTotal: number;
   totalTax: number;
   grandTotal: number;
@@ -253,7 +262,19 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
         chequeBankName: raw.chequeBankName ?? null,
         chequeStatus: raw.chequeStatus ?? null,
         comments: raw.comments ?? "",
-        lines: raw.lines.map((line) => ({
+        lines: raw.lines.map((line, index) => ({
+          ...(raw.allocations
+            ? {
+                allocations: raw.allocations
+                  .filter((row) => row.paymentLineIndex === index)
+                  .map((row) => ({
+                    targetType: row.targetType,
+                    targetId: row.targetId,
+                    number: row.targetNo,
+                    amount: row.amount,
+                  })),
+              }
+            : {}),
           accountId: line.accountId,
           accountName: names.get(line.accountId) ?? null,
           narration: line.narration ?? "",

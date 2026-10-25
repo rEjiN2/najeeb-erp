@@ -9,6 +9,8 @@ import type { AccountLookupItem } from "./types";
 export interface LineAccountOption extends SearchableSelectOption {
   /** null when the backend leaves balances out (no balances:view). */
   balance: number | null;
+  /** Ledger account type, e.g. "supplier", "party", "expense". */
+  type: string;
 }
 
 export type LineAccountSearch = (
@@ -56,6 +58,7 @@ function createSearch(types: readonly string[]): LineAccountSearch {
             ? account.code
             : `${account.code} · Balance ${formatAmount(account.balance)}`,
         balance: account.balance ?? null,
+        type: account.type,
       })),
     };
   };

@@ -7,6 +7,7 @@ import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
 import { getAccount } from "@/features/accounts/api";
 import { isOwnScope } from "@/features/auth/session";
 import { getUsers } from "@/features/users/api";
+import { apiGet } from "@/lib/api";
 import { describeFailure, type ApiResult } from "@/lib/api-types";
 import { uaeToday } from "@/lib/datetime";
 
@@ -20,6 +21,8 @@ import {
 } from "./config";
 import { parseFilters, resolveDateRange, toSearch } from "./filters";
 import { loadVoucherFormData } from "./form-data";
+import type { OpenBill } from "./allocation-dialog";
+import type { DraftLine } from "./form/draft";
 import { VoucherForm } from "./form/voucher-form";
 import { VoucherListPage } from "./list/voucher-list-page";
 import type { Loadable } from "./list/voucher-filter-bar";
@@ -185,7 +188,56 @@ export async function VoucherListRoute({
   );
 }
 
-export async function VoucherNewRoute({ module }: { module: VoucherModule }) {
+/**
+ * A payment line for one bill (?supplier=&bill=, or a receipt's
+ * ?customer=&bill=): the party's account, amount = the bill's balance,
+ * allocated to it. Anything off returns none.
+ */
+async function billPaymentLine(
+  searchParams: SearchParams,
+): Promise<DraftLine | null> {
+  const partyId = searchParams.supplier ?? searchParams.customer;
+  const billId = searchParams.bill;
+  if (typeof partyId !== "string" || typeof billId !== "string") return null;
+  if (!/^[a-f\d]{24}$/i.test(partyId) || !/^[a-f\d]{24}$/i.test(billId)) {
+    return null;
+  }
+  const [party, bills] = await Promise.all([
+    apiGet<{ name: string; ledgerAccountId: string }>(`/parties/${partyId}`),
+    apiGet<OpenBill[]>(`/parties/${partyId}/open-bills`),
+  ]);
+  const bill = bills.ok ? bills.data.find((b) => b.id === billId) : undefined;
+  if (!party.ok || !bill) return null;
+  return {
+    id: `bill-${bill.id}`,
+    accountId: party.data.ledgerAccountId,
+    accountName: party.data.name,
+    narration: `Payment for ${bill.number}${bill.billNo ? ` (bill ${bill.billNo})` : ""}`,
+    remarks: "",
+    oldBalance: null,
+    amount: bill.balance.toFixed(2),
+    vat: "",
+    accountType: searchParams.customer ? "party" : "supplier",
+    allocations: [
+      {
+        targetType: bill.type,
+        targetId: bill.id,
+        number: bill.number,
+        billNo: bill.billNo,
+        amount: bill.balance,
+        saved: 0,
+      },
+    ],
+  };
+}
+
+export async function VoucherNewRoute({
+  module,
+  searchParams = {},
+}: {
+  module: VoucherModule;
+  searchParams?: SearchParams;
+}) {
   const { config, api } = module;
   const title = `New ${config.singular}`;
 
@@ -194,10 +246,13 @@ export async function VoucherNewRoute({ module }: { module: VoucherModule }) {
     return <ManageForbidden config={config} title={title} action="create" />;
   }
 
-  const formData = await loadVoucherFormData({
-    config,
-    getHeaderAccounts: api.getHeaderAccounts,
-  });
+  const [formData, billLine] = await Promise.all([
+    loadVoucherFormData({
+      config,
+      getHeaderAccounts: api.getHeaderAccounts,
+    }),
+    config.allocatesBills ? billPaymentLine(searchParams) : null,
+  ]);
   if (!formData.ok) {
     return (
       <LoadFailure
@@ -216,6 +271,7 @@ export async function VoucherNewRoute({ module }: { module: VoucherModule }) {
       showBalances={access.canViewBalances}
       createAction={module.createAction}
       updateAction={module.updateAction}
+      initialLines={billLine ? [billLine] : undefined}
       {...formData.data}
     />
   );

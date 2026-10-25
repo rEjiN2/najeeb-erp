@@ -26,6 +26,14 @@ export const PERMISSIONS = {
   /** Stock summary and history; scoped users see only their locations. */
   STOCK_READ: "stock:read",
   OPENING_STOCK_READ: "opening-stock:read",
+  PURCHASE_INVOICES_READ: "purchase-invoices:read",
+  SALES_INVOICES_READ: "sales-invoices:read",
+  /** Change a sales line's rate (and VAT %) from the product's. */
+  SALES_OVERRIDE_PRICE: "sales:override-price",
+  /** Give a discount on a sales line. */
+  SALES_DISCOUNT: "sales:discount",
+  /** Apply payments to bills and reverse them. */
+  ALLOCATIONS_MANAGE: "allocations:manage",
   LOCATIONS_MANAGE: "locations:manage",
   PARTIES_MANAGE: "parties:manage",
   PRODUCT_GROUPS_MANAGE: "product-groups:manage",

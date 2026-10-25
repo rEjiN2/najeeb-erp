@@ -47,6 +47,8 @@ export interface VoucherConfig {
   /** One account and amount per voucher (handovers): the view leaves out
    * narration, remarks, VAT and the gross/tax totals. */
   simpleLines?: boolean;
+  /** Payments: supplier/customer lines can be allocated to open bills. */
+  allocatesBills?: boolean;
   /** false: no PDF (opening balances), so no Print / Download buttons. */
   printable?: boolean;
   /** Status filter choices; receipts and payments: all / posted / cancelled.

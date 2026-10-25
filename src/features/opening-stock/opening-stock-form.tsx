@@ -99,7 +99,7 @@ function lineOf(product: {
 }
 
 /** "Line 3: X; Line 7: Y" (a refused save) → messages by line number. */
-function rowErrorsOf(messages: string[]): {
+export function rowErrorsOf(messages: string[]): {
   byRow: Map<number, string[]>;
   general: string[];
 } {

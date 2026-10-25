@@ -1,7 +1,12 @@
 import { uaeToday, toDateInputValue } from "@/lib/datetime";
 
 import type { VoucherConfig } from "../config";
-import type { PaymentMethod, VoucherDetail, VoucherInput } from "../types";
+import type {
+  LineAllocation,
+  PaymentMethod,
+  VoucherDetail,
+  VoucherInput,
+} from "../types";
 
 /** A line as the form edits it — amounts stay text until submit so typing
  * "12." or clearing a field doesn't fight the input. */
@@ -16,6 +21,26 @@ export interface DraftLine {
   oldBalance: number | null;
   amount: string;
   vat: string;
+  /** Payments: bills this line settles; the rest stays on account. */
+  allocations?: DraftAllocation[];
+  /** Ledger account type when picked here (e.g. "party"); unknown on a loaded voucher. */
+  accountType?: string;
+}
+
+/** An allocation as the form holds it: `saved` is what this line already
+ * had on the bill when the form opened (the bill's balance excludes it). */
+export interface DraftAllocation extends LineAllocation {
+  billNo?: string;
+  saved: number;
+}
+
+/** What a line's allocations add up to, in cents-safe AED. */
+export function allocatedOf(line: Pick<DraftLine, "allocations">): number {
+  return (
+    Math.round(
+      (line.allocations ?? []).reduce((sum, a) => sum + a.amount * 100, 0),
+    ) / 100
+  );
 }
 
 export interface DraftVoucher {
@@ -79,6 +104,14 @@ export function draftFromVoucher(voucher: VoucherDetail): DraftVoucher {
       oldBalance: line.oldBalance,
       amount: String(line.amount),
       vat: line.vat ? String(line.vat) : "",
+      ...(line.allocations
+        ? {
+            allocations: line.allocations.map((allocation) => ({
+              ...allocation,
+              saved: allocation.amount,
+            })),
+          }
+        : {}),
     })),
   };
 }
@@ -143,6 +176,11 @@ export function validateDraft(
     if (Number.isNaN(parseMoney(line.vat, true))) {
       errors.lineVat[line.id] = "VAT must be 0 or more, up to 2 decimals.";
     }
+    const net = parseMoney(line.amount) + parseMoney(line.vat, true);
+    if (!errors.lineAmount[line.id] && allocatedOf(line) > net + 0.001) {
+      errors.lineAmount[line.id] =
+        `Allocated ${allocatedOf(line).toFixed(2)} is more than the line's ${net.toFixed(2)}.`;
+    }
   }
   const valid =
     !errors.voucherDate &&
@@ -175,6 +213,18 @@ export function toInput(draft: DraftVoucher): VoucherInput {
       remarks: line.remarks,
       amount: parseMoney(line.amount),
       vat: parseMoney(line.vat, true),
+      ...(line.allocations?.length
+        ? {
+            allocations: line.allocations.map(
+              ({ targetType, targetId, number, amount }) => ({
+                targetType,
+                targetId,
+                number,
+                amount,
+              }),
+            ),
+          }
+        : {}),
     })),
   };
 }

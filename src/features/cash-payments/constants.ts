@@ -41,6 +41,7 @@ export const CASH_PAYMENT_CONFIG: VoucherConfig = {
   lineAccountTypes: PAYMENT_LINE_ACCOUNT_TYPES,
   showPaymentDetails: true,
   addPartyKind: "supplier",
+  allocatesBills: true,
   copy: {
     headerLabel: "Paid From",
     headerFilterAny: "Paid from: any",

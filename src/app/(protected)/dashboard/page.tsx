@@ -65,8 +65,12 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <PurchaseAnalysisCard />
-        <SalesAnalysisCard />
+        {permissions.includes(PERMISSIONS.PURCHASE_INVOICES_READ) ? (
+          <PurchaseAnalysisCard />
+        ) : null}
+        {permissions.includes(PERMISSIONS.SALES_INVOICES_READ) ? (
+          <SalesAnalysisCard />
+        ) : null}
       </div>
 
       {canViewBalances ? (

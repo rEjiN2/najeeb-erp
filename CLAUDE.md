@@ -62,7 +62,28 @@ value with products:view-cost) and Stock History (running balance, CSV)
 in features/stock; Opening Stock (features/opening-stock, list/new/view/
 edit/cancel, CSV import via /opening-stock/validate); Users "Assigned
 locations" (allowedLocationIds, scoped roles); Company "Allow negative stock".
-Planned: purchase, sales, bundling, reports.
+Built (untested end to end): Purchase Invoices (features/purchase-invoices:
+list with search/supplier/location/status/date + summary, new/view/edit/
+cancel/print; lines priced live; due date from supplier creditDays; bill
+files via POST /files/upload ownerType supplier before save; Unpaid badge
+static until payments link).
+Built (untested end to end): Allocations. Cash Payment lines (config
+allocatesBills) "Allocate to bills" dialog (features/vouchers/
+allocation-dialog.tsx; party found via /parties/lookup by ledgerAccountId),
+on-account totals on form/view; payment edit sends allocations back
+(backend GET /cash-payments/:id returns them). Purchase Invoice view:
+Payments card (Pay → /cash-payments/new?supplier=&bill=, Apply existing,
+Reverse), Unpaid/Partly paid/Paid + Overdue; list payment filter, Paid/
+Balance, outstanding.
+Built (untested end to end): Sales Invoices (features/sales-invoices: list
+with customer/location/salesman/payment filters + summary; form with stock
+at location (needs stock:read), rate/VAT locked without
+sales:override-price, discount only with sales:discount, Pay now posting a
+receipt, credit dialog on acknowledgeCredit 409; view reuses Purchase
+lines + InvoicePayments targetType sales-invoice). Receipts allocate to
+bills (allocatesBills; ?customer=&bill= prefill). Dashboard Purchase/Sales
+Analysis live from /dashboard/purchases|sales.
+Planned: bundling, reports.
 
 ## Conventions
 

@@ -47,6 +47,7 @@ export const CASH_RECEIPT_CONFIG: VoucherConfig = {
   showPaymentDetails: false,
   methodSelector: true,
   addPartyKind: "customer",
+  allocatesBills: true,
   copy: {
     headerLabel: "Received Into",
     headerFilterAny: "Received into: any",

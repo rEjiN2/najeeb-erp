@@ -18,6 +18,10 @@ export const OPENING_STOCK_PATH =
 /** Voucher types (backend voucherType) the history can link to, and their label. */
 const VOUCHER_TYPES: Record<string, { label: string; path?: string }> = {
   "opening-stock": { label: "Opening Stock", path: OPENING_STOCK_PATH },
+  "purchase-invoice": {
+    label: "Purchase Invoice",
+    path: "/accounting-inventory/transactions/purchase-invoices",
+  },
 };
 
 export function voucherTypeLabel(type: string): string {

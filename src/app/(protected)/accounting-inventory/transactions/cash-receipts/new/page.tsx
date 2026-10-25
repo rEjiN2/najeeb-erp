@@ -7,6 +7,16 @@ export const metadata: Metadata = {
   title: "New Receipt | ALA Dates",
 };
 
-export default function Page() {
-  return <VoucherNewRoute module={CASH_RECEIPTS_MODULE} />;
+/** ?customer=<partyId>&bill=<invoiceId> (a sales invoice's "Pay") prefills the line. */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <VoucherNewRoute
+      module={CASH_RECEIPTS_MODULE}
+      searchParams={await searchParams}
+    />
+  );
 }

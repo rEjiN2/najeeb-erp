@@ -35,6 +35,7 @@ import type { MutationResult } from "@/lib/mutation";
 import { formatAmount } from "@/lib/format";
 
 import { lineAccountSearch, type LineAccountOption } from "../account-search";
+import { AllocationCell, AllocationDialog } from "../allocation-dialog";
 import {
   ATTACHMENT_ACCEPT,
   AttachmentPreview,
@@ -59,6 +60,7 @@ import type {
   VoucherWarning,
 } from "../types";
 import {
+  allocatedOf,
   blankDraft,
   draftFromVoucher,
   draftTotals,
@@ -108,6 +110,7 @@ function AddLineControl({
             oldBalance: option.balance,
             amount: "",
             vat: "",
+            accountType: option.type,
           });
         }}
         search={lineAccountSearch(config.lineAccountTypes)}
@@ -157,6 +160,8 @@ type VoucherFormProps = {
   scoped: boolean;
   /** balances:view — without it the Old Balance column is left out. */
   showBalances: boolean;
+  /** New voucher only: lines to start with (a bill's "Pay"). */
+  initialLines?: DraftLine[];
 } & (
   | { mode: "create"; voucher?: undefined }
   | { mode: "edit"; voucher: VoucherDetail }
@@ -175,6 +180,7 @@ export function VoucherForm({
   canAddParty,
   scoped,
   showBalances,
+  initialLines,
 }: VoucherFormProps) {
   const router = useRouter();
   const partyKind = PARTY_KIND_CONFIG[config.addPartyKind];
@@ -206,9 +212,13 @@ export function VoucherForm({
   const [initial] = useState<DraftVoucher>(() => {
     if (voucher) return draftFromVoucher(voucher);
     const method = methods[0] ?? "cash";
-    return blankDraft(me?.id ?? "", defaultHeaderFor(method), method);
+    return {
+      ...blankDraft(me?.id ?? "", defaultHeaderFor(method), method),
+      lines: initialLines ?? [],
+    };
   });
   const [partyPanelOpen, setPartyPanelOpen] = useState(false);
+  const [allocatingLineId, setAllocatingLineId] = useState<string | null>(null);
   // A save the backend sent back for confirmation, with what it warned about.
   const [pendingWarnings, setPendingWarnings] = useState<{
     input: VoucherInput;
@@ -245,6 +255,8 @@ export function VoucherForm({
   const visibleErrors: DraftErrors = showErrors ? errors : NO_ERRORS;
   const totals = draftTotals(draft.voucher.lines);
   const isDirty = draft.isDirty || changeNote.trim() !== "";
+  const allocatingLine =
+    draft.voucher.lines.find((line) => line.id === allocatingLineId) ?? null;
   const backHref = voucher ? voucherPath(config, voucher.id) : config.basePath;
 
   // Ctrl/Cmd + S saves, like a desktop voucher screen.
@@ -567,6 +579,14 @@ export function VoucherForm({
           <VoucherLineGrid
             columns={editColumns(visibleErrors, {
               showOldBalance: showBalances,
+              renderAllocation: config.allocatesBills
+                ? (line) => (
+                    <AllocationCell
+                      line={line}
+                      onOpen={() => setAllocatingLineId(line.id)}
+                    />
+                  )
+                : undefined,
             })}
             lines={draft.voucher.lines}
             onUpdateLine={draft.updateLine}
@@ -598,6 +618,27 @@ export function VoucherForm({
               value: formatAmount(totals.grandTotal),
               emphasize: true,
             },
+            ...(config.allocatesBills
+              ? (() => {
+                  const allocated =
+                    Math.round(
+                      draft.voucher.lines.reduce(
+                        (sum, line) => sum + allocatedOf(line) * 100,
+                        0,
+                      ),
+                    ) / 100;
+                  return [
+                    {
+                      label: "Allocated to bills",
+                      value: formatAmount(allocated),
+                    },
+                    {
+                      label: "On account",
+                      value: formatAmount(totals.grandTotal - allocated),
+                    },
+                  ];
+                })()
+              : []),
           ]}
         />
 
@@ -625,6 +666,29 @@ export function VoucherForm({
 
         <UnsavedChangesGuard when={isDirty && !leaving} />
       </form>
+
+      {allocatingLine ? (
+        <AllocationDialog
+          key={allocatingLine.id}
+          line={allocatingLine}
+          open
+          onOpenChange={(open) => {
+            if (!open) setAllocatingLineId(null);
+          }}
+          onApply={(allocations) => {
+            const total =
+              Math.round(allocations.reduce((s, a) => s + a.amount * 100, 0)) /
+              100;
+            draft.updateLine(allocatingLine.id, {
+              allocations,
+              // A blank amount fills from the allocations.
+              ...(allocatingLine.amount.trim() === "" && total > 0
+                ? { amount: total.toFixed(2) }
+                : {}),
+            });
+          }}
+        />
+      ) : null}
 
       {/* Outside the voucher <form>: React events bubble through portals, so a
         nested form's submit would also submit the voucher. */}

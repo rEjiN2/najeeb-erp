@@ -89,6 +89,17 @@ export interface VoucherLine {
   amount: number;
   vat: number;
   netAmount: number;
+  /** Payments: bills this line settles (active allocations); the rest is on account. */
+  allocations?: LineAllocation[];
+}
+
+/** Part of a payment line applied to a bill (backend AllocationTargetDto). */
+export interface LineAllocation {
+  targetType: "purchase-invoice" | "sales-invoice" | "opening-balance";
+  targetId: string;
+  /** The bill's voucher number, e.g. PI-0001. */
+  number: string;
+  amount: number;
 }
 
 /** A file on a receipt (cheque photo, transfer slip). */
@@ -174,6 +185,8 @@ export interface VoucherInput {
     remarks: string;
     amount: number;
     vat: number;
+    /** Payments only; sending lines replaces the payment's allocations. */
+    allocations?: LineAllocation[];
   }[];
 }
 

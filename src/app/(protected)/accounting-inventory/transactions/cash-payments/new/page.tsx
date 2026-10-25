@@ -7,6 +7,16 @@ export const metadata: Metadata = {
   title: "New Cash Payment | ALA Dates",
 };
 
-export default function Page() {
-  return <VoucherNewRoute module={CASH_PAYMENTS_MODULE} />;
+/** ?supplier=<partyId>&bill=<invoiceId> (a purchase invoice's "Pay") prefills the line. */
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  return (
+    <VoucherNewRoute
+      module={CASH_PAYMENTS_MODULE}
+      searchParams={await searchParams}
+    />
+  );
 }

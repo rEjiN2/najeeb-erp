@@ -164,6 +164,8 @@ interface VoucherViewProps {
   justSaved: boolean;
   /** Replaces the lines and totals (handovers show their receipts). */
   body?: ReactNode;
+  /** Shown after the status badge (purchase invoices: Unpaid). */
+  extraBadge?: ReactNode;
 }
 
 export function VoucherView({
@@ -173,6 +175,7 @@ export function VoucherView({
   access,
   justSaved,
   body,
+  extraBadge,
 }: VoucherViewProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -222,7 +225,12 @@ export function VoucherView({
     <div className="space-y-6">
       <VoucherToolbar
         title={`${config.singular} ${voucher.voucherNo}`}
-        badge={<VoucherStatusBadge status={voucher.status} />}
+        badge={
+          <>
+            <VoucherStatusBadge status={voucher.status} />
+            {extraBadge}
+          </>
+        }
         description={<MetaStrip voucher={voucher} />}
         back={{ href: config.basePath, label: config.title }}
         actions={
@@ -438,6 +446,7 @@ export function VoucherView({
                 // Left out by the backend without balances:view.
                 showOldBalance: lines.every((line) => line.oldBalance !== null),
                 simpleLines: config.simpleLines ?? false,
+                showAllocations: Boolean(config.allocatesBills),
               })}
               lines={lines}
             />
@@ -463,6 +472,32 @@ export function VoucherView({
                   value: formatAmount(voucher.grandTotal),
                   emphasize: true,
                 },
+                ...(config.allocatesBills && isPosted
+                  ? (() => {
+                      const allocated =
+                        Math.round(
+                          voucher.lines.reduce(
+                            (sum, line) =>
+                              sum +
+                              (line.allocations ?? []).reduce(
+                                (s, a) => s + a.amount * 100,
+                                0,
+                              ),
+                            0,
+                          ),
+                        ) / 100;
+                      return [
+                        {
+                          label: "Allocated to bills",
+                          value: formatAmount(allocated),
+                        },
+                        {
+                          label: "On account",
+                          value: formatAmount(voucher.grandTotal - allocated),
+                        },
+                      ];
+                    })()
+                  : []),
               ]}
             />
           )}

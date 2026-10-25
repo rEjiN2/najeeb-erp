@@ -1,9 +1,11 @@
 import {
   ArrowRightLeft,
   Banknote,
+  FileText,
   HandCoins,
   Landmark,
   PackagePlus,
+  Receipt,
   ScrollText,
 } from "lucide-react";
 import type { Metadata } from "next";
@@ -52,6 +54,22 @@ const TRANSACTION_LINKS = [
     description: "Balances brought over from the old system, by hand or CSV.",
     icon: Landmark,
     permission: PERMISSIONS.OPENING_BALANCES_READ,
+  },
+  {
+    href: "/accounting-inventory/transactions/purchase-invoices",
+    title: "Purchase Invoices",
+    description:
+      "Supplier bills: stock in at a location, owed to the supplier.",
+    icon: FileText,
+    permission: PERMISSIONS.PURCHASE_INVOICES_READ,
+  },
+  {
+    href: "/accounting-inventory/transactions/sales-invoices",
+    title: "Sales Invoices",
+    description:
+      "Sales to customers: stock out of a location, paid now or owed.",
+    icon: Receipt,
+    permission: PERMISSIONS.SALES_INVOICES_READ,
   },
   {
     href: "/accounting-inventory/transactions/opening-stock",

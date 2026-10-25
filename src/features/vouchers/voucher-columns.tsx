@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Input } from "@/components/ui/input";
 import type { VoucherColumn } from "@/components/voucher/voucher-line-grid";
 import { formatAmount } from "@/lib/format";
@@ -32,6 +34,8 @@ interface ColumnOptions {
   showOldBalance: boolean;
   /** Account and amount only (see VoucherConfig.simpleLines). */
   simpleLines?: boolean;
+  /** Payments: a "Bills" column (allocations and the on-account rest). */
+  showAllocations?: boolean;
 }
 
 const LINE_DETAIL_KEYS = ["narration", "remarks", "vat", "netAmount"];
@@ -50,8 +54,12 @@ function withoutOldBalance<T>(
 /** Editable grid for the create/edit form. */
 export function editColumns(
   errors: Pick<DraftErrors, "lineAmount" | "lineVat">,
-  options: ColumnOptions,
+  options: ColumnOptions & {
+    /** Payments: the line's allocation cell (see AllocationCell). */
+    renderAllocation?: (line: DraftLine) => ReactNode;
+  },
 ): VoucherColumn<DraftLine>[] {
+  const { renderAllocation } = options;
   return withoutOldBalance<DraftLine>(
     [
       {
@@ -144,6 +152,15 @@ export function editColumns(
           );
         },
       },
+      ...(renderAllocation
+        ? [
+            {
+              key: "allocation",
+              header: "Bills",
+              render: (line: DraftLine) => renderAllocation(line),
+            },
+          ]
+        : []),
     ],
     options,
   );
@@ -201,6 +218,49 @@ const VIEW_COLUMNS: VoucherColumn<ViewLine>[] = [
   },
 ];
 
+/** Bills a payment line settles, and what stays on account. */
+const ALLOCATION_COLUMN: VoucherColumn<ViewLine> = {
+  key: "allocation",
+  header: "Bills",
+  render: (line) => {
+    const allocations = line.allocations ?? [];
+    const onAccount =
+      Math.round(
+        (line.netAmount - allocations.reduce((sum, a) => sum + a.amount, 0)) *
+          100,
+      ) / 100;
+    return (
+      <div className="space-y-0.5 text-sm">
+        {allocations.map((a) => (
+          <p key={a.targetId} className="tabular-nums">
+            <span className="font-mono">{a.number}</span>{" "}
+            <span className="text-muted-foreground">
+              {formatAmount(a.amount)}
+            </span>
+          </p>
+        ))}
+        <p
+          className={cn(
+            "text-xs tabular-nums",
+            onAccount > 0
+              ? "text-primary font-medium"
+              : "text-muted-foreground",
+          )}
+        >
+          {onAccount > 0
+            ? `${formatAmount(onAccount)} on account`
+            : "Fully allocated"}
+        </p>
+      </div>
+    );
+  },
+};
+
 export function viewColumns(options: ColumnOptions): VoucherColumn<ViewLine>[] {
-  return withoutOldBalance(VIEW_COLUMNS, options);
+  return withoutOldBalance(
+    options.showAllocations
+      ? [...VIEW_COLUMNS, ALLOCATION_COLUMN]
+      : VIEW_COLUMNS,
+    options,
+  );
 }
