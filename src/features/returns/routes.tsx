@@ -3,6 +3,10 @@ import "server-only";
 import { notFound } from "next/navigation";
 
 import { VoucherToolbar } from "@/components/voucher/voucher-toolbar";
+import { CASH_PAYMENTS_MODULE } from "@/features/cash-payments/module";
+import { CASH_RECEIPTS_MODULE } from "@/features/cash-receipts/module";
+import { hasPermission } from "@/features/auth/session";
+import { PERMISSIONS } from "@/features/auth/permissions";
 import { getSupplierName as getPartyName } from "@/features/purchase-invoices/api";
 import { getVisibleStockLocations } from "@/features/stock/api";
 import { getVoucherAccess } from "@/features/vouchers/access";
@@ -16,6 +20,7 @@ import {
 import { uaeToday } from "@/lib/datetime";
 
 import { cancelPurchaseReturn, cancelSalesReturn } from "./actions";
+import { ReturnRefund } from "./return-refund";
 import { getInvoiceNo, getReturn, getReturns, getReturnSource } from "./api";
 import { RETURN_KINDS, returnPath } from "./constants";
 import { parseReturnFilters, toReturnSearch } from "./filters";
@@ -128,10 +133,27 @@ export async function ReturnDetailRoute({
   searchParams: SearchParams;
 }) {
   const info = RETURN_KINDS[kind];
-  const [detail, access] = await Promise.all([
-    getReturn(kind, id),
-    getVoucherAccess(info.config),
-  ]);
+  const sales = kind === "sales";
+  const [detail, access, canRefund, canCancelRefund, accounts] =
+    await Promise.all([
+      getReturn(kind, id),
+      getVoucherAccess(info.config),
+      // A refund posts a Cash Payment (sales) or Cash Receipt (purchase).
+      hasPermission(
+        sales
+          ? PERMISSIONS.CASH_PAYMENTS_CREATE
+          : PERMISSIONS.CASH_RECEIPTS_CREATE,
+      ),
+      hasPermission(
+        sales
+          ? PERMISSIONS.CASH_PAYMENTS_CANCEL
+          : PERMISSIONS.CASH_RECEIPTS_CANCEL,
+      ),
+      (sales
+        ? CASH_PAYMENTS_MODULE
+        : CASH_RECEIPTS_MODULE
+      ).api.getHeaderAccounts(),
+    ]);
   if (!detail.ok) {
     if (isMissing(detail)) notFound();
     return (
@@ -156,7 +178,21 @@ export async function ReturnDetailRoute({
       // A return can't be edited: cancel it and enter a new one.
       access={{ ...access, canEdit: false }}
       justSaved={searchParams.saved === "1"}
-      body={<ReturnLines kind={kind} detail={detail.data} />}
+      body={
+        <div className="space-y-6">
+          <ReturnLines kind={kind} detail={detail.data} />
+          <ReturnRefund
+            kind={kind}
+            returnId={id}
+            detail={detail.data}
+            cancelled={detail.data.voucher.status === "cancelled"}
+            today={uaeToday()}
+            accounts={accounts.ok ? accounts.data : []}
+            canRefund={access.canEdit && canRefund}
+            canCancelRefund={access.canEdit && canCancelRefund}
+          />
+        </div>
+      }
     />
   );
 }

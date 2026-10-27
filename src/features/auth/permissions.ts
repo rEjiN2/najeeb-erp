@@ -26,6 +26,9 @@ export const PERMISSIONS = {
   /** Stock summary and history; scoped users see only their locations. */
   STOCK_READ: "stock:read",
   OPENING_STOCK_READ: "opening-stock:read",
+  STOCK_COUNTS_READ: "stock-counts:read",
+  /** System quantities and differences on a count; without it a count is blind. */
+  STOCK_VIEW_SYSTEM_QTY: "stock:view-system-qty",
   PURCHASE_INVOICES_READ: "purchase-invoices:read",
   SALES_INVOICES_READ: "sales-invoices:read",
   SALES_RETURNS_READ: "sales-returns:read",
@@ -42,6 +45,9 @@ export const PERMISSIONS = {
   PRODUCTS_MANAGE: "products:manage",
   /** See purchase prices (cost). Never for van salesmen. */
   PRODUCTS_VIEW_COST: "products:view-cost",
+  /** Define and change bundle recipes. */
+  BUNDLES_MANAGE: "bundles:manage",
+  BUNDLING_READ: "bundling:read",
   UNITS_MANAGE: "units:manage",
   /** The salesman collections report. */
   REPORTS_SALESMAN: "reports:salesman",

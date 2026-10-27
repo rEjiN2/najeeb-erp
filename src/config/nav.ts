@@ -13,6 +13,7 @@ import {
   Landmark,
   LayoutDashboard,
   MapPin,
+  ClipboardCheck,
   Package,
   PackagePlus,
   PackageSearch,
@@ -170,6 +171,12 @@ export const NAV_ITEMS: NavEntry[] = [
             permission: PERMISSIONS.OPENING_STOCK_READ,
           },
           {
+            title: "Bundling",
+            href: "/accounting-inventory/transactions/bundling",
+            icon: Boxes,
+            permission: PERMISSIONS.BUNDLING_READ,
+          },
+          {
             title: "Cheques",
             href: "/accounting-inventory/transactions/cheques",
             icon: ScrollText,
@@ -192,6 +199,12 @@ export const NAV_ITEMS: NavEntry[] = [
             href: "/accounting-inventory/inventory/stock-history",
             icon: History,
             permission: PERMISSIONS.STOCK_READ,
+          },
+          {
+            title: "Stock Counts",
+            href: "/accounting-inventory/inventory/stock-counts",
+            icon: ClipboardCheck,
+            permission: PERMISSIONS.STOCK_COUNTS_READ,
           },
         ],
       },

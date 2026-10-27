@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 
 import { MasterPageHeader } from "@/components/master/master-page-header";
 import { MasterLoadError } from "@/components/master/master-states";
+import { PERMISSIONS } from "@/features/auth/permissions";
+import { hasPermission } from "@/features/auth/session";
 import { getProductGroups } from "@/features/product-groups/api";
 import {
   canManageProducts,
@@ -28,13 +30,15 @@ export default async function Page({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const filters = parseProductFilters(await searchParams);
-  const [products, groups, units, canManage, viewCost] = await Promise.all([
-    getProducts(filters),
-    getProductGroups(),
-    getUnits(),
-    canManageProducts(),
-    canViewCost(),
-  ]);
+  const [products, groups, units, canManage, viewCost, manageRecipe] =
+    await Promise.all([
+      getProducts(filters),
+      getProductGroups(),
+      getUnits(),
+      canManageProducts(),
+      canViewCost(),
+      hasPermission(PERMISSIONS.BUNDLES_MANAGE),
+    ]);
 
   // The list needs all three: groups and units fill its filter and form.
   const failure = [products, groups, units].find((result) => !result.ok);
@@ -70,6 +74,7 @@ export default async function Page({
       units={units.ok ? units.data : []}
       canManage={canManage}
       canViewCost={viewCost}
+      canManageRecipe={manageRecipe}
     />
   );
 }

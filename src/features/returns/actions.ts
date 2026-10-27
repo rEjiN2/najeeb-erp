@@ -79,3 +79,65 @@ export async function cancelPurchaseReturn(
 ): Promise<MutationResult> {
   return cancelReturn("purchase", id, reason);
 }
+
+export interface RefundInput {
+  voucherDate: string;
+  accountId: string;
+  amount: number;
+  paymentReference: string;
+  acknowledgeWarnings?: boolean;
+}
+
+/** Pays the credit left on account out in cash (sales) or takes it in (purchase); posts the voucher. */
+export async function refundReturn(
+  kind: ReturnKind,
+  id: string,
+  input: RefundInput,
+): Promise<MutationResult> {
+  if (!isReturnKind(kind)) {
+    return { ok: false, messages: ["Unknown return type."] };
+  }
+  const info = RETURN_KINDS[kind];
+  return runMutation(
+    apiSend<Saved>("POST", `${info.apiPath}/${encodeURIComponent(id)}/refund`, {
+      voucherDate: input.voucherDate,
+      accountId: input.accountId,
+      amount: input.amount,
+      ...(input.paymentReference.trim()
+        ? { paymentReference: input.paymentReference.trim() }
+        : {}),
+      ...(input.acknowledgeWarnings ? { acknowledgeWarnings: true } : {}),
+    }),
+    {
+      returnTo: returnPath(kind, id),
+      forbiddenMessage: `You don't have permission to refund ${info.config.nounPlural}.`,
+      successMessage: (saved) =>
+        `${info.config.Noun} ${saved.voucherNo} refunded`,
+    },
+  );
+}
+
+/** Cancels a refund voucher: its amount is back on account. */
+export async function cancelReturnRefund(
+  kind: ReturnKind,
+  id: string,
+  voucherId: string,
+  reason: string,
+): Promise<MutationResult> {
+  if (!isReturnKind(kind)) {
+    return { ok: false, messages: ["Unknown return type."] };
+  }
+  const info = RETURN_KINDS[kind];
+  return runMutation(
+    apiSend<Saved>(
+      "POST",
+      `${info.apiPath}/${encodeURIComponent(id)}/refunds/${encodeURIComponent(voucherId)}/cancel`,
+      { reason: reason.trim() },
+    ),
+    {
+      returnTo: returnPath(kind, id),
+      forbiddenMessage: "You don't have permission to cancel this refund.",
+      successMessage: () => "Refund cancelled",
+    },
+  );
+}

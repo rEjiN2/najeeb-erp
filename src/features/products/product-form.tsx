@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { BACKEND_PROXY_PATH } from "@/features/auth/constants";
+import { RecipeSection } from "@/features/bundling/recipe-section";
 import { groupPathOptions } from "@/features/product-groups/group-options";
 import type { ProductGroup } from "@/features/product-groups/types";
 import type { Unit } from "@/features/units/types";
@@ -112,6 +113,8 @@ interface ProductFormProps {
   units: Unit[];
   /** products:view-cost — otherwise Purchase Price is never shown or sent. */
   canViewCost: boolean;
+  /** bundles:manage — change a bundle's recipe. */
+  canManageRecipe?: boolean;
   onSubmit: (values: ProductInput) => Promise<MutationResult>;
 }
 
@@ -120,6 +123,7 @@ export function ProductForm({
   groups,
   units,
   canViewCost,
+  canManageRecipe = false,
   onSubmit,
 }: ProductFormProps) {
   const router = useRouter();
@@ -472,6 +476,22 @@ export function ProductForm({
               {numberInput("vatRate", "VAT %", { step: "0.01", max: 100 })}
             </div>
           </Section>
+
+          {type === "bundle" ? (
+            isEdit ? (
+              <RecipeSection
+                productId={initialValue.id}
+                canManage={canManageRecipe}
+                canViewCost={canViewCost}
+              />
+            ) : (
+              <Section title="Recipe">
+                <p className="text-muted-foreground text-xs">
+                  Add the product first, then open it to define its recipe.
+                </p>
+              </Section>
+            )
+          ) : null}
 
           <Section title="Stock Levels">
             <p className="text-muted-foreground text-xs">

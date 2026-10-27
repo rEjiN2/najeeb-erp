@@ -90,6 +90,8 @@ interface ProductsPageProps {
   canManage: boolean;
   /** products:view-cost: the Purchase Price column and field. */
   canViewCost: boolean;
+  /** bundles:manage: the recipe of a bundle product. */
+  canManageRecipe: boolean;
 }
 
 export function ProductsPage({
@@ -99,6 +101,7 @@ export function ProductsPage({
   units,
   canManage,
   canViewCost,
+  canManageRecipe,
 }: ProductsPageProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -416,6 +419,7 @@ export function ProductsPage({
           groups={groups}
           units={units}
           canViewCost={canViewCost}
+          canManageRecipe={canManageRecipe}
           onSubmit={crud.submit}
         />
       </MasterFormSheet>

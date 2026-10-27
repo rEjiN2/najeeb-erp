@@ -113,6 +113,8 @@ type RawReturn = {
   netTotal: number;
   creditApplied: number;
   onAccount: number;
+  refundedAmount?: number;
+  refunds?: ReturnRefund[];
   status?: "posted" | "cancelled";
   createdBy?: UserRef | null;
   createdAt?: string | null;
@@ -130,7 +132,20 @@ type RawProduct = {
   unit: { symbol: string } | null;
 };
 
+/** A cash refund of a return's credit (a Cash Payment, or a Cash Receipt for purchase). */
+export interface ReturnRefund {
+  voucherId: string;
+  voucherNo: string;
+  amount: number;
+  date: string;
+  cancelledAt: string | null;
+}
+
 export interface ReturnDetail {
+  /** Credit still on account: not applied to a bill, not refunded. */
+  onAccount: number;
+  refundedAmount: number;
+  refunds: ReturnRefund[];
   /** In the shared voucher view's shape (meta strip, cancel, Activity). */
   voucher: VoucherDetail;
   invoiceId: string;
@@ -173,6 +188,12 @@ export async function getReturn(
   return {
     ok: true,
     data: {
+      onAccount: raw.onAccount,
+      refundedAmount: raw.refundedAmount ?? 0,
+      refunds: (raw.refunds ?? []).map((refund) => ({
+        ...refund,
+        voucherId: String(refund.voucherId),
+      })),
       invoiceId: String(raw.invoiceId),
       invoiceNo: raw.invoiceNo,
       taxableTotal: raw.taxableTotal,
@@ -239,6 +260,15 @@ export async function getReturn(
             label: "On account",
             value: `AED ${formatAmount(raw.onAccount)}`,
           },
+          ...((raw.refundedAmount ?? 0) > 0
+            ? [
+                {
+                  key: "refunded",
+                  label: "Refunded in cash",
+                  value: `AED ${formatAmount(raw.refundedAmount ?? 0)}`,
+                },
+              ]
+            : []),
         ],
         attachments: [],
       },

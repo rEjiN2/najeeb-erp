@@ -84,7 +84,9 @@ lines + InvoicePayments targetType sales-invoice). Receipts allocate to
 bills (allocatesBills; ?customer=&bill= prefill). Dashboard Purchase/Sales
 Analysis live from /dashboard/purchases|sales.
 Built (untested end to end): Sales/Purchase Returns (features/returns: list, new from invoice picker or ?invoice=, view with Print/Cancel/Activity, no edit; invoice views get a Returns card + Returned/Credited in the header strip).
-Planned: bundling, reports.
+Built (untested end to end): Stock Counts (features/stock-counts, under Inventory: status tabs list, blind count form with Load products/CSV/print sheet, view page with approve/reject/cancel + moved-line acknowledgement; no Stock Transfers screens exist yet, mirrored Opening Stock instead).
+Built (untested end to end): Bundling (features/bundling: Recipe section on the bundle product form via PUT /products/:id/recipe; Transactions > Bundling list/new/view with Print + Undo, parts table with shortage block).
+Planned: reports.
 
 ## Conventions
 

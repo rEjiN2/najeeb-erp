@@ -1,6 +1,7 @@
 import {
   ArrowRightLeft,
   Banknote,
+  Boxes,
   FileText,
   HandCoins,
   Landmark,
@@ -92,6 +93,13 @@ const TRANSACTION_LINKS = [
     description: "Stock on hand per location, brought over by hand or CSV.",
     icon: PackagePlus,
     permission: PERMISSIONS.OPENING_STOCK_READ,
+  },
+  {
+    href: "/accounting-inventory/transactions/bundling",
+    title: "Bundling",
+    description: "Pack parts into bundles, or break bundles back into parts.",
+    icon: Boxes,
+    permission: PERMISSIONS.BUNDLING_READ,
   },
   {
     href: "/accounting-inventory/transactions/cheques",
