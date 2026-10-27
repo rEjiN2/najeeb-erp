@@ -83,6 +83,7 @@ receipt, credit dialog on acknowledgeCredit 409; view reuses Purchase
 lines + InvoicePayments targetType sales-invoice). Receipts allocate to
 bills (allocatesBills; ?customer=&bill= prefill). Dashboard Purchase/Sales
 Analysis live from /dashboard/purchases|sales.
+Built (untested end to end): Sales/Purchase Returns (features/returns: list, new from invoice picker or ?invoice=, view with Print/Cancel/Activity, no edit; invoice views get a Returns card + Returned/Credited in the header strip).
 Planned: bundling, reports.
 
 ## Conventions

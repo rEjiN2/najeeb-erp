@@ -57,6 +57,9 @@ type RawSalesInvoice = {
   netTotal: number;
   paidAmount: number;
   balance: number;
+  creditedAmount?: number;
+  returnedQty?: number;
+  returnedAmount?: number;
   paymentStatus: PaymentStatus;
   overdue?: boolean;
   allocations?: InvoiceAllocation[];
@@ -94,6 +97,9 @@ export interface SalesInvoiceDetail {
   netTotal: number;
   paidAmount: number;
   balance: number;
+  creditedAmount: number;
+  returnedQty: number;
+  returnedAmount: number;
   paymentStatus: PaymentStatus;
   overdue: boolean;
   allocations: InvoiceAllocation[];
@@ -150,6 +156,9 @@ export async function getSalesInvoice(
       netTotal: raw.netTotal,
       paidAmount: raw.paidAmount,
       balance: raw.balance,
+      creditedAmount: raw.creditedAmount ?? 0,
+      returnedQty: raw.returnedQty ?? 0,
+      returnedAmount: raw.returnedAmount ?? 0,
       paymentStatus: raw.paymentStatus,
       overdue: raw.overdue ?? false,
       allocations: raw.allocations ?? [],
@@ -210,6 +219,20 @@ export async function getSalesInvoice(
             label: "Balance",
             value: `AED ${formatAmount(raw.balance)}`,
           },
+          ...(raw.returnedQty
+            ? [
+                {
+                  key: "returned",
+                  label: "Returned",
+                  value: `${raw.returnedQty} units · AED ${formatAmount(raw.returnedAmount ?? 0)}`,
+                },
+                {
+                  key: "credited",
+                  label: "Credited",
+                  value: `AED ${formatAmount(raw.creditedAmount ?? 0)}`,
+                },
+              ]
+            : []),
         ],
         attachments: [],
       },

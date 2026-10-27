@@ -28,6 +28,8 @@ export const PERMISSIONS = {
   OPENING_STOCK_READ: "opening-stock:read",
   PURCHASE_INVOICES_READ: "purchase-invoices:read",
   SALES_INVOICES_READ: "sales-invoices:read",
+  SALES_RETURNS_READ: "sales-returns:read",
+  PURCHASE_RETURNS_READ: "purchase-returns:read",
   /** Change a sales line's rate (and VAT %) from the product's. */
   SALES_OVERRIDE_PRICE: "sales:override-price",
   /** Give a discount on a sales line. */

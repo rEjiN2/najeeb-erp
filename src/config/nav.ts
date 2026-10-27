@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   Tags,
   Truck,
+  Undo2,
   Users,
   Wallet,
   Warehouse,
@@ -149,6 +150,18 @@ export const NAV_ITEMS: NavEntry[] = [
             href: "/accounting-inventory/transactions/sales-invoices",
             icon: Receipt,
             permission: PERMISSIONS.SALES_INVOICES_READ,
+          },
+          {
+            title: "Purchase Returns",
+            href: "/accounting-inventory/transactions/purchase-returns",
+            icon: Undo2,
+            permission: PERMISSIONS.PURCHASE_RETURNS_READ,
+          },
+          {
+            title: "Sales Returns",
+            href: "/accounting-inventory/transactions/sales-returns",
+            icon: Undo2,
+            permission: PERMISSIONS.SALES_RETURNS_READ,
           },
           {
             title: "Opening Stock",

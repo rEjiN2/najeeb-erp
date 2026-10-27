@@ -9,6 +9,9 @@ import { hasPermission } from "@/features/auth/session";
 import { getProductGroups } from "@/features/product-groups/api";
 import { getVisibleStockLocations } from "@/features/stock/api";
 import { getUnits } from "@/features/units/api";
+import { getInvoiceReturns } from "@/features/returns/api";
+import { RETURN_KINDS } from "@/features/returns/constants";
+import { InvoiceReturns } from "@/features/returns/invoice-returns";
 import { getVoucherAccess } from "@/features/vouchers/access";
 import { LoadFailure } from "@/features/vouchers/load-failure";
 import { isMissing } from "@/features/vouchers/routes";
@@ -135,12 +138,15 @@ export async function PurchaseInvoiceDetailRoute({
   id: string;
   searchParams: SearchParams;
 }) {
-  const [detail, access, canPay, canAllocate] = await Promise.all([
-    getPurchaseInvoice(id),
-    getVoucherAccess(config),
-    hasPermission(PERMISSIONS.CASH_PAYMENTS_CREATE),
-    hasPermission(PERMISSIONS.ALLOCATIONS_MANAGE),
-  ]);
+  const [detail, access, returnAccess, returns, canPay, canAllocate] =
+    await Promise.all([
+      getPurchaseInvoice(id),
+      getVoucherAccess(config),
+      getVoucherAccess(RETURN_KINDS.purchase.config),
+      getInvoiceReturns("purchase", id),
+      hasPermission(PERMISSIONS.CASH_PAYMENTS_CREATE),
+      hasPermission(PERMISSIONS.ALLOCATIONS_MANAGE),
+    ]);
   if (!detail.ok) {
     if (isMissing(detail)) notFound();
     return (
@@ -184,6 +190,20 @@ export async function PurchaseInvoiceDetailRoute({
             canAllocate={canAllocate}
             allocations={detail.data.allocations}
           />
+          {returns.ok ? (
+            <InvoiceReturns
+              kind="purchase"
+              invoiceId={id}
+              returns={returns.data}
+              canCreate={
+                returnAccess.canCreate &&
+                voucher.status === "posted" &&
+                detail.data.lines.some(
+                  (line) => line.qty - (line.returnedQty ?? 0) > 0,
+                )
+              }
+            />
+          ) : null}
         </>
       }
     />

@@ -7,6 +7,7 @@ import {
   PackagePlus,
   Receipt,
   ScrollText,
+  Undo2,
 } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -70,6 +71,20 @@ const TRANSACTION_LINKS = [
       "Sales to customers: stock out of a location, paid now or owed.",
     icon: Receipt,
     permission: PERMISSIONS.SALES_INVOICES_READ,
+  },
+  {
+    href: "/accounting-inventory/transactions/purchase-returns",
+    title: "Purchase Returns",
+    description: "Goods sent back to suppliers: stock out, debit note.",
+    icon: Undo2,
+    permission: PERMISSIONS.PURCHASE_RETURNS_READ,
+  },
+  {
+    href: "/accounting-inventory/transactions/sales-returns",
+    title: "Sales Returns",
+    description: "Goods customers send back: stock in, credit note.",
+    icon: Undo2,
+    permission: PERMISSIONS.SALES_RETURNS_READ,
   },
   {
     href: "/accounting-inventory/transactions/opening-stock",

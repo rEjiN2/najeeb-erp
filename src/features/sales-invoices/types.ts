@@ -63,6 +63,10 @@ export interface SalesInvoiceFilters {
 
 /** One product's line, with the product resolved; amounts from the backend. */
 export interface SalesInvoiceLine {
+  /** The line's id: what a return names. */
+  _id?: string;
+  /** Quantity already returned. */
+  returnedQty?: number;
   productId: string;
   code: string | null;
   name: string | null;

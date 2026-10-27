@@ -18,6 +18,9 @@ import {
 } from "@/features/purchase-invoices/purchase-invoice-lines";
 import { getVisibleStockLocations } from "@/features/stock/api";
 import { getUsers } from "@/features/users/api";
+import { getInvoiceReturns } from "@/features/returns/api";
+import { RETURN_KINDS } from "@/features/returns/constants";
+import { InvoiceReturns } from "@/features/returns/invoice-returns";
 import { getVoucherAccess } from "@/features/vouchers/access";
 import { loadVoucherFormData } from "@/features/vouchers/form-data";
 import { LoadFailure } from "@/features/vouchers/load-failure";
@@ -146,12 +149,15 @@ export async function SalesInvoiceDetailRoute({
   id: string;
   searchParams: SearchParams;
 }) {
-  const [detail, access, canPay, canAllocate] = await Promise.all([
-    getSalesInvoice(id),
-    getVoucherAccess(config),
-    hasPermission(PERMISSIONS.CASH_RECEIPTS_CREATE),
-    hasPermission(PERMISSIONS.ALLOCATIONS_MANAGE),
-  ]);
+  const [detail, access, returnAccess, returns, canPay, canAllocate] =
+    await Promise.all([
+      getSalesInvoice(id),
+      getVoucherAccess(config),
+      getVoucherAccess(RETURN_KINDS.sales.config),
+      getInvoiceReturns("sales", id),
+      hasPermission(PERMISSIONS.CASH_RECEIPTS_CREATE),
+      hasPermission(PERMISSIONS.ALLOCATIONS_MANAGE),
+    ]);
   if (!detail.ok) {
     if (isMissing(detail)) notFound();
     return (
@@ -196,6 +202,20 @@ export async function SalesInvoiceDetailRoute({
             allocations={detail.data.allocations}
             targetType="sales-invoice"
           />
+          {returns.ok ? (
+            <InvoiceReturns
+              kind="sales"
+              invoiceId={id}
+              returns={returns.data}
+              canCreate={
+                returnAccess.canCreate &&
+                voucher.status === "posted" &&
+                detail.data.lines.some(
+                  (line) => line.qty - (line.returnedQty ?? 0) > 0,
+                )
+              }
+            />
+          ) : null}
         </>
       }
     />

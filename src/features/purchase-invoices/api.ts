@@ -66,6 +66,9 @@ type RawPurchaseInvoice = {
   netTotal: number;
   paidAmount?: number;
   balance?: number;
+  creditedAmount?: number;
+  returnedQty?: number;
+  returnedAmount?: number;
   paymentStatus?: PaymentStatus;
   overdue?: boolean;
   allocations?: InvoiceAllocation[];
@@ -106,6 +109,9 @@ export interface PurchaseInvoiceDetail {
   netTotal: number;
   paidAmount: number;
   balance: number;
+  creditedAmount: number;
+  returnedQty: number;
+  returnedAmount: number;
   paymentStatus: PaymentStatus;
   overdue: boolean;
   allocations: InvoiceAllocation[];
@@ -165,6 +171,9 @@ export async function getPurchaseInvoice(
       netTotal: raw.netTotal,
       paidAmount: raw.paidAmount ?? 0,
       balance: raw.balance ?? raw.netTotal,
+      creditedAmount: raw.creditedAmount ?? 0,
+      returnedQty: raw.returnedQty ?? 0,
+      returnedAmount: raw.returnedAmount ?? 0,
       paymentStatus: raw.paymentStatus ?? "unpaid",
       overdue: raw.overdue ?? false,
       allocations: raw.allocations ?? [],
@@ -234,6 +243,20 @@ export async function getPurchaseInvoice(
             label: "Balance",
             value: `AED ${formatAmount(raw.balance ?? raw.netTotal)}`,
           },
+          ...(raw.returnedQty
+            ? [
+                {
+                  key: "returned",
+                  label: "Returned",
+                  value: `${raw.returnedQty} units · AED ${formatAmount(raw.returnedAmount ?? 0)}`,
+                },
+                {
+                  key: "credited",
+                  label: "Credited",
+                  value: `AED ${formatAmount(raw.creditedAmount ?? 0)}`,
+                },
+              ]
+            : []),
         ],
         attachments: [],
       },
