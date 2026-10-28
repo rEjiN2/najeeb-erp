@@ -43,6 +43,8 @@ export interface VoucherEndpoint {
   headerAccountTypes?: readonly string[];
   /** Fields only this voucher type has, for the view page. */
   detailExtras?: (raw: Record<string, unknown>) => VoucherExtraField[];
+  /** Always sent on list reads, e.g. { kind: "reference" }. */
+  listQuery?: Record<string, string>;
   /** How a status filter goes on the query; default `status=<filter>`. */
   statusQuery?: (status: StatusFilter) => Record<string, string>;
 }
@@ -152,7 +154,11 @@ export function createVoucherApi(endpoint: VoucherEndpoint) {
   async function list(
     query: URLSearchParams | string,
   ): Promise<ApiResult<VoucherPage>> {
-    const result = await apiGet<RawVoucherPage>(`${endpoint.path}?${query}`);
+    const withKind = new URLSearchParams(query);
+    for (const [key, value] of Object.entries(endpoint.listQuery ?? {})) {
+      withKind.set(key, value);
+    }
+    const result = await apiGet<RawVoucherPage>(`${endpoint.path}?${withKind}`);
     if (!result.ok) return result;
     return {
       ok: true,

@@ -10,11 +10,14 @@ import type {
 
 import {
   cancelCashReceipt,
+  cancelReferenceReceipt,
   createCashReceipt,
+  createReferenceReceipt,
   updateCashReceipt,
+  updateReferenceReceipt,
 } from "./actions";
-import { cashReceiptsApi } from "./api";
-import { CASH_RECEIPT_CONFIG } from "./constants";
+import { cashReceiptsApi, referenceReceiptsApi } from "./api";
+import { CASH_RECEIPT_CONFIG, REFERENCE_RECEIPT_CONFIG } from "./constants";
 
 export const CASH_RECEIPTS_MODULE: VoucherModule &
   Pick<VoucherReadModule, "listBanner"> = {
@@ -25,4 +28,12 @@ export const CASH_RECEIPTS_MODULE: VoucherModule &
   cancelAction: cancelCashReceipt,
   // A salesman's pending cash and cheques, and the way to hand them over.
   listBanner: async () => createElement(UnsettledBanner),
+};
+
+export const REFERENCE_RECEIPTS_MODULE: VoucherModule = {
+  config: REFERENCE_RECEIPT_CONFIG,
+  api: referenceReceiptsApi,
+  createAction: createReferenceReceipt,
+  updateAction: updateReferenceReceipt,
+  cancelAction: cancelReferenceReceipt,
 };

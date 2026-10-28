@@ -27,6 +27,8 @@ export interface VoucherWriteTarget {
   sendsReference: boolean;
   /** Receipts: the body carries paymentMethod, and no header for a cheque. */
   sendsMethod?: boolean;
+  /** Receipts: sent on create only, e.g. "reference". */
+  receiptKind?: string;
   /** Whether a 409 with warnings can be acknowledged and resent. */
   acknowledgesWarnings: boolean;
   listPath: string;
@@ -125,6 +127,7 @@ export function createVoucher(
         ? { [target.headerKey]: input.headerAccountId }
         : {}),
       ...(target.sendsMethod ? { paymentMethod: input.paymentMethod } : {}),
+      ...(target.receiptKind ? { receiptKind: target.receiptKind } : {}),
       collectedById: input.collectedById,
       ...(reference ? { paymentReference: reference } : {}),
       // Cheque receipts only; the backend requires all three there.

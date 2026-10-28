@@ -34,6 +34,8 @@ interface ColumnOptions {
   showOldBalance: boolean;
   /** Account and amount only (see VoucherConfig.simpleLines). */
   simpleLines?: boolean;
+  /** Reference receipts: no VAT column (see VoucherConfig.hideVat). */
+  hideVat?: boolean;
   /** Payments: a "Bills" column (allocations and the on-account rest). */
   showAllocations?: boolean;
 }
@@ -42,11 +44,12 @@ const LINE_DETAIL_KEYS = ["narration", "remarks", "vat", "netAmount"];
 
 function withoutOldBalance<T>(
   columns: VoucherColumn<T>[],
-  { showOldBalance, simpleLines = false }: ColumnOptions,
+  { showOldBalance, simpleLines = false, hideVat = false }: ColumnOptions,
 ): VoucherColumn<T>[] {
   return columns.filter(
     (column) =>
       (showOldBalance || column.key !== "oldBalance") &&
+      (!hideVat || column.key !== "vat") &&
       (!simpleLines || !LINE_DETAIL_KEYS.includes(column.key)),
   );
 }

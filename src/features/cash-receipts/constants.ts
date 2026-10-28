@@ -83,3 +83,33 @@ export const CASH_RECEIPT_CONFIG: VoucherConfig = {
     cancelReasonPlaceholder: "e.g. Duplicate of CR000123",
   },
 };
+
+export const REFERENCE_RECEIPTS_PATH =
+  "/accounting-inventory/transactions/reference-receipts";
+
+export function referenceReceiptPath(id: string): string {
+  return `${REFERENCE_RECEIPTS_PATH}/${encodeURIComponent(id)}`;
+}
+
+/** The same screens as Receipts, on the plain-slip kind: own CRV- numbers, no VAT. */
+export const REFERENCE_RECEIPT_CONFIG: VoucherConfig = {
+  ...CASH_RECEIPT_CONFIG,
+  basePath: REFERENCE_RECEIPTS_PATH,
+  title: "Reference Receipts",
+  description:
+    "Plain receipt slips with their own CRV numbers, posted like any receipt.",
+  singular: "Reference Receipt",
+  noun: "reference receipt",
+  Noun: "Reference Receipt",
+  nounPlural: "reference receipts",
+  NounPlural: "Reference Receipts",
+  permissionPrefix: "reference-receipts",
+  hideVat: true,
+  copy: {
+    ...CASH_RECEIPT_CONFIG.copy,
+    createButton: "Create Reference Receipt",
+    firstCreateButton: "Create your first reference receipt",
+    cancelledNotEditableHint:
+      "Create a new reference receipt if the cash still needs recording.",
+  },
+};

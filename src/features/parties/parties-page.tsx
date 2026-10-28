@@ -8,6 +8,7 @@ import {
   RotateCcw,
   Truck,
 } from "lucide-react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -33,6 +34,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAuth } from "@/features/auth/auth-context";
+import { PERMISSIONS } from "@/features/auth/permissions";
+import { ACCOUNTING_REPORTS } from "@/features/reports/accounting/constants";
 import { useMasterCrud } from "@/hooks/use-master-crud";
 import { formatAmount } from "@/lib/format";
 import type { MutationResult } from "@/lib/mutation";
@@ -151,6 +155,10 @@ export function PartiesPage({
     });
   }
 
+  const { session } = useAuth();
+  const canViewLedger =
+    session?.user.permissions.includes(PERMISSIONS.REPORTS_ACCOUNTING) ?? false;
+
   const columns: MasterColumn<PartyRow>[] = [
     {
       key: "code",
@@ -166,7 +174,17 @@ export function PartiesPage({
       header: "Name",
       render: (party) => (
         <div className="min-w-0 leading-tight">
-          <p className="font-medium">{party.name}</p>
+          {canViewLedger ? (
+            <Link
+              href={`${ACCOUNTING_REPORTS.ledger.path}?account=${party.ledgerAccountId}`}
+              className="font-medium hover:underline"
+              title="Open statement"
+            >
+              {party.name}
+            </Link>
+          ) : (
+            <p className="font-medium">{party.name}</p>
+          )}
           {party.contactPerson ? (
             <p className="text-muted-foreground text-xs">
               {party.contactPerson}

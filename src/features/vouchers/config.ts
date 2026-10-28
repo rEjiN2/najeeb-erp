@@ -47,6 +47,8 @@ export interface VoucherConfig {
   /** One account and amount per voucher (handovers): the view leaves out
    * narration, remarks, VAT and the gross/tax totals. */
   simpleLines?: boolean;
+  /** Reference receipts: no VAT column, so Net equals Amount. */
+  hideVat?: boolean;
   /** Payments: supplier/customer lines can be allocated to open bills. */
   allocatesBills?: boolean;
   /** false: no PDF (opening balances), so no Print / Download buttons. */

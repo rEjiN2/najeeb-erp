@@ -422,6 +422,22 @@ export function CompanyProfileForm({
               id="company-receiptFooterText-error"
               message={fieldErrors.receiptFooterText}
             />
+            <Label htmlFor="company-referenceReceiptHeaderText">
+              Reference receipt header text (optional)
+            </Label>
+            <Textarea
+              id="company-referenceReceiptHeaderText"
+              value={values.referenceReceiptHeaderText}
+              onChange={(event) =>
+                set("referenceReceiptHeaderText", event.target.value)
+              }
+              maxLength={500}
+              aria-invalid={Boolean(fieldErrors.referenceReceiptHeaderText)}
+            />
+            <FieldError
+              id="company-referenceReceiptHeaderText-error"
+              message={fieldErrors.referenceReceiptHeaderText}
+            />
           </CardContent>
         </Card>
 

@@ -579,6 +579,7 @@ export function VoucherForm({
           <VoucherLineGrid
             columns={editColumns(visibleErrors, {
               showOldBalance: showBalances,
+              hideVat: config.hideVat,
               renderAllocation: config.allocatesBills
                 ? (line) => (
                     <AllocationCell

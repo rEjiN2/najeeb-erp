@@ -8,6 +8,7 @@ export const PERMISSIONS = {
   CASH_RECEIPTS_CREATE: "cash-receipts:create",
   CASH_RECEIPTS_EDIT: "cash-receipts:edit",
   CASH_RECEIPTS_CANCEL: "cash-receipts:cancel",
+  REFERENCE_RECEIPTS_READ: "reference-receipts:read",
   CASH_PAYMENTS_READ: "cash-payments:read",
   CASH_PAYMENTS_CREATE: "cash-payments:create",
   CASH_PAYMENTS_EDIT: "cash-payments:edit",
@@ -51,6 +52,8 @@ export const PERMISSIONS = {
   UNITS_MANAGE: "units:manage",
   /** The salesman collections report. */
   REPORTS_SALESMAN: "reports:salesman",
+  /** Ledger, Day Book, Cash and Bank Book, Trial Balance. */
+  REPORTS_ACCOUNTING: "reports:accounting",
   ROLES_MANAGE: "roles:manage",
   USERS_MANAGE: "users:manage",
   /** Pick someone else as Collected By / Paid By. */

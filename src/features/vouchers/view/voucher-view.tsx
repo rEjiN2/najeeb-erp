@@ -446,6 +446,7 @@ export function VoucherView({
                 // Left out by the backend without balances:view.
                 showOldBalance: lines.every((line) => line.oldBalance !== null),
                 simpleLines: config.simpleLines ?? false,
+                hideVat: config.hideVat,
                 showAllocations: Boolean(config.allocatesBills),
               })}
               lines={lines}

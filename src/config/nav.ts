@@ -123,6 +123,12 @@ export const NAV_ITEMS: NavEntry[] = [
             permission: PERMISSIONS.CASH_RECEIPTS_READ,
           },
           {
+            title: "Reference Receipts",
+            href: "/accounting-inventory/transactions/reference-receipts",
+            icon: HandCoins,
+            permission: PERMISSIONS.REFERENCE_RECEIPTS_READ,
+          },
+          {
             title: "Cash Payments",
             href: "/accounting-inventory/transactions/cash-payments",
             icon: Banknote,
@@ -217,6 +223,30 @@ export const NAV_ITEMS: NavEntry[] = [
             href: "/accounting-inventory/reports/salesman-collections",
             icon: ClipboardList,
             permission: PERMISSIONS.REPORTS_SALESMAN,
+          },
+          {
+            title: "Ledger",
+            href: "/accounting-inventory/reports/ledger",
+            icon: ScrollText,
+            permission: PERMISSIONS.REPORTS_ACCOUNTING,
+          },
+          {
+            title: "Day Book",
+            href: "/accounting-inventory/reports/day-book",
+            icon: FileText,
+            permission: PERMISSIONS.REPORTS_ACCOUNTING,
+          },
+          {
+            title: "Cash and Bank Book",
+            href: "/accounting-inventory/reports/cash-book",
+            icon: Wallet,
+            permission: PERMISSIONS.REPORTS_ACCOUNTING,
+          },
+          {
+            title: "Trial Balance",
+            href: "/accounting-inventory/reports/trial-balance",
+            icon: Landmark,
+            permission: PERMISSIONS.REPORTS_ACCOUNTING,
           },
         ],
       },

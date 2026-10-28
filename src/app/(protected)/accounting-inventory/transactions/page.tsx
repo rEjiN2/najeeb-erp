@@ -36,6 +36,13 @@ const TRANSACTION_LINKS = [
     permission: PERMISSIONS.CASH_RECEIPTS_READ,
   },
   {
+    href: "/accounting-inventory/transactions/reference-receipts",
+    title: "Reference Receipts",
+    description: "Plain receipt slips with their own CRV numbers.",
+    icon: HandCoins,
+    permission: PERMISSIONS.REFERENCE_RECEIPTS_READ,
+  },
+  {
     href: "/accounting-inventory/transactions/cash-payments",
     title: "Cash Payments",
     description:

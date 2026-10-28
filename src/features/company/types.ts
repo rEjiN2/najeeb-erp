@@ -14,6 +14,7 @@ export const COMPANY_TEXT_FIELDS = [
   "trn",
   "currencyCode",
   "receiptFooterText",
+  "referenceReceiptHeaderText",
 ] as const;
 export type CompanyTextField = (typeof COMPANY_TEXT_FIELDS)[number];
 
