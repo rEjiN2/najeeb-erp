@@ -12,5 +12,10 @@ export default function Page({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  return <AccountingReportRoute reportKey="trial-balance" searchParams={searchParams} />;
+  return (
+    <AccountingReportRoute
+      reportKey="trial-balance"
+      searchParams={searchParams}
+    />
+  );
 }

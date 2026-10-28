@@ -108,19 +108,28 @@ export async function AccountingReportRoute({
 
   switch (reportKey) {
     case "ledger":
-      return <LedgerReportPage report={data as LedgerReport | null} {...common} />;
+      return (
+        <LedgerReportPage report={data as LedgerReport | null} {...common} />
+      );
     case "day-book":
       return <DayBookReportPage report={data as DayBookReport} {...common} />;
     case "cash-book":
       return <CashBookReportPage report={data as CashBookReport} {...common} />;
     case "trial-balance":
       return (
-        <TrialBalanceReportPage report={data as TrialBalanceReport} {...common} />
+        <TrialBalanceReportPage
+          report={data as TrialBalanceReport}
+          {...common}
+        />
       );
   }
 }
 
-export function ReportLoading({ reportKey }: { reportKey: AccountingReportKey }) {
+export function ReportLoading({
+  reportKey,
+}: {
+  reportKey: AccountingReportKey;
+}) {
   const meta = ACCOUNTING_REPORTS[reportKey];
   return (
     <div aria-busy="true" aria-label="Loading" className="space-y-6">

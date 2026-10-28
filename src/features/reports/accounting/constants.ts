@@ -11,10 +11,7 @@ import { RETURN_KINDS } from "@/features/returns/constants";
 import { SALES_INVOICES_PATH } from "@/features/sales-invoices/constants";
 
 export type AccountingReportKey =
-  | "ledger"
-  | "day-book"
-  | "cash-book"
-  | "trial-balance";
+  "ledger" | "day-book" | "cash-book" | "trial-balance";
 
 interface ReportMeta {
   path: string;

@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Download, Loader2, Printer } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Loader2,
+  Printer,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition, type ReactNode } from "react";
@@ -16,7 +22,11 @@ import { uaeToday } from "@/lib/datetime";
 import { formatAmount } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-import { ACCOUNTING_REPORTS, voucherViewPath, type AccountingReportKey } from "./constants";
+import {
+  ACCOUNTING_REPORTS,
+  voucherViewPath,
+  type AccountingReportKey,
+} from "./constants";
 import { toReportSearch, type ReportFilters } from "./filters";
 
 /** The backend's page size for Ledger and Day Book. */
@@ -74,7 +84,8 @@ export function ReportTable({ children }: { children: ReactNode }) {
   );
 }
 
-export const stickyHead = "bg-card sticky top-0 z-10 shadow-[0_1px_0_var(--border)]";
+export const stickyHead =
+  "bg-card sticky top-0 z-10 shadow-[0_1px_0_var(--border)]";
 
 interface ReportShellProps {
   reportKey: AccountingReportKey;
@@ -180,7 +191,10 @@ export function ReportShell({
           </Label>
         ) : null}
         {meta.dates === "range" ? (
-          <DateRangeControl filters={filters} onChange={(next) => navigate(next)} />
+          <DateRangeControl
+            filters={filters}
+            onChange={(next) => navigate(next)}
+          />
         ) : (
           <div className="flex items-center gap-2 lg:ml-auto">
             <Label htmlFor="as-of" className="text-sm font-normal">

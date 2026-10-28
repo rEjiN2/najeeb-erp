@@ -34,7 +34,8 @@ interface PageProps<T> {
   exportQuery: string;
 }
 
-const th = (extra?: string) => cn(stickyHead, "h-10 px-3 text-left font-medium", extra);
+const th = (extra?: string) =>
+  cn(stickyHead, "h-10 px-3 text-left font-medium", extra);
 const td = (extra?: string) => cn("px-3 py-2 align-top", extra);
 const num = "text-right whitespace-nowrap";
 const typeLabel = (type: string) => VOUCHER_TYPE_LABELS[type] ?? type;
@@ -70,7 +71,8 @@ export function LedgerReportPage({
 }
 
 function LedgerTable({ report, page }: { report: LedgerReport; page: number }) {
-  const lastPage = page >= Math.max(1, Math.ceil(report.total / REPORT_PAGE_SIZE));
+  const lastPage =
+    page >= Math.max(1, Math.ceil(report.total / REPORT_PAGE_SIZE));
   return (
     <>
       <p className="text-sm">
@@ -140,7 +142,10 @@ function LedgerTable({ report, page }: { report: LedgerReport; page: number }) {
           ))}
           {report.rows.length === 0 ? (
             <tr>
-              <td className={td("text-muted-foreground text-center")} colSpan={7}>
+              <td
+                className={td("text-muted-foreground text-center")}
+                colSpan={7}
+              >
                 No entries in this period.
               </td>
             </tr>
@@ -169,7 +174,10 @@ function LedgerTable({ report, page }: { report: LedgerReport; page: number }) {
   );
 }
 
-export function DayBookReportPage({ report, ...rest }: PageProps<DayBookReport>) {
+export function DayBookReportPage({
+  report,
+  ...rest
+}: PageProps<DayBookReport>) {
   return (
     <ReportShell reportKey="day-book" {...rest} total={report.total}>
       {report.rows.length === 0 ? (
@@ -202,7 +210,11 @@ export function DayBookReportPage({ report, ...rest }: PageProps<DayBookReport>)
                   </td>
                   <td className={td()}>{typeLabel(row.type)}</td>
                   <td className={td()}>
-                    <VoucherLink type={row.type} id={row.voucherId} no={row.no} />
+                    <VoucherLink
+                      type={row.type}
+                      id={row.voucherId}
+                      no={row.no}
+                    />
                   </td>
                   <td className={td()}>{row.summary}</td>
                   <td className={td(num)}>
@@ -239,7 +251,10 @@ export function DayBookReportPage({ report, ...rest }: PageProps<DayBookReport>)
   );
 }
 
-export function CashBookReportPage({ report, ...rest }: PageProps<CashBookReport>) {
+export function CashBookReportPage({
+  report,
+  ...rest
+}: PageProps<CashBookReport>) {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const toggle = (date: string) =>
     setOpen((current) => {
@@ -316,7 +331,9 @@ export function CashBookReportPage({ report, ...rest }: PageProps<CashBookReport
                                 entry.cancelled && "text-muted-foreground",
                               )}
                             >
-                              <td className="py-1.5 pl-8 pr-2">{entry.account}</td>
+                              <td className="py-1.5 pr-2 pl-8">
+                                {entry.account}
+                              </td>
                               <td className="px-2 py-1.5">
                                 {typeLabel(entry.voucherType)}{" "}
                                 <VoucherLink
@@ -329,10 +346,14 @@ export function CashBookReportPage({ report, ...rest }: PageProps<CashBookReport
                                 {entry.cancelled ? " (cancelled)" : ""}
                               </td>
                               <td className={cn("px-2 py-1.5", num)}>
-                                {entry.debit ? <Money value={entry.debit} /> : null}
+                                {entry.debit ? (
+                                  <Money value={entry.debit} />
+                                ) : null}
                               </td>
                               <td className={cn("px-3 py-1.5", num)}>
-                                {entry.credit ? <Money value={entry.credit} /> : null}
+                                {entry.credit ? (
+                                  <Money value={entry.credit} />
+                                ) : null}
                               </td>
                             </tr>
                           ))}
@@ -346,7 +367,10 @@ export function CashBookReportPage({ report, ...rest }: PageProps<CashBookReport
           })}
           {report.daily.length === 0 ? (
             <tr>
-              <td className={td("text-muted-foreground text-center")} colSpan={5}>
+              <td
+                className={td("text-muted-foreground text-center")}
+                colSpan={5}
+              >
                 No movements in this period.
               </td>
             </tr>
@@ -378,12 +402,15 @@ export function TrialBalanceReportPage({
   report,
   ...rest
 }: PageProps<TrialBalanceReport>) {
-  const difference = Math.round((report.totals.debit - report.totals.credit) * 100) / 100;
+  const difference =
+    Math.round((report.totals.debit - report.totals.credit) * 100) / 100;
   const ledgerPath = ACCOUNTING_REPORTS.ledger.path;
   return (
     <ReportShell reportKey="trial-balance" {...rest}>
       {report.groups.length === 0 ? (
-        <Empty title="No balances">No account has a balance as of this date.</Empty>
+        <Empty title="No balances">
+          No account has a balance as of this date.
+        </Empty>
       ) : (
         <ReportTable>
           <thead>

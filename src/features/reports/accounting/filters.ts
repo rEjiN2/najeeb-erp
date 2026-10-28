@@ -80,7 +80,10 @@ export function reportBackendQuery(
   if (dateFrom) query.set("dateFrom", dateFrom);
   if (dateTo) query.set("dateTo", dateTo);
   if (filters.accountId) {
-    query.set(key === "cash-book" ? "accountIds" : "accountId", filters.accountId);
+    query.set(
+      key === "cash-book" ? "accountIds" : "accountId",
+      filters.accountId,
+    );
   }
   if (filters.cancelled) query.set("includeCancelled", "true");
   if (filters.page > 1 && (key === "ledger" || key === "day-book")) {

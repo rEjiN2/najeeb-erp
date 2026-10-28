@@ -21,7 +21,9 @@ export function getAccountingReport<T>(
 }
 
 /** Trial Balance rows carry a code, not an id: find the account behind it. */
-export async function findAccountIdByCode(code: string): Promise<string | null> {
+export async function findAccountIdByCode(
+  code: string,
+): Promise<string | null> {
   const result = await apiGet<{ items: { id: string; code: string }[] }>(
     `/accounts?${new URLSearchParams({ q: code, limit: "10" })}`,
   );
